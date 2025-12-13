@@ -1,0 +1,248 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  /* Safe area insets for notched devices */
+  --safe-area-inset-top: env(safe-area-inset-top, 0px);
+  --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-area-inset-left: env(safe-area-inset-left, 0px);
+  --safe-area-inset-right: env(safe-area-inset-right, 0px);
+}
+
+/* Mobile-first base styles */
+html {
+  /* Prevent font size adjustment on orientation change */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* Smooth scrolling */
+  scroll-behavior: smooth;
+  /* Better tap highlighting */
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  /* Prevent overscroll bounce on iOS */
+  overscroll-behavior: none;
+  /* Mobile-first font size (16px prevents zoom on iOS) */
+  font-size: 16px;
+  line-height: 1.5;
+  /* Safe area padding for notched devices */
+  padding-top: var(--safe-area-inset-top);
+  padding-left: var(--safe-area-inset-left);
+  padding-right: var(--safe-area-inset-right);
+}
+
+/* Prevent zoom on input focus (iOS Safari) */
+input, textarea, select {
+  font-size: 16px;
+}
+
+/* Touch-friendly interactions */
+button, a, [role="button"] {
+  /* Minimum touch target size (44px as per Apple HIG) */
+  min-height: 44px;
+  /* Remove touch delay */
+  touch-action: manipulation;
+}
+
+/* Allow smaller buttons when explicitly sized */
+button.btn-sm, .btn-sm {
+  min-height: auto;
+}
+
+/* Improve touch scrolling */
+.overflow-y-auto, .overflow-x-auto, .overflow-auto {
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Custom scrollbar - hide on mobile, show on desktop */
+@media (max-width: 768px) {
+  ::-webkit-scrollbar {
+    display: none;
+  }
+
+  * {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@media (min-width: 769px) {
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #333;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #444;
+  }
+}
+
+/* Safe area utilities */
+.pb-safe {
+  padding-bottom: max(1rem, var(--safe-area-inset-bottom));
+}
+
+.pt-safe {
+  padding-top: max(0.5rem, var(--safe-area-inset-top));
+}
+
+.px-safe {
+  padding-left: max(1rem, var(--safe-area-inset-left));
+  padding-right: max(1rem, var(--safe-area-inset-right));
+}
+
+/* Mobile keyboard awareness - apply to input containers */
+.keyboard-aware {
+  /* Helps with virtual keyboard on mobile */
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding-bottom: var(--safe-area-inset-bottom);
+}
+
+/* Prevent text selection on interactive elements */
+.no-select {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Active states for touch feedback */
+@media (hover: none) and (pointer: coarse) {
+  button:active,
+  a:active,
+  [role="button"]:active {
+    opacity: 0.7;
+    transform: scale(0.98);
+  }
+}
+
+/* Responsive typography scale */
+.text-responsive-sm {
+  font-size: clamp(0.75rem, 2vw, 0.875rem);
+}
+
+.text-responsive-base {
+  font-size: clamp(0.875rem, 2.5vw, 1rem);
+}
+
+.text-responsive-lg {
+  font-size: clamp(1rem, 3vw, 1.125rem);
+}
+
+.text-responsive-xl {
+  font-size: clamp(1.25rem, 4vw, 1.5rem);
+}
+
+.text-responsive-2xl {
+  font-size: clamp(1.5rem, 5vw, 2rem);
+}
+
+.text-responsive-3xl {
+  font-size: clamp(1.875rem, 6vw, 2.5rem);
+}
+
+.text-responsive-4xl {
+  font-size: clamp(2.25rem, 8vw, 3rem);
+}
+
+/* Markdown styling in messages */
+.prose-chat {
+  @apply text-gray-100;
+}
+
+.prose-chat p {
+  @apply mb-3 last:mb-0;
+}
+
+.prose-chat ul,
+.prose-chat ol {
+  @apply mb-3 pl-5;
+}
+
+.prose-chat li {
+  @apply mb-1;
+}
+
+.prose-chat strong {
+  @apply font-semibold text-white;
+}
+
+.prose-chat em {
+  @apply italic text-gray-300;
+}
+
+.prose-chat code {
+  @apply bg-gray-800 px-1.5 py-0.5 rounded text-sm font-mono;
+}
+
+.prose-chat blockquote {
+  @apply border-l-2 border-gray-600 pl-4 italic text-gray-400 my-3;
+}
+
+/* Mobile-specific utilities */
+@layer utilities {
+  /* Full height accounting for mobile browser chrome */
+  .h-screen-safe {
+    height: 100dvh;
+  }
+
+  .min-h-screen-safe {
+    min-height: 100dvh;
+  }
+
+  /* Touch-friendly spacing */
+  .touch-spacing {
+    @apply p-3 sm:p-4;
+  }
+
+  /* Mobile-first container */
+  .container-mobile {
+    @apply w-full px-4 sm:px-6 lg:px-8;
+  }
+}
+
+/* Animated gradient background for special elements */
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradient-shift 8s ease infinite;
+}
+
+/* Pulse animation for loading states */
+@keyframes subtle-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.animate-subtle-pulse {
+  animation: subtle-pulse 2s ease-in-out infinite;
+}

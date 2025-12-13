@@ -1,0 +1,17 @@
+{
+  "name": "socrates-voice-agent",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --env-file=.env src/agent.js dev",
+    "start": "node --env-file=.env src/agent.js start",
+    "download-files": "node scripts/download-files.js"
+  },
+  "dependencies": {
+    "@livekit/agents": "^1.0.0",
+    "@livekit/agents-plugin-elevenlabs": "^1.0.0",
+    "@livekit/agents-plugin-openai": "^1.0.25",
+    "@livekit/agents-plugin-silero": "^1.0.0",
+    "dotenv": "^16.4.0"
+  }
+}
