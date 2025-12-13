@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Send } from "lucide-react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
 interface ChatInputProps {
   onSend: (message: string) => void;
@@ -10,6 +12,8 @@ interface ChatInputProps {
 }
 
 export function ChatInput({ onSend, disabled, placeholder }: ChatInputProps) {
+  const { data: session } = useSession();
+  const router = useRouter();
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -25,6 +29,11 @@ export function ChatInput({ onSend, disabled, placeholder }: ChatInputProps) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (value.trim() && !disabled) {
+      // Check if user is authenticated
+      if (!session) {
+        router.push("/auth/signin");
+        return;
+      }
       onSend(value.trim());
       setValue("");
       // Reset textarea height after submit

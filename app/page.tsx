@@ -1,6 +1,8 @@
 "use client";
 
 import { useRef, useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { Menu, MessageSquare, Mic, RotateCcw, ChevronRight, User } from "lucide-react";
 import { useSocraticChat } from "@/lib/use-chat";
 import { ChatMessage } from "@/components/chat-message";
@@ -22,6 +24,9 @@ interface VoiceInsightsData {
 }
 
 export default function Home() {
+  const { data: session } = useSession();
+  const router = useRouter();
+
   const {
     messages,
     phase,
@@ -46,6 +51,15 @@ export default function Home() {
   }, [messages]);
 
   const hasMessages = messages.length > 0;
+
+  // Wrapper to check auth before sending message
+  const handleSendMessage = (message: string) => {
+    if (!session) {
+      router.push("/auth/signin");
+      return;
+    }
+    sendMessage(message);
+  };
 
   return (
     <div className="flex h-screen-safe bg-[#0a0a0f] text-white overflow-hidden">
@@ -191,15 +205,15 @@ export default function Home() {
                     Start exploring
                   </p>
                   <ExamplePrompt
-                    onClick={sendMessage}
+                    onClick={handleSendMessage}
                     prompt="I'm struggling to decide whether to change careers"
                   />
                   <ExamplePrompt
-                    onClick={sendMessage}
+                    onClick={handleSendMessage}
                     prompt="I feel like I'm not making progress in life"
                   />
                   <ExamplePrompt
-                    onClick={sendMessage}
+                    onClick={handleSendMessage}
                     prompt="I can't seem to maintain good habits"
                   />
                 </div>
