@@ -294,6 +294,7 @@ export default function Home() {
         onClose={() => setSidebarOpen(false)}
         voiceSummary={mode === "voice" && voiceInsights ? voiceInsights.summary : undefined}
         voiceReflections={mode === "voice" && voiceInsights ? voiceInsights.reflections : undefined}
+        user={session?.user}
       />
     </div>
   );

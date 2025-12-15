@@ -1,8 +1,17 @@
 "use client";
 
 import { clsx } from "clsx";
-import { Lightbulb, RotateCcw, Info, X, FileText, Sparkles } from "lucide-react";
+import { Lightbulb, RotateCcw, Info, X, FileText, Sparkles, LogOut, User, Coins } from "lucide-react";
+import { signOut } from "next-auth/react";
+import Link from "next/link";
 import type { Insight } from "@/lib/types";
+
+interface UserData {
+  name?: string | null;
+  email?: string | null;
+  image?: string | null;
+  credits?: number;
+}
 
 interface SidebarProps {
   insights: Insight[];
@@ -12,9 +21,10 @@ interface SidebarProps {
   onClose: () => void;
   voiceSummary?: string;
   voiceReflections?: string[];
+  user?: UserData | null;
 }
 
-export function Sidebar({ insights, problemStatement, onReset, isOpen, onClose, voiceSummary, voiceReflections }: SidebarProps) {
+export function Sidebar({ insights, problemStatement, onReset, isOpen, onClose, voiceSummary, voiceReflections, user }: SidebarProps) {
   return (
     <>
       {/* Mobile overlay */}
@@ -45,6 +55,63 @@ export function Sidebar({ insights, problemStatement, onReset, isOpen, onClose, 
             >
               <X className="w-5 h-5 text-gray-400" />
             </button>
+          </div>
+
+          {/* User Profile Section */}
+          <div className="p-4 border-b border-gray-800">
+            {user ? (
+              <div className="space-y-3">
+                {/* User info row */}
+                <div className="flex items-center gap-3">
+                  {user.image ? (
+                    <img
+                      src={user.image}
+                      alt={user.name || "User"}
+                      className="w-10 h-10 rounded-full ring-1 ring-gray-700"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center ring-1 ring-gray-600">
+                      <User className="w-5 h-5 text-gray-400" />
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-gray-200 truncate">
+                      {user.name || "User"}
+                    </p>
+                    <p className="text-xs text-gray-500 truncate">
+                      {user.email}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Credits and Sign out row */}
+                <div className="flex items-center gap-2">
+                  {typeof user.credits === "number" && (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                      <Coins className="w-3.5 h-3.5 text-amber-400" />
+                      <span className="text-xs font-medium text-amber-400">
+                        {user.credits.toLocaleString()} credits
+                      </span>
+                    </div>
+                  )}
+                  <button
+                    onClick={() => signOut()}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-gray-400 hover:text-gray-200 hover:bg-gray-800 rounded-lg transition-colors ml-auto"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span className="text-xs">Sign out</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <Link
+                href="/auth/signin"
+                className="flex items-center justify-center gap-2 w-full px-4 py-2.5 bg-white/10 hover:bg-white/15 border border-white/10 rounded-lg transition-colors"
+              >
+                <User className="w-4 h-4 text-gray-300" />
+                <span className="text-sm font-medium text-gray-200">Sign in</span>
+              </Link>
+            )}
           </div>
 
           {/* Content */}
