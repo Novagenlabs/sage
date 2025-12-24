@@ -464,6 +464,9 @@ export function useSocraticChat() {
     setState((prev) => ({ ...prev, phase }));
   }, []);
 
+  // Extract user insights from context for display
+  const userInsights = state.context?.userInsights || [];
+
   return {
     ...state,
     isHydrated,
@@ -474,5 +477,6 @@ export function useSocraticChat() {
     addInsight,
     pastConversations,
     loadConversation,
+    userInsights,
   };
 }

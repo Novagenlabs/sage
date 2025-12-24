@@ -1,7 +1,7 @@
 "use client";
 
 import { clsx } from "clsx";
-import { Lightbulb, RotateCcw, Info, X, FileText, Sparkles, LogOut, User, Coins, History, MessageCircle } from "lucide-react";
+import { Lightbulb, RotateCcw, Info, X, FileText, Sparkles, LogOut, User, Coins, History, MessageCircle, Brain } from "lucide-react";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
 import type { Insight } from "@/lib/types";
@@ -21,6 +21,12 @@ interface PastConversation {
   messageCount?: number;
 }
 
+interface UserInsightData {
+  content: string;
+  category: string;
+  confidence: number;
+}
+
 interface SidebarProps {
   insights: Insight[];
   problemStatement: string;
@@ -33,9 +39,10 @@ interface SidebarProps {
   pastConversations?: PastConversation[];
   onLoadConversation?: (id: string) => void;
   currentConversationId?: string | null;
+  userInsights?: UserInsightData[];
 }
 
-export function Sidebar({ insights, problemStatement, onReset, isOpen, onClose, voiceSummary, voiceReflections, user, pastConversations, onLoadConversation, currentConversationId }: SidebarProps) {
+export function Sidebar({ insights, problemStatement, onReset, isOpen, onClose, voiceSummary, voiceReflections, user, pastConversations, onLoadConversation, currentConversationId, userInsights }: SidebarProps) {
   return (
     <>
       {/* Mobile overlay */}
@@ -237,6 +244,26 @@ export function Sidebar({ insights, problemStatement, onReset, isOpen, onClose, 
                       className="text-sm text-gray-400 bg-purple-900/20 border border-purple-500/20 rounded-lg p-3 italic"
                     >
                       &ldquo;{reflection}&rdquo;
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* User Insights (learned patterns from past conversations) */}
+            {userInsights && userInsights.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Brain className="w-4 h-4 text-emerald-400" />
+                  <h3 className="text-sm font-medium text-gray-300">What I Know About You</h3>
+                </div>
+                <ul className="space-y-2">
+                  {userInsights.map((insight, i) => (
+                    <li
+                      key={i}
+                      className="text-sm text-gray-400 bg-emerald-900/20 border border-emerald-500/20 rounded-lg p-3"
+                    >
+                      {insight.content}
                     </li>
                   ))}
                 </ul>

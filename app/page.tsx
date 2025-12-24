@@ -39,6 +39,7 @@ export default function Home() {
     pastConversations,
     loadConversation,
     conversationId,
+    userInsights,
   } = useSocraticChat();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -314,6 +315,7 @@ export default function Home() {
         pastConversations={pastConversations}
         onLoadConversation={loadConversation}
         currentConversationId={conversationId}
+        userInsights={userInsights}
       />
     </div>
   );
