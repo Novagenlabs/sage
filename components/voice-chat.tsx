@@ -222,7 +222,10 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
       const response = await fetch("/api/livekit/token", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ roomName, participantName }),
+        body: JSON.stringify({
+          roomName,
+          participantName,
+        }),
       });
 
       if (!response.ok) {

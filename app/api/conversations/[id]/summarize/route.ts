@@ -208,6 +208,52 @@ export async function POST(request: Request, { params }: RouteParams) {
       }
     }
 
+    // Regenerate consolidated profile summary from all insights
+    const allInsights = await prisma.userInsight.findMany({
+      where: { userId, confidence: { gte: 0.3 } },
+      orderBy: { confidence: "desc" },
+      take: 20,
+    });
+
+    if (allInsights.length > 0) {
+      const profilePrompt = `Based on these observations about a person from past conversations, write a single cohesive paragraph (3-5 sentences) summarizing what you know about them. Focus on their personality, goals, patterns, and what matters to them. Write in second person ("You tend to...").
+
+Observations:
+${allInsights.map((i) => `- ${i.content}`).join("\n")}
+
+Write a warm, insightful summary that feels personal, not clinical. Return only the paragraph, no JSON.`;
+
+      const profileResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
+          "X-Title": "Socratic AI - Profile Summary",
+        },
+        body: JSON.stringify({
+          model: "openai/gpt-4o-mini",
+          messages: [
+            { role: "user", content: profilePrompt },
+          ],
+          temperature: 0.7,
+          max_tokens: 300,
+        }),
+      });
+
+      if (profileResponse.ok) {
+        const profileData = await profileResponse.json();
+        const profileSummary = profileData.choices?.[0]?.message?.content?.trim();
+        if (profileSummary) {
+          await prisma.user.update({
+            where: { id: userId },
+            data: { profileSummary },
+          });
+          console.log("[Summarize] Updated user profile summary");
+        }
+      }
+    }
+
     // Deduct credits
     const usage = data.usage || {};
     const promptTokens = usage.prompt_tokens || Math.ceil(conversationText.length / 4);

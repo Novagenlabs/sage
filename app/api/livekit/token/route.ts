@@ -28,30 +28,36 @@ export async function POST(request: NextRequest) {
   const session = await auth();
   if (session?.user?.id) {
     try {
-      // Get recent conversation summaries
+      // Build context string for the agent
+      const contextParts: string[] = [];
+
+      // Get user's name and profile summary
+      const user = await prisma.user.findUnique({
+        where: { id: session.user.id },
+        select: { name: true, profileSummary: true },
+      });
+
+      if (user?.name) {
+        contextParts.push(`User's name: ${user.name}`);
+        console.log("[Token] User name:", user.name);
+      }
+
+      // Add consolidated profile summary (replaces individual insights)
+      if (user?.profileSummary) {
+        contextParts.push(`About this person: ${user.profileSummary}`);
+        console.log("[Token] Added profile summary");
+      }
+
+      // Fetch recent conversation summaries for additional context (last 5)
       const recentConversations = await prisma.conversation.findMany({
         where: {
           userId: session.user.id,
           summary: { not: null },
         },
         orderBy: { updatedAt: "desc" },
-        select: { summary: true, updatedAt: true },
-        take: 3,
-      });
-
-      // Get user insights
-      const userInsights = await prisma.userInsight.findMany({
-        where: {
-          userId: session.user.id,
-          confidence: { gte: 0.4 },
-        },
-        orderBy: { confidence: "desc" },
-        select: { content: true },
+        select: { summary: true },
         take: 5,
       });
-
-      // Build context string for the agent
-      const contextParts: string[] = [];
 
       if (recentConversations.length > 0) {
         const summaries = recentConversations
@@ -60,21 +66,20 @@ export async function POST(request: NextRequest) {
           .join(" | ");
         if (summaries) {
           contextParts.push(`Recent sessions: ${summaries}`);
+          console.log("[Token] Added", recentConversations.length, "recent session summaries");
         }
-      }
-
-      if (userInsights.length > 0) {
-        const insights = userInsights.map(i => i.content).join("; ");
-        contextParts.push(`About this person: ${insights}`);
       }
 
       if (contextParts.length > 0) {
         contextMetadata = contextParts.join("\n\n");
+        console.log("[Token] Final context metadata length:", contextMetadata.length, "chars");
       }
     } catch (error) {
       console.error("Failed to fetch voice context:", error);
     }
   }
+
+  console.log("[Token] Context metadata:", contextMetadata ? `${contextMetadata.slice(0, 200)}...` : "NONE");
 
   // Create access token with context metadata
   const at = new AccessToken(apiKey, apiSecret, {

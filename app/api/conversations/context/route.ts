@@ -16,11 +16,11 @@ export async function GET() {
   }
 
   try {
-    // Get recent conversation summaries (last 5 with summaries)
+    // Get recent conversations (last 5 for AI context - not displayed to users)
     const recentConversations = await prisma.conversation.findMany({
       where: {
         userId: session.user.id,
-        summary: { not: null },
+        summary: { not: null }, // Only include summarized conversations
       },
       orderBy: { updatedAt: "desc" },
       select: {
@@ -32,19 +32,10 @@ export async function GET() {
       take: 5,
     });
 
-    // Get user insights (sorted by confidence)
-    const userInsights = await prisma.userInsight.findMany({
-      where: {
-        userId: session.user.id,
-        confidence: { gte: 0.4 }, // Only include moderately confident insights
-      },
-      orderBy: { confidence: "desc" },
-      select: {
-        content: true,
-        category: true,
-        confidence: true,
-      },
-      take: 10,
+    // Get user's consolidated profile summary
+    const user = await prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { profileSummary: true },
     });
 
     // Get active conversation if any
@@ -64,7 +55,7 @@ export async function GET() {
     return new Response(
       JSON.stringify({
         recentSummaries: recentConversations,
-        userInsights,
+        profileSummary: user?.profileSummary || null,
         activeConversation,
       }),
       { headers: { "Content-Type": "application/json" } }

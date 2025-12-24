@@ -3,7 +3,7 @@
 import { useRef, useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { Menu, MessageSquare, Mic, RotateCcw, ChevronRight, User, History } from "lucide-react";
+import { Menu, MessageSquare, Mic, RotateCcw, ChevronRight, Ghost, Loader2 } from "lucide-react";
 import { useSocraticChat } from "@/lib/use-chat";
 import { ChatMessage } from "@/components/chat-message";
 import { ChatInput } from "@/components/chat-input";
@@ -11,9 +11,7 @@ import { ModelSelector } from "@/components/model-selector";
 import { Sidebar } from "@/components/sidebar";
 import { VoiceChat } from "@/components/voice-chat";
 import { AuthHeader } from "@/components/auth/auth-header";
-import { ChatHistoryDrawer } from "@/components/chat-history-drawer";
 import { clsx } from "clsx";
-import type { Insight } from "@/lib/types";
 
 type Mode = "text" | "voice";
 
@@ -33,18 +31,17 @@ export default function Home() {
     problemStatement,
     modelId,
     isLoading,
+    isResetting,
     sendMessage,
     setModel,
     reset,
-    pastConversations,
-    loadConversation,
-    conversationId,
-    userInsights,
+    profileSummary,
+    ghostMode,
+    toggleGhostMode,
   } = useSocraticChat();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [historyDrawerOpen, setHistoryDrawerOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("text");
   const [voiceConnected, setVoiceConnected] = useState(false);
   const [voiceInsights, setVoiceInsights] = useState<VoiceInsightsData | null>(null);
@@ -67,16 +64,6 @@ export default function Home() {
 
   return (
     <div className="flex h-screen-safe bg-[#0a0a0f] text-white overflow-hidden">
-      {/* Chat History Drawer */}
-      <ChatHistoryDrawer
-        isOpen={historyDrawerOpen}
-        onClose={() => setHistoryDrawerOpen(false)}
-        conversations={pastConversations}
-        onSelectConversation={loadConversation}
-        onNewConversation={reset}
-        currentConversationId={conversationId}
-      />
-
       {/* Ambient background glow - warm subtle tones */}
       <div className="fixed inset-0 pointer-events-none">
         <div className="absolute top-1/4 left-1/3 w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-amber-500/[0.03] rounded-full blur-[80px] sm:blur-[120px]" />
@@ -88,14 +75,13 @@ export default function Home() {
         {/* Header - Mobile optimized */}
         <header className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 border-b border-white/5 bg-black/20 backdrop-blur-xl">
           <div className="flex items-center gap-3 sm:gap-6">
-            {/* History Menu Button */}
-            <button
-              onClick={() => setHistoryDrawerOpen(true)}
-              className="p-2 sm:p-2.5 hover:bg-white/5 rounded-xl transition-colors border border-white/10"
-              title="Chat History"
-            >
-              <History className="w-4 h-4 sm:w-5 sm:h-5 text-white/60" />
-            </button>
+            {/* Ghost Mode Indicator */}
+            {ghostMode && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-purple-500/20 border border-purple-500/30 rounded-lg">
+                <Ghost className="w-3.5 h-3.5 text-purple-400" />
+                <span className="text-xs font-medium text-purple-300 hidden sm:inline">Ghost</span>
+              </div>
+            )}
 
             {/* Logo - Compact on mobile */}
             <div className="flex items-center gap-2 sm:gap-3 group cursor-pointer" onClick={reset}>
@@ -161,7 +147,7 @@ export default function Home() {
               <AuthHeader />
             </div>
 
-            {/* Mobile menu button */}
+            {/* Sidebar menu button */}
             <button
               onClick={() => setSidebarOpen(true)}
               className="lg:hidden p-2 sm:p-2.5 hover:bg-white/5 rounded-xl transition-colors border border-white/10"
@@ -268,10 +254,20 @@ export default function Home() {
                 <div className="flex justify-center mb-2 sm:mb-3">
                   <button
                     onClick={reset}
-                    className="btn-sm flex items-center gap-2 px-3 py-1.5 text-xs text-white/40 hover:text-white/60 hover:bg-white/5 rounded-full transition-colors"
+                    disabled={isResetting}
+                    className="btn-sm flex items-center gap-2 px-3 py-1.5 text-xs text-white/40 hover:text-white/60 hover:bg-white/5 rounded-full transition-colors disabled:opacity-50"
                   >
-                    <RotateCcw className="w-3 h-3" />
-                    New conversation
+                    {isResetting ? (
+                      <>
+                        <Loader2 className="w-3 h-3 animate-spin" />
+                        Saving insights...
+                      </>
+                    ) : (
+                      <>
+                        <RotateCcw className="w-3 h-3" />
+                        New conversation
+                      </>
+                    )}
                   </button>
                 </div>
               )}
@@ -312,10 +308,10 @@ export default function Home() {
         voiceSummary={mode === "voice" && voiceInsights ? voiceInsights.summary : undefined}
         voiceReflections={mode === "voice" && voiceInsights ? voiceInsights.reflections : undefined}
         user={session?.user}
-        pastConversations={pastConversations}
-        onLoadConversation={loadConversation}
-        currentConversationId={conversationId}
-        userInsights={userInsights}
+        profileSummary={profileSummary}
+        ghostMode={ghostMode}
+        onToggleGhostMode={toggleGhostMode}
+        isResetting={isResetting}
       />
     </div>
   );

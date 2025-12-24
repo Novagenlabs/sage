@@ -9,15 +9,16 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  email         String    @unique
-  password      String?
-  name          String?
-  image         String?
-  emailVerified DateTime?
-  credits       Int       @default(1000)
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id             String    @id @default(cuid())
+  email          String    @unique
+  password       String?
+  name           String?
+  image          String?
+  emailVerified  DateTime?
+  credits        Int       @default(1000)
+  profileSummary String?   @db.Text // Consolidated summary of what Sage knows about user
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   accounts      Account[]
   sessions      Session[]

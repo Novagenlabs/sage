@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { signOut } from "next-auth/react";
-import { LogOut, Coins, User } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { LogOut, Coins, User, Settings } from "lucide-react";
 import type { Session } from "next-auth";
 
 interface UserMenuProps {
@@ -12,6 +13,7 @@ interface UserMenuProps {
 export function UserMenu({ session }: UserMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -73,6 +75,17 @@ export function UserMenu({ session }: UserMenuProps) {
               Buy Credits
             </button>
           </div>
+
+          <button
+            onClick={() => {
+              setIsOpen(false);
+              router.push("/profile");
+            }}
+            className="w-full px-4 py-3 flex items-center gap-2 text-sm text-white/60 hover:text-white/90 hover:bg-white/5 transition-colors border-b border-stone-700/50"
+          >
+            <Settings className="w-4 h-4" />
+            <span>Profile Settings</span>
+          </button>
 
           <button
             onClick={() => signOut()}

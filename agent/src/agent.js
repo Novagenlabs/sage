@@ -91,15 +91,29 @@ This prevents endless drilling and gives the user agency to redirect.
 
 Never lecture or give direct answers. Guide through questions to help them discover answers within themselves.`;
 
+// Extract user's name from context
+function extractUserName(context) {
+  if (!context) return null;
+  const match = context.match(/User's name: ([^\n]+)/);
+  return match ? match[1].trim() : null;
+}
+
 // Build full instructions with context if available
 function buildInstructions(context) {
   if (!context) {
     return SAGE_BASE_INSTRUCTIONS;
   }
+
+  const userName = extractUserName(context);
+  const nameInstruction = userName
+    ? `\n\nThe user's name is ${userName}. Use their name naturally and warmly in conversation, but don't overuse it.`
+    : '';
+
   return `${SAGE_BASE_INSTRUCTIONS}
 
 ## Context from Previous Sessions
 ${context}
+${nameInstruction}
 
 Use this context naturally in your responses. If they ask if you remember, you can say "Yes, I recall we've spoken before" and reference relevant context. Don't explicitly state you're reading from notes.`;
 }
@@ -237,11 +251,21 @@ export default defineAgent({
     // Say a brief greeting so user knows Sage is ready
     // This provides immediate audio feedback that connection is working
     try {
-      const greeting = userContext
-        ? "Hello again, I'm here. What's on your mind today?"
-        : "Hello, I'm here. What's on your mind?";
+      const userName = extractUserName(userContext);
+      let greeting;
+
+      if (userName && userContext) {
+        greeting = `Hello ${userName}, it's good to hear from you again. What's on your mind today?`;
+      } else if (userName) {
+        greeting = `Hello ${userName}, I'm Sage. What's on your mind?`;
+      } else if (userContext) {
+        greeting = "Hello again, I'm here. What's on your mind today?";
+      } else {
+        greeting = "Hello, I'm Sage. What's on your mind?";
+      }
+
       await session.say(greeting, { allowInterruptions: true });
-      console.log('[GREETING] Initial greeting sent');
+      console.log('[GREETING] Initial greeting sent:', greeting);
     } catch (error) {
       console.error('[GREETING ERROR]', error);
     }

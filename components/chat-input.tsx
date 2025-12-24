@@ -17,6 +17,7 @@ export function ChatInput({ onSend, disabled, placeholder }: ChatInputProps) {
   const [value, setValue] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Auto-resize textarea based on content
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = "auto";
@@ -25,6 +26,23 @@ export function ChatInput({ onSend, disabled, placeholder }: ChatInputProps) {
       textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, maxHeight)}px`;
     }
   }, [value]);
+
+  // Auto-focus when AI finishes responding (disabled goes from true to false)
+  const prevDisabledRef = useRef(disabled);
+  useEffect(() => {
+    if (prevDisabledRef.current === true && disabled === false) {
+      // AI just finished responding, focus the input
+      textareaRef.current?.focus();
+    }
+    prevDisabledRef.current = disabled;
+  }, [disabled]);
+
+  // Also focus on initial mount if not disabled
+  useEffect(() => {
+    if (!disabled) {
+      textareaRef.current?.focus();
+    }
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
