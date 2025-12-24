@@ -8,7 +8,6 @@ import { useSocraticChat } from "@/lib/use-chat";
 import { ChatMessage } from "@/components/chat-message";
 import { ChatInput } from "@/components/chat-input";
 import { ModelSelector } from "@/components/model-selector";
-import { PhaseIndicator } from "@/components/phase-indicator";
 import { Sidebar } from "@/components/sidebar";
 import { VoiceChat } from "@/components/voice-chat";
 import { AuthHeader } from "@/components/auth/auth-header";
@@ -29,7 +28,6 @@ export default function Home() {
 
   const {
     messages,
-    phase,
     insights,
     problemStatement,
     modelId,
@@ -91,12 +89,6 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Phase indicator - Desktop only */}
-            {hasMessages && mode === "text" && (
-              <div className="hidden md:block">
-                <PhaseIndicator currentPhase={phase} />
-              </div>
-            )}
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">

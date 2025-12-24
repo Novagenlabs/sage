@@ -1,5 +1,5 @@
 import { auth } from "@/auth";
-import { SOCRATIC_SYSTEM_PROMPT, getPhasePrompt, type DialoguePhase } from "@/lib/prompts";
+import { buildSystemPrompt, type DialoguePhase } from "@/lib/prompts";
 import { calculateCreditsUsed, deductCredits, hasEnoughCredits } from "@/lib/credits";
 
 export const runtime = "nodejs";
@@ -15,6 +15,7 @@ interface RequestBody {
   messages: ChatMessage[];
   modelId: string;
   phase: DialoguePhase;
+  sessionStartTime?: number; // Unix timestamp when session started
 }
 
 async function fetchWithRetry(
@@ -80,10 +81,15 @@ export async function POST(request: Request) {
 
   try {
     const body: RequestBody = await request.json();
-    const { messages, modelId, phase } = body;
+    const { messages, modelId, phase, sessionStartTime } = body;
 
-    const phaseContext = getPhasePrompt(phase);
-    const systemPrompt = `${SOCRATIC_SYSTEM_PROMPT}\n\n## Current Phase\n${phaseContext}`;
+    // Calculate session duration in minutes
+    const sessionMinutes = sessionStartTime
+      ? Math.floor((Date.now() - sessionStartTime) / 60000)
+      : undefined;
+
+    // Build system prompt with phase context and optional time awareness
+    const systemPrompt = buildSystemPrompt(phase, sessionMinutes);
 
     const apiMessages: ChatMessage[] = [
       { role: "system", content: systemPrompt },
