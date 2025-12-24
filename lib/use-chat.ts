@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect } from "react";
-import type { Message, DialogueState, Insight, Assumption } from "./types";
-import type { DialoguePhase } from "./prompts";
+import type { Message, DialogueState, Insight } from "./types";
+import type { DialoguePhase, ConversationContext } from "./prompts";
 import { DEFAULT_MODEL } from "./models";
 
 const STORAGE_KEY = "socratic-ai-session";
@@ -33,15 +33,24 @@ function extractPhaseData(content: string): PhaseData | null {
 function stripPhaseMarker(content: string): string {
   // Remove complete phase markers
   let cleaned = content.replace(/<!--PHASE:.*?-->/g, "");
-  // Remove incomplete phase markers (during streaming) - matches from <!-- to end if it looks like start of marker
-  cleaned = cleaned.replace(/<!--P(HASE)?:?[^>]*$/s, "");
+  // Remove incomplete phase markers (during streaming)
+  cleaned = cleaned.replace(/<!--P(HASE)?:?[^>]*$/, "");
   // Remove any trailing partial HTML comment start
-  cleaned = cleaned.replace(/<!-?-?$/s, "");
+  cleaned = cleaned.replace(/<!-?-?$/, "");
   return cleaned.trim();
 }
 
 interface ExtendedDialogueState extends DialogueState {
   sessionStartTime: number | null;
+  conversationId: string | null;
+  context: ConversationContext | null;
+}
+
+interface PastConversation {
+  id: string;
+  title: string | null;
+  summary: string | null;
+  updatedAt: string;
 }
 
 const INITIAL_STATE: ExtendedDialogueState = {
@@ -54,6 +63,8 @@ const INITIAL_STATE: ExtendedDialogueState = {
   modelId: DEFAULT_MODEL,
   isLoading: false,
   sessionStartTime: null,
+  conversationId: null,
+  context: null,
 };
 
 function loadFromStorage(): ExtendedDialogueState | null {
@@ -93,16 +104,46 @@ function saveToStorage(state: ExtendedDialogueState): void {
 export function useSocraticChat() {
   const [state, setState] = useState<ExtendedDialogueState>(INITIAL_STATE);
   const [isHydrated, setIsHydrated] = useState(false);
+  const [pastConversations, setPastConversations] = useState<PastConversation[]>([]);
   const abortControllerRef = useRef<AbortController | null>(null);
 
-  // Load from localStorage on mount
+  // Load from localStorage and fetch context on mount
   useEffect(() => {
     const stored = loadFromStorage();
     if (stored) {
       setState(stored);
     }
+
+    // Fetch context from previous sessions
+    fetchContext();
+
     setIsHydrated(true);
   }, []);
+
+  // Fetch context from API (past summaries + user insights)
+  const fetchContext = async () => {
+    try {
+      const response = await fetch("/api/conversations/context");
+      if (response.ok) {
+        const data = await response.json();
+        setState((prev) => ({
+          ...prev,
+          context: {
+            recentSummaries: data.recentSummaries,
+            userInsights: data.userInsights,
+          },
+          // If there's an active conversation, restore it
+          conversationId: data.activeConversation?.id || prev.conversationId,
+        }));
+        // Store past conversations for sidebar display
+        if (data.recentSummaries) {
+          setPastConversations(data.recentSummaries);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch context:", error);
+    }
+  };
 
   // Save to localStorage on state change
   useEffect(() => {
@@ -115,16 +156,83 @@ export function useSocraticChat() {
     setState((prev) => ({ ...prev, modelId }));
   }, []);
 
-  const reset = useCallback(() => {
+  // Create a new conversation in the database
+  const createConversation = async (problemStatement: string): Promise<string | null> => {
+    try {
+      const response = await fetch("/api/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ problemStatement }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        return data.id;
+      }
+    } catch (error) {
+      console.error("Failed to create conversation:", error);
+    }
+    return null;
+  };
+
+  // Save a message to the database
+  const saveMessage = async (
+    conversationId: string,
+    role: "user" | "assistant",
+    content: string,
+    phase: DialoguePhase
+  ) => {
+    try {
+      await fetch(`/api/conversations/${conversationId}/messages`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ role, content, phase }),
+      });
+    } catch (error) {
+      console.error("Failed to save message:", error);
+    }
+  };
+
+  // Summarize and end current conversation
+  const endConversation = async (conversationId: string) => {
+    try {
+      // Generate summary
+      await fetch(`/api/conversations/${conversationId}/summarize`, {
+        method: "POST",
+      });
+      // Mark as inactive
+      await fetch(`/api/conversations/${conversationId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: false }),
+      });
+    } catch (error) {
+      console.error("Failed to end conversation:", error);
+    }
+  };
+
+  const reset = useCallback(async () => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
-    setState(INITIAL_STATE);
+
+    // If there's an active conversation with messages, summarize it
+    if (state.conversationId && state.messages.length >= 2) {
+      await endConversation(state.conversationId);
+    }
+
+    // Refresh context to include the just-ended conversation
+    await fetchContext();
+
+    setState((prev) => ({
+      ...INITIAL_STATE,
+      context: prev.context, // Keep context
+    }));
+
     // Clear storage
     if (typeof window !== "undefined") {
       localStorage.removeItem(STORAGE_KEY);
     }
-  }, []);
+  }, [state.conversationId, state.messages.length]);
 
   const addInsight = useCallback((content: string) => {
     const insight: Insight = {
@@ -138,6 +246,48 @@ export function useSocraticChat() {
       insights: [...prev.insights, insight],
     }));
   }, [state.messages.length]);
+
+  // Load a specific conversation from the database
+  const loadConversation = useCallback(async (conversationId: string) => {
+    try {
+      const response = await fetch(`/api/conversations/${conversationId}`);
+      if (response.ok) {
+        const data = await response.json();
+
+        // Transform messages to match our Message type
+        const messages: Message[] = data.messages.map((m: { id: string; role: string; content: string; createdAt: string; phase?: string }) => ({
+          id: m.id,
+          role: m.role as "user" | "assistant",
+          content: m.content,
+          timestamp: new Date(m.createdAt),
+          phase: m.phase || "opening",
+        }));
+
+        // Find the problem statement (first user message)
+        const firstUserMessage = messages.find(m => m.role === "user");
+
+        setState((prev) => ({
+          ...prev,
+          messages,
+          conversationId: data.id,
+          problemStatement: firstUserMessage?.content || data.title || "",
+          phase: data.messages[data.messages.length - 1]?.phase || "opening",
+          sessionStartTime: new Date(data.createdAt).getTime(),
+          insights: [], // Clear insights - they'll be loaded separately if needed
+        }));
+
+        // Save to localStorage
+        saveToStorage({
+          ...state,
+          messages,
+          conversationId: data.id,
+          problemStatement: firstUserMessage?.content || data.title || "",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to load conversation:", error);
+    }
+  }, [state]);
 
   const sendMessage = useCallback(
     async (content: string) => {
@@ -159,13 +309,25 @@ export function useSocraticChat() {
       const isFirstMessage = state.messages.length === 0;
       const sessionStartTime = isFirstMessage ? Date.now() : state.sessionStartTime;
 
+      // Create conversation in DB if first message
+      let conversationId = state.conversationId;
+      if (isFirstMessage) {
+        conversationId = await createConversation(content);
+      }
+
       setState((prev) => ({
         ...prev,
         messages: [...prev.messages, userMessage],
         problemStatement: isFirstMessage ? content : prev.problemStatement,
         sessionStartTime: sessionStartTime,
+        conversationId: conversationId,
         isLoading: true,
       }));
+
+      // Save user message to DB
+      if (conversationId) {
+        saveMessage(conversationId, "user", content, state.phase);
+      }
 
       try {
         const response = await fetch("/api/chat", {
@@ -179,6 +341,7 @@ export function useSocraticChat() {
             modelId: state.modelId,
             phase: state.phase,
             sessionStartTime: sessionStartTime,
+            context: isFirstMessage ? state.context : undefined, // Only send context on first message
           }),
           signal: abortControllerRef.current.signal,
         });
@@ -250,18 +413,26 @@ export function useSocraticChat() {
 
         // After streaming completes, check for AI-driven phase transition
         const phaseData = extractPhaseData(fullContent);
+        let newPhase = state.phase;
         if (phaseData?.ready && phaseData.next) {
-          setState((prev) => ({ ...prev, phase: phaseData.next as DialoguePhase }));
+          newPhase = phaseData.next as DialoguePhase;
         }
 
         // Ensure final content is clean (without phase marker)
         const cleanContent = stripPhaseMarker(fullContent);
+
+        // Save assistant message to DB
+        if (conversationId) {
+          saveMessage(conversationId, "assistant", cleanContent, newPhase);
+        }
+
         setState((prev) => ({
           ...prev,
           isLoading: false,
+          phase: newPhase,
           messages: prev.messages.map((msg) =>
             msg.id === assistantMessageId
-              ? { ...msg, content: cleanContent }
+              ? { ...msg, content: cleanContent, phase: newPhase }
               : msg
           ),
         }));
@@ -286,7 +457,7 @@ export function useSocraticChat() {
         }));
       }
     },
-    [state.messages, state.modelId, state.phase, state.sessionStartTime]
+    [state.messages, state.modelId, state.phase, state.sessionStartTime, state.conversationId, state.context]
   );
 
   const setPhase = useCallback((phase: DialoguePhase) => {
@@ -301,5 +472,7 @@ export function useSocraticChat() {
     setPhase,
     reset,
     addInsight,
+    pastConversations,
+    loadConversation,
   };
 }

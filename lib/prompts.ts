@@ -122,12 +122,81 @@ export function getPhasePrompt(phase: DialoguePhase): string {
   return PHASE_PROMPTS[phase];
 }
 
-// Build complete system prompt with phase context and optional time awareness
+// Types for conversation context
+export interface ConversationSummary {
+  title: string | null;
+  summary: string | null;
+  updatedAt: Date | string;
+}
+
+export interface UserInsightData {
+  content: string;
+  category: string;
+  confidence: number;
+}
+
+export interface ConversationContext {
+  recentSummaries?: ConversationSummary[];
+  userInsights?: UserInsightData[];
+}
+
+// Build context section from past conversations and user insights
+export function buildContextSection(context: ConversationContext): string {
+  const sections: string[] = [];
+
+  // Add recent session summaries
+  if (context.recentSummaries && context.recentSummaries.length > 0) {
+    const summaries = context.recentSummaries
+      .filter((s) => s.summary)
+      .map((s) => {
+        const date = new Date(s.updatedAt).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        });
+        return `[${date}] ${s.summary}`;
+      })
+      .join("\n\n");
+
+    if (summaries) {
+      sections.push(`## Previous Sessions\n${summaries}`);
+    }
+  }
+
+  // Add user insights
+  if (context.userInsights && context.userInsights.length > 0) {
+    const insights = context.userInsights
+      .map((i) => `- ${i.content}`)
+      .join("\n");
+
+    sections.push(`## What I Know About This Person\n${insights}`);
+  }
+
+  if (sections.length === 0) {
+    return "";
+  }
+
+  return (
+    "\n\n" +
+    sections.join("\n\n") +
+    "\n\nUse this context naturally. Don't explicitly reference \"previous sessions\" unless directly relevant. Let insights inform your questions without stating them outright."
+  );
+}
+
+// Build complete system prompt with phase context, time awareness, and conversation history
 export function buildSystemPrompt(
   phase: DialoguePhase,
-  sessionMinutes?: number
+  sessionMinutes?: number,
+  context?: ConversationContext
 ): string {
   let prompt = SOCRATIC_SYSTEM_PROMPT;
+
+  // Add context from previous sessions if available
+  if (context) {
+    const contextSection = buildContextSection(context);
+    if (contextSection) {
+      prompt += contextSection;
+    }
+  }
 
   // Add current phase context
   prompt += `\n\n## Current Phase\n${PHASE_PROMPTS[phase]}`;

@@ -35,6 +35,9 @@ export default function Home() {
     sendMessage,
     setModel,
     reset,
+    pastConversations,
+    loadConversation,
+    conversationId,
   } = useSocraticChat();
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -287,6 +290,9 @@ export default function Home() {
         voiceSummary={mode === "voice" && voiceInsights ? voiceInsights.summary : undefined}
         voiceReflections={mode === "voice" && voiceInsights ? voiceInsights.reflections : undefined}
         user={session?.user}
+        pastConversations={pastConversations}
+        onLoadConversation={loadConversation}
+        currentConversationId={conversationId}
       />
     </div>
   );

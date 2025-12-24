@@ -1,7 +1,7 @@
 "use client";
 
 import { clsx } from "clsx";
-import { Lightbulb, RotateCcw, Info, X, FileText, Sparkles, LogOut, User, Coins } from "lucide-react";
+import { Lightbulb, RotateCcw, Info, X, FileText, Sparkles, LogOut, User, Coins, History, MessageCircle } from "lucide-react";
 import { signOut } from "next-auth/react";
 import Link from "next/link";
 import type { Insight } from "@/lib/types";
@@ -13,6 +13,14 @@ interface UserData {
   credits?: number;
 }
 
+interface PastConversation {
+  id: string;
+  title: string | null;
+  summary: string | null;
+  updatedAt: string;
+  messageCount?: number;
+}
+
 interface SidebarProps {
   insights: Insight[];
   problemStatement: string;
@@ -22,9 +30,12 @@ interface SidebarProps {
   voiceSummary?: string;
   voiceReflections?: string[];
   user?: UserData | null;
+  pastConversations?: PastConversation[];
+  onLoadConversation?: (id: string) => void;
+  currentConversationId?: string | null;
 }
 
-export function Sidebar({ insights, problemStatement, onReset, isOpen, onClose, voiceSummary, voiceReflections, user }: SidebarProps) {
+export function Sidebar({ insights, problemStatement, onReset, isOpen, onClose, voiceSummary, voiceReflections, user, pastConversations, onLoadConversation, currentConversationId }: SidebarProps) {
   return (
     <>
       {/* Mobile overlay */}
@@ -116,6 +127,45 @@ export function Sidebar({ insights, problemStatement, onReset, isOpen, onClose, 
 
           {/* Content */}
           <div className="flex-1 overflow-y-auto p-4 space-y-6">
+            {/* Past Conversations */}
+            {pastConversations && pastConversations.length > 0 && (
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <History className="w-4 h-4 text-blue-400" />
+                  <h3 className="text-sm font-medium text-gray-300">Past Sessions</h3>
+                </div>
+                <div className="space-y-1.5">
+                  {pastConversations.map((conv) => (
+                    <button
+                      key={conv.id}
+                      onClick={() => onLoadConversation?.(conv.id)}
+                      className={clsx(
+                        "w-full text-left p-2.5 rounded-lg transition-colors",
+                        currentConversationId === conv.id
+                          ? "bg-blue-500/20 border border-blue-500/30"
+                          : "bg-gray-800/50 hover:bg-gray-800 border border-transparent"
+                      )}
+                    >
+                      <div className="flex items-start gap-2">
+                        <MessageCircle className="w-3.5 h-3.5 text-gray-500 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-gray-300 truncate">
+                            {conv.title || conv.summary?.slice(0, 50) || "Untitled session"}
+                          </p>
+                          <p className="text-[10px] text-gray-500 mt-0.5">
+                            {new Date(conv.updatedAt).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </p>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Problem Statement / Topic */}
             {problemStatement && (
               <div>

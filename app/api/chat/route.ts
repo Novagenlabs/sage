@@ -1,5 +1,5 @@
 import { auth } from "@/auth";
-import { buildSystemPrompt, type DialoguePhase } from "@/lib/prompts";
+import { buildSystemPrompt, type DialoguePhase, type ConversationContext } from "@/lib/prompts";
 import { calculateCreditsUsed, deductCredits, hasEnoughCredits } from "@/lib/credits";
 
 export const runtime = "nodejs";
@@ -16,6 +16,7 @@ interface RequestBody {
   modelId: string;
   phase: DialoguePhase;
   sessionStartTime?: number; // Unix timestamp when session started
+  context?: ConversationContext; // Past session summaries and user insights
 }
 
 async function fetchWithRetry(
@@ -81,15 +82,15 @@ export async function POST(request: Request) {
 
   try {
     const body: RequestBody = await request.json();
-    const { messages, modelId, phase, sessionStartTime } = body;
+    const { messages, modelId, phase, sessionStartTime, context } = body;
 
     // Calculate session duration in minutes
     const sessionMinutes = sessionStartTime
       ? Math.floor((Date.now() - sessionStartTime) / 60000)
       : undefined;
 
-    // Build system prompt with phase context and optional time awareness
-    const systemPrompt = buildSystemPrompt(phase, sessionMinutes);
+    // Build system prompt with phase context, time awareness, and conversation history
+    const systemPrompt = buildSystemPrompt(phase, sessionMinutes, context);
 
     const apiMessages: ChatMessage[] = [
       { role: "system", content: systemPrompt },

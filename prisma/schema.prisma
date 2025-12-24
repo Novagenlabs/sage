@@ -23,6 +23,7 @@ model User {
   sessions      Session[]
   usageRecords  UsageRecord[]
   conversations Conversation[]
+  userInsights  UserInsight[]
 }
 
 model Account {
@@ -65,11 +66,14 @@ model Conversation {
   userId    String
   title     String?
   phase     String   @default("opening")
+  summary   String?  @db.Text // AI-generated summary for context injection
+  isActive  Boolean  @default(true) // Is this the current active conversation?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
   messages Message[]
+  insights ConversationInsight[]
 }
 
 model Message {
@@ -92,6 +96,28 @@ model UsageRecord {
   creditsUsed Int
   modelId     String?
   createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ConversationInsight {
+  id             String   @id @default(cuid())
+  conversationId String
+  content        String   @db.Text
+  type           String // "realization", "assumption", "pattern", "question"
+  createdAt      DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+}
+
+model UserInsight {
+  id         String   @id @default(cuid())
+  userId     String
+  content    String   @db.Text // e.g., "Tends to overthink decisions"
+  category   String // "pattern", "preference", "goal", "behavior"
+  confidence Float    @default(0.5) // 0-1, how reliable this insight is
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
