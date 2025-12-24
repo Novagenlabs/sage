@@ -140,7 +140,9 @@ export function useSocraticChat() {
           setPastConversations(data.recentSummaries);
         }
       }
+      // 401 is expected when not logged in - silently ignore
     } catch (error) {
+      // Only log actual network errors, not auth issues
       console.error("Failed to fetch context:", error);
     }
   };
