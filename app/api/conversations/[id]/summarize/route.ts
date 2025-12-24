@@ -151,11 +151,14 @@ export async function POST(request: Request, { params }: RouteParams) {
       };
     }
 
+    console.log("[Summarize] Parsed response:", JSON.stringify(parsed, null, 2));
+
     // Save summary to conversation
     await prisma.conversation.update({
       where: { id },
       data: { summary: parsed.summary },
     });
+    console.log("[Summarize] Saved summary to conversation");
 
     // Save conversation insights
     if (parsed.insights && parsed.insights.length > 0) {
@@ -166,10 +169,12 @@ export async function POST(request: Request, { params }: RouteParams) {
           type: insight.type || "realization",
         })),
       });
+      console.log("[Summarize] Saved", parsed.insights.length, "conversation insights");
     }
 
     // Save or update user patterns/insights
     if (parsed.userPatterns && parsed.userPatterns.length > 0) {
+      console.log("[Summarize] Processing", parsed.userPatterns.length, "user patterns");
       for (const pattern of parsed.userPatterns) {
         // Check if similar insight already exists
         const existing = await prisma.userInsight.findFirst({
@@ -187,6 +192,7 @@ export async function POST(request: Request, { params }: RouteParams) {
               confidence: (existing.confidence + (pattern.confidence || 0.5)) / 2,
             },
           });
+          console.log("[Summarize] Updated existing user insight:", pattern.content.slice(0, 50));
         } else {
           // Create new user insight
           await prisma.userInsight.create({
@@ -197,6 +203,7 @@ export async function POST(request: Request, { params }: RouteParams) {
               confidence: pattern.confidence || 0.5,
             },
           });
+          console.log("[Summarize] Created new user insight:", pattern.content.slice(0, 50));
         }
       }
     }

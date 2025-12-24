@@ -195,16 +195,23 @@ export function useSocraticChat() {
   // Summarize and end current conversation
   const endConversation = async (conversationId: string) => {
     try {
+      console.log("[Chat] Ending conversation:", conversationId);
       // Generate summary
-      await fetch(`/api/conversations/${conversationId}/summarize`, {
+      const summarizeResponse = await fetch(`/api/conversations/${conversationId}/summarize`, {
         method: "POST",
       });
+      console.log("[Chat] Summarize response status:", summarizeResponse.status);
+      if (!summarizeResponse.ok) {
+        const errorText = await summarizeResponse.text();
+        console.error("[Chat] Summarize failed:", errorText);
+      }
       // Mark as inactive
       await fetch(`/api/conversations/${conversationId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ isActive: false }),
       });
+      console.log("[Chat] Conversation marked as inactive");
     } catch (error) {
       console.error("Failed to end conversation:", error);
     }

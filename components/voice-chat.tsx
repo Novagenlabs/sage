@@ -86,6 +86,25 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
   const [isLoadingInsights, setIsLoadingInsights] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
   const [currentTopic, setCurrentTopic] = useState<string>("");
+  const [conversationId, setConversationId] = useState<string | null>(null);
+
+  // Create a conversation in the database
+  const createConversation = useCallback(async (problemStatement: string): Promise<string | null> => {
+    try {
+      const response = await fetch("/api/conversations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ problemStatement, title: `Voice: ${problemStatement.slice(0, 50)}` }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        return data.id;
+      }
+    } catch (error) {
+      console.error("Failed to create conversation:", error);
+    }
+    return null;
+  }, []);
 
   const addTranscriptMessage = useCallback((role: "user" | "assistant", content: string) => {
     setTranscript((prev) => {
@@ -94,11 +113,79 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
         setCurrentTopic(content);
         // Schedule parent notification outside of setState to avoid React warning
         setTimeout(() => onTopicChange?.(content), 0);
+        // Create conversation in database
+        createConversation(content).then((id) => {
+          if (id) {
+            setConversationId(id);
+            console.log("[Voice] Created conversation:", id);
+          }
+        });
       }
       return [...prev, { role, content, timestamp: new Date() }];
     });
-  }, [onTopicChange]);
+  }, [onTopicChange, createConversation]);
 
+  // Save messages and generate summary/insights
+  const saveConversationAndGenerateInsights = useCallback(async (
+    convId: string,
+    conversationTranscript: TranscriptMessage[]
+  ) => {
+    if (conversationTranscript.length < 2) return;
+
+    setIsLoadingInsights(true);
+    try {
+      // Save all messages to the database
+      for (const msg of conversationTranscript) {
+        await fetch(`/api/conversations/${convId}/messages`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            role: msg.role,
+            content: msg.content,
+            phase: "voice",
+          }),
+        });
+      }
+
+      // Generate summary and extract insights
+      const summarizeResponse = await fetch(`/api/conversations/${convId}/summarize`, {
+        method: "POST",
+      });
+
+      // Mark conversation as inactive
+      await fetch(`/api/conversations/${convId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isActive: false }),
+      });
+
+      // Also call the existing insights endpoint for immediate UI display
+      const insightsResponse = await fetch("/api/insights", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          transcript: conversationTranscript.map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
+        }),
+      });
+
+      if (insightsResponse.ok) {
+        const data = await insightsResponse.json();
+        setInsights(data);
+        onInsightsChange?.(data);
+      }
+
+      console.log("[Voice] Conversation saved and summarized:", convId);
+    } catch (err) {
+      console.error("Failed to save conversation:", err);
+    } finally {
+      setIsLoadingInsights(false);
+    }
+  }, [onInsightsChange]);
+
+  // Legacy function for when no conversation was created (unauthenticated)
   const generateInsights = useCallback(async (conversationTranscript: TranscriptMessage[]) => {
     if (conversationTranscript.length < 2) return;
 
@@ -168,15 +255,22 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
     // Show summary and generate insights if there was a conversation
     if (transcript.length >= 2) {
       setShowSummary(true);
-      generateInsights(transcript);
+      // Save to database if we have a conversation ID (authenticated user)
+      if (conversationId) {
+        saveConversationAndGenerateInsights(conversationId, transcript);
+      } else {
+        // Fallback for unauthenticated users - just generate UI insights
+        generateInsights(transcript);
+      }
     }
-  }, [onConnectionChange, transcript, generateInsights]);
+  }, [onConnectionChange, transcript, conversationId, saveConversationAndGenerateInsights, generateInsights]);
 
   const closeSummary = useCallback(() => {
     setShowSummary(false);
     setTranscript([]);
     setInsights(null);
     setCurrentTopic("");
+    setConversationId(null);
     onInsightsChange?.(null);
     onTopicChange?.("");
   }, [onInsightsChange, onTopicChange]);
