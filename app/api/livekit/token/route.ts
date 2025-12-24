@@ -1,5 +1,7 @@
 import { AccessToken } from "livekit-server-sdk";
 import { NextRequest } from "next/server";
+import { auth } from "@/auth";
+import { prisma } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
   const { roomName, participantName } = await request.json();
@@ -21,10 +23,64 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Create access token
+  // Fetch context for authenticated users
+  let contextMetadata = "";
+  const session = await auth();
+  if (session?.user?.id) {
+    try {
+      // Get recent conversation summaries
+      const recentConversations = await prisma.conversation.findMany({
+        where: {
+          userId: session.user.id,
+          summary: { not: null },
+        },
+        orderBy: { updatedAt: "desc" },
+        select: { summary: true, updatedAt: true },
+        take: 3,
+      });
+
+      // Get user insights
+      const userInsights = await prisma.userInsight.findMany({
+        where: {
+          userId: session.user.id,
+          confidence: { gte: 0.4 },
+        },
+        orderBy: { confidence: "desc" },
+        select: { content: true },
+        take: 5,
+      });
+
+      // Build context string for the agent
+      const contextParts: string[] = [];
+
+      if (recentConversations.length > 0) {
+        const summaries = recentConversations
+          .map(c => c.summary)
+          .filter(Boolean)
+          .join(" | ");
+        if (summaries) {
+          contextParts.push(`Recent sessions: ${summaries}`);
+        }
+      }
+
+      if (userInsights.length > 0) {
+        const insights = userInsights.map(i => i.content).join("; ");
+        contextParts.push(`About this person: ${insights}`);
+      }
+
+      if (contextParts.length > 0) {
+        contextMetadata = contextParts.join("\n\n");
+      }
+    } catch (error) {
+      console.error("Failed to fetch voice context:", error);
+    }
+  }
+
+  // Create access token with context metadata
   const at = new AccessToken(apiKey, apiSecret, {
     identity: participantName,
-    ttl: "1h", // Token valid for 1 hour
+    ttl: "1h",
+    metadata: contextMetadata || undefined,
   });
 
   // Grant permissions

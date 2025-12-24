@@ -37,7 +37,7 @@ function logTTSMetrics(metrics) {
 }
 
 // Sage system prompt - wise female guide
-const SAGE_INSTRUCTIONS = `You are Sage, a wise guide helping people discover their own answers through thoughtful questions.
+const SAGE_BASE_INSTRUCTIONS = `You are Sage, a wise guide helping people discover their own answers through thoughtful questions.
 
 Character:
 - Wise, calm, knowing - like a trusted elder
@@ -63,6 +63,19 @@ When the user shows signs of clarity or resolution, gracefully acknowledge it in
 In these moments, affirm their insight warmly ("That's a powerful realization.", "You've found your own answer.") and offer gentle closure. You might ask if there's anything else, but don't force more exploration.
 
 Never lecture or give direct answers. Guide through questions to help them discover answers within themselves.`;
+
+// Build full instructions with context if available
+function buildInstructions(context) {
+  if (!context) {
+    return SAGE_BASE_INSTRUCTIONS;
+  }
+  return `${SAGE_BASE_INSTRUCTIONS}
+
+## Context from Previous Sessions
+${context}
+
+Use this context naturally in your responses. If they ask if you remember, you can say "Yes, I recall we've spoken before" and reference relevant context. Don't explicitly state you're reading from notes.`;
+}
 
 // Define the Sage agent
 export default defineAgent({
@@ -137,11 +150,6 @@ export default defineAgent({
       console.error('[TTS ERROR]', error);
     });
 
-    // Create the Sage voice agent
-    const assistant = new voice.Agent({
-      instructions: SAGE_INSTRUCTIONS,
-    });
-
     // Configure the voice session
     const session = new voice.AgentSession({
       vad,
@@ -163,6 +171,34 @@ export default defineAgent({
     await ctx.connect();
     console.log(`Connected to room: ${ctx.room.name}`);
 
+    // Wait for user participant and get their metadata (context)
+    let userContext = null;
+    const participants = ctx.room.remoteParticipants;
+    for (const [, participant] of participants) {
+      if (participant.metadata) {
+        userContext = participant.metadata;
+        console.log('[CONTEXT] Found user context:', userContext.slice(0, 100) + '...');
+        break;
+      }
+    }
+
+    // Also listen for new participants joining with metadata
+    ctx.room.on('participantConnected', (participant) => {
+      if (participant.metadata && !userContext) {
+        userContext = participant.metadata;
+        console.log('[CONTEXT] User joined with context:', userContext.slice(0, 100) + '...');
+      }
+    });
+
+    // Build instructions with context
+    const instructions = buildInstructions(userContext);
+    console.log('[INSTRUCTIONS] Using context:', userContext ? 'Yes' : 'No');
+
+    // Create the Sage voice agent with context-aware instructions
+    const assistant = new voice.Agent({
+      instructions: instructions,
+    });
+
     // Start the session with the agent
     await session.start({
       agent: assistant,
@@ -174,7 +210,10 @@ export default defineAgent({
     // Say a brief greeting so user knows Sage is ready
     // This provides immediate audio feedback that connection is working
     try {
-      await session.say("Hello, I'm here. What's on your mind?", { allowInterruptions: true });
+      const greeting = userContext
+        ? "Hello again, I'm here. What's on your mind today?"
+        : "Hello, I'm here. What's on your mind?";
+      await session.say(greeting, { allowInterruptions: true });
       console.log('[GREETING] Initial greeting sent');
     } catch (error) {
       console.error('[GREETING ERROR]', error);
