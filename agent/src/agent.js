@@ -122,10 +122,18 @@ Use this context naturally in your responses. If they ask if you remember, you c
 export default defineAgent({
   prewarm: async (proc) => {
     // Preload VAD model for faster startup
-    proc.userData.vad = await silero.VAD.load();
+    console.log('[PREWARM] Loading Silero VAD model...');
+    try {
+      proc.userData.vad = await silero.VAD.load();
+      console.log('[PREWARM] VAD model loaded successfully');
+    } catch (error) {
+      console.error('[PREWARM ERROR] Failed to load VAD:', error);
+      throw error;
+    }
   },
 
   entry: async (ctx) => {
+    console.log('[ENTRY] Starting agent entry point...');
     const vad = ctx.proc.userData.vad;
 
     // Debug: Check environment variables
