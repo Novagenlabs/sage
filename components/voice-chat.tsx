@@ -125,7 +125,7 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
     });
   }, [onTopicChange, createConversation]);
 
-  // Save messages and generate summary/insights
+  // Save messages and generate summary/insights via Inngest (durable background processing)
   const saveConversationAndGenerateInsights = useCallback(async (
     convId: string,
     conversationTranscript: TranscriptMessage[]
@@ -134,32 +134,25 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
 
     setIsLoadingInsights(true);
     try {
-      // Save all messages to the database
-      for (const msg of conversationTranscript) {
-        await fetch(`/api/conversations/${convId}/messages`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            role: msg.role,
-            content: msg.content,
-            phase: "voice",
-          }),
-        });
-      }
-
-      // Generate summary and extract insights
-      const summarizeResponse = await fetch(`/api/conversations/${convId}/summarize`, {
+      // Queue durable background processing via Inngest
+      // This handles: save messages, summarize, extract insights, update profile
+      // Processing continues even if user refreshes/leaves the page
+      await fetch("/api/conversation/end", {
         method: "POST",
-      });
-
-      // Mark conversation as inactive
-      await fetch(`/api/conversations/${convId}`, {
-        method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isActive: false }),
+        body: JSON.stringify({
+          conversationId: convId,
+          type: "voice",
+          transcript: conversationTranscript.map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
+        }),
       });
 
-      // Also call the existing insights endpoint for immediate UI display
+      console.log("[Voice] Queued conversation for background processing:", convId);
+
+      // Generate immediate UI insights (doesn't save to DB, just for display)
       const insightsResponse = await fetch("/api/insights", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -176,10 +169,8 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
         setInsights(data);
         onInsightsChange?.(data);
       }
-
-      console.log("[Voice] Conversation saved and summarized:", convId);
     } catch (err) {
-      console.error("Failed to save conversation:", err);
+      console.error("Failed to process conversation:", err);
     } finally {
       setIsLoadingInsights(false);
     }

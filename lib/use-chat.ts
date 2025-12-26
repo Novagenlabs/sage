@@ -116,7 +116,7 @@ export function useSocraticChat() {
     setIsHydrated(true);
   }, []);
 
-  // Fetch context from API (past summaries + profile summary)
+  // Fetch context from API (past summaries + profile summary + user name)
   const fetchContext = async () => {
     try {
       const response = await fetch("/api/conversations/context");
@@ -127,6 +127,7 @@ export function useSocraticChat() {
           context: {
             recentSummaries: data.recentSummaries,
             profileSummary: data.profileSummary,
+            userName: data.userName,
           },
           profileSummary: data.profileSummary || null,
           // If there's an active conversation, restore it
@@ -187,26 +188,29 @@ export function useSocraticChat() {
     }
   };
 
-  // Summarize and end current conversation
+  // End conversation via Inngest (durable background processing)
+  // Handles: summarize, extract insights, update profile, mark inactive
   const endConversation = async (conversationId: string) => {
     try {
-      console.log("[Chat] Ending conversation:", conversationId);
-      // Generate summary
-      const summarizeResponse = await fetch(`/api/conversations/${conversationId}/summarize`, {
+      console.log("[Chat] Ending conversation via Inngest:", conversationId);
+
+      // Queue durable background processing
+      // Processing continues even if user refreshes/leaves the page
+      const response = await fetch("/api/conversation/end", {
         method: "POST",
-      });
-      console.log("[Chat] Summarize response status:", summarizeResponse.status);
-      if (!summarizeResponse.ok) {
-        const errorText = await summarizeResponse.text();
-        console.error("[Chat] Summarize failed:", errorText);
-      }
-      // Mark as inactive
-      await fetch(`/api/conversations/${conversationId}`, {
-        method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ isActive: false }),
+        body: JSON.stringify({
+          conversationId,
+          type: "text",
+        }),
       });
-      console.log("[Chat] Conversation marked as inactive");
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("[Chat] Failed to queue conversation end:", errorText);
+      } else {
+        console.log("[Chat] Conversation queued for background processing");
+      }
     } catch (error) {
       console.error("Failed to end conversation:", error);
     }

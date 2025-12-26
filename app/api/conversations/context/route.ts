@@ -32,10 +32,10 @@ export async function GET() {
       take: 5,
     });
 
-    // Get user's consolidated profile summary
+    // Get user's consolidated profile summary and name
     const user = await prisma.user.findUnique({
       where: { id: session.user.id },
-      select: { profileSummary: true },
+      select: { profileSummary: true, name: true },
     });
 
     // Get active conversation if any
@@ -56,6 +56,7 @@ export async function GET() {
       JSON.stringify({
         recentSummaries: recentConversations,
         profileSummary: user?.profileSummary || null,
+        userName: user?.name || null,
         activeConversation,
       }),
       { headers: { "Content-Type": "application/json" } }

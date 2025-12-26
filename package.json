@@ -16,6 +16,7 @@
     "ai": "^4.0.0",
     "bcryptjs": "^3.0.3",
     "clsx": "^2.1.0",
+    "inngest": "^3.48.1",
     "livekit-client": "^2.16.0",
     "livekit-server-sdk": "^2.14.2",
     "lucide-react": "^0.460.0",

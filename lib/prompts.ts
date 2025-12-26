@@ -138,11 +138,23 @@ export interface UserInsightData {
 export interface ConversationContext {
   recentSummaries?: ConversationSummary[];
   userInsights?: UserInsightData[];
+  profileSummary?: string | null;
+  userName?: string | null;
 }
 
 // Build context section from past conversations and user insights
 export function buildContextSection(context: ConversationContext): string {
   const sections: string[] = [];
+
+  // Add user's name if available
+  if (context.userName) {
+    sections.push(`## User\nThe user's name is ${context.userName}. Use their name naturally and warmly in conversation, but don't overuse it.`);
+  }
+
+  // Add profile summary if available
+  if (context.profileSummary) {
+    sections.push(`## What I Know About This Person\n${context.profileSummary}`);
+  }
 
   // Add recent session summaries
   if (context.recentSummaries && context.recentSummaries.length > 0) {
@@ -162,13 +174,13 @@ export function buildContextSection(context: ConversationContext): string {
     }
   }
 
-  // Add user insights
+  // Add user insights (legacy, if still used)
   if (context.userInsights && context.userInsights.length > 0) {
     const insights = context.userInsights
       .map((i) => `- ${i.content}`)
       .join("\n");
 
-    sections.push(`## What I Know About This Person\n${insights}`);
+    sections.push(`## Additional Observations\n${insights}`);
   }
 
   if (sections.length === 0) {
@@ -178,7 +190,7 @@ export function buildContextSection(context: ConversationContext): string {
   return (
     "\n\n" +
     sections.join("\n\n") +
-    "\n\nUse this context naturally. Don't explicitly reference \"previous sessions\" unless directly relevant. Let insights inform your questions without stating them outright."
+    "\n\nUse this context naturally. If they ask if you remember them, you can warmly acknowledge your previous conversations. Let insights inform your questions without stating them outright."
   );
 }
 
