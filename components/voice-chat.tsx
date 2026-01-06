@@ -13,6 +13,8 @@ import { Mic, MicOff, Phone, PhoneOff, Loader2, X } from "lucide-react";
 import { clsx } from "clsx";
 import type { Message } from "@/lib/types";
 import { VoiceOrb } from "./voice-orb";
+import { VoiceSelector } from "./voice-selector";
+import { DEFAULT_VOICE_KEY } from "@/lib/voices";
 
 interface TranscriptMessage {
   role: "user" | "assistant";
@@ -79,6 +81,21 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
   const [participantName] = useState(generateParticipantName);
   const [error, setError] = useState<string>("");
   const orbSize = useOrbSize();
+
+  // Voice selection state with localStorage persistence
+  const [selectedVoiceKey, setSelectedVoiceKey] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("sage-voice-preference") || DEFAULT_VOICE_KEY;
+    }
+    return DEFAULT_VOICE_KEY;
+  });
+
+  // Persist voice selection to localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("sage-voice-preference", selectedVoiceKey);
+    }
+  }, [selectedVoiceKey]);
 
   // Transcript and insights state
   const [transcript, setTranscript] = useState<TranscriptMessage[]>([]);
@@ -216,6 +233,7 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
         body: JSON.stringify({
           roomName,
           participantName,
+          voiceKey: selectedVoiceKey,
         }),
       });
 
@@ -238,7 +256,7 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
       setError(err instanceof Error ? err.message : "Connection failed");
       setConnectionState("disconnected");
     }
-  }, [roomName, participantName, onConnectionChange]);
+  }, [roomName, participantName, selectedVoiceKey, onConnectionChange]);
 
   const disconnect = useCallback(() => {
     setToken("");
@@ -384,6 +402,14 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
           <p className="text-sm sm:text-base text-stone-400 max-w-md leading-relaxed">
             Have a conversation through voice. Ask questions, explore ideas, and discover answers together.
           </p>
+        </div>
+
+        {/* Voice selector */}
+        <div className="z-10 w-full max-w-xs px-4">
+          <VoiceSelector
+            selectedVoiceKey={selectedVoiceKey}
+            onSelect={setSelectedVoiceKey}
+          />
         </div>
 
         <button

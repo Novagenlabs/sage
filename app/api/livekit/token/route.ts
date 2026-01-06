@@ -4,7 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
-  const { roomName, participantName } = await request.json();
+  const { roomName, participantName, voiceKey } = await request.json();
 
   const apiKey = process.env.LIVEKIT_API_KEY;
   const apiSecret = process.env.LIVEKIT_API_SECRET;
@@ -80,12 +80,19 @@ export async function POST(request: NextRequest) {
   }
 
   console.log("[Token] Context metadata:", contextMetadata ? `${contextMetadata.slice(0, 200)}...` : "NONE");
+  console.log("[Token] Voice key:", voiceKey || "default (sage)");
 
-  // Create access token with context metadata
+  // Build structured metadata object with voice selection and context
+  const metadataObj = {
+    voiceKey: voiceKey || "sage",
+    context: contextMetadata || null,
+  };
+
+  // Create access token with JSON metadata
   const at = new AccessToken(apiKey, apiSecret, {
     identity: participantName,
     ttl: "1h",
-    metadata: contextMetadata || undefined,
+    metadata: JSON.stringify(metadataObj),
   });
 
   // Grant permissions
