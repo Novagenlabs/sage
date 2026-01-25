@@ -5,6 +5,7 @@ import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Loader2, Coins } from "lucide-react";
+import { LogoOrb } from "@/components/voice-orb-3d";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -64,16 +65,11 @@ export default function SignUpPage() {
         {/* Header */}
         <div className="text-center mb-6 sm:mb-8">
           <div className="mb-4 sm:mb-6 flex justify-center">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden ring-1 ring-stone-500/20 shadow-xl shadow-black/40">
-              <img
-                src="/sage.png"
-                alt="Sage"
-                className="w-full h-full object-cover object-top scale-150"
-              />
-            </div>
+            <LogoOrb size={64} className="sm:hidden" />
+            <LogoOrb size={80} className="hidden sm:block" animated />
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white mb-1 sm:mb-2">Create your account</h1>
-          <p className="text-sm sm:text-base text-white/50">Start your journey of self-discovery</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-white mb-1 sm:mb-2 text-balance">Create your account</h1>
+          <p className="text-sm sm:text-base text-white/50 text-pretty">Start your journey of self-discovery</p>
         </div>
 
         {/* Free credits banner */}

@@ -10,6 +10,7 @@ import { ChatInput } from "@/components/chat-input";
 import { ModelSelector } from "@/components/model-selector";
 import { Sidebar } from "@/components/sidebar";
 import { VoiceChat } from "@/components/voice-chat";
+import { VoiceOrb, LogoOrb } from "@/components/voice-orb-3d";
 import { AuthHeader } from "@/components/auth/auth-header";
 import { clsx } from "clsx";
 
@@ -85,17 +86,10 @@ export default function Home() {
 
             {/* Logo - Compact on mobile */}
             <div className="flex items-center gap-2 sm:gap-3 group cursor-pointer" onClick={reset}>
-              <div className="relative">
-                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden ring-1 ring-stone-500/20 shadow-lg shadow-black/30 group-hover:ring-stone-500/30 transition-all">
-                  <img
-                    src="/sage.png"
-                    alt="Sage"
-                    className="w-full h-full object-cover object-top scale-150"
-                  />
-                </div>
-              </div>
+              <LogoOrb size={32} className="sm:hidden" />
+              <LogoOrb size={40} className="hidden sm:block" animated />
               <div className="hidden xs:block sm:block">
-                <h1 className="text-base sm:text-lg font-semibold tracking-tight">Sage</h1>
+                <h1 className="text-base sm:text-lg font-semibold tracking-tight text-balance">Sage</h1>
                 <p className="text-[10px] sm:text-xs text-white/40 -mt-0.5">Ask anything</p>
               </div>
             </div>
@@ -175,29 +169,17 @@ export default function Home() {
               <div className="max-w-2xl w-full">
                 {/* Hero section - Mobile optimized */}
                 <div className="text-center mb-8 sm:mb-12">
-                  {/* Sage portrait - Smaller on mobile */}
+                  {/* Orb logo - Smaller on mobile */}
                   <div className="mb-6 sm:mb-8 flex justify-center">
-                    <div className="relative group">
-                      {/* Subtle warm glow */}
-                      <div className="absolute -inset-4 bg-amber-500/[0.08] rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-
-                      {/* Sage image in circular frame */}
-                      <div className="relative w-[120px] h-[120px] sm:w-[150px] sm:h-[150px] md:w-[180px] md:h-[180px] rounded-full overflow-hidden ring-1 ring-stone-500/20 shadow-2xl shadow-black/40">
-                        <img
-                          src="/sage.png"
-                          alt="Sage"
-                          className="w-full h-full object-cover object-top scale-125 -translate-y-2"
-                        />
-                        {/* Subtle gradient overlay for blending */}
-                        <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0f]/40 via-transparent to-transparent" />
-                      </div>
-                    </div>
+                    <VoiceOrb state="idle" size={120} className="sm:hidden" />
+                    <VoiceOrb state="idle" size={150} className="hidden sm:block md:hidden" />
+                    <VoiceOrb state="idle" size={180} className="hidden md:block" />
                   </div>
 
-                  <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-3 sm:mb-4 text-white">
+                  <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-3 sm:mb-4 text-white text-balance">
                     What&apos;s on your mind?
                   </h2>
-                  <p className="text-sm sm:text-lg text-white/50 max-w-md mx-auto leading-relaxed px-4">
+                  <p className="text-sm sm:text-lg text-white/50 max-w-md mx-auto leading-relaxed px-4 text-pretty">
                     Ask anything. I&apos;ll help you find the answers you&apos;re looking for.
                   </p>
                 </div>

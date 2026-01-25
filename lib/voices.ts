@@ -16,10 +16,11 @@ export interface Voice {
   settings: VoiceSettings;
 }
 
+// All voice IDs verified from ElevenLabs API
 export const AVAILABLE_VOICES: Voice[] = [
   {
     key: "sage",
-    id: "7NsaqHdLuKNFvEfjpUno",
+    id: "EXAVITQu4vr4xnSDxMaL", // Sarah
     name: "Sage",
     gender: "female",
     description: "Wise and calm (default)",
@@ -32,7 +33,7 @@ export const AVAILABLE_VOICES: Voice[] = [
   },
   {
     key: "rachel",
-    id: "21m00Tcm4TlvDq8ikWAM",
+    id: "21m00Tcm4TlvDq8ikWAM", // Rachel - original working
     name: "Rachel",
     gender: "female",
     description: "Warm and friendly",
@@ -45,7 +46,7 @@ export const AVAILABLE_VOICES: Voice[] = [
   },
   {
     key: "matilda",
-    id: "XrExE9yKIg1WjnnlVkGX",
+    id: "XrExE9yKIg1WjnnlVkGX", // Matilda - verified
     name: "Matilda",
     gender: "female",
     description: "Soft and nurturing",
@@ -57,11 +58,11 @@ export const AVAILABLE_VOICES: Voice[] = [
     },
   },
   {
-    key: "thomas",
-    id: "GBv7mTt0atIp3Br8iCZE",
-    name: "Thomas",
+    key: "george",
+    id: "JBFqnCBsd6RMkjVDRZzb", // George - verified
+    name: "George",
     gender: "male",
-    description: "Calm and meditative",
+    description: "Calm and thoughtful",
     settings: {
       stability: 0.8,
       similarity_boost: 0.75,
@@ -70,9 +71,9 @@ export const AVAILABLE_VOICES: Voice[] = [
     },
   },
   {
-    key: "emily",
-    id: "LcfcDJNUP1GQjkzn1xUU",
-    name: "Emily",
+    key: "lily",
+    id: "pFZP5JQG7iQjIQuC4Bku", // Lily - verified
+    name: "Lily",
     gender: "female",
     description: "Gentle and soothing",
     settings: {
@@ -83,11 +84,11 @@ export const AVAILABLE_VOICES: Voice[] = [
     },
   },
   {
-    key: "james",
-    id: "ZQe5CZNOzWyzPSCn5a3c",
-    name: "James",
+    key: "brian",
+    id: "nPczCjzI2devNBz1zQrb", // Brian - verified
+    name: "Brian",
     gender: "male",
-    description: "Thoughtful and steady",
+    description: "Clear and steady",
     settings: {
       stability: 0.75,
       similarity_boost: 0.75,

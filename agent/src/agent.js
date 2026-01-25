@@ -162,90 +162,23 @@ export default defineAgent({
       console.error('[LLM ERROR]', error);
     });
 
-    // Voice options - user-selectable voices
-    const VOICE_OPTIONS = {
-      sage: {
-        id: '7NsaqHdLuKNFvEfjpUno',
-        name: 'Sage',
-        settings: { stability: 0.85, similarity_boost: 0.8, style: 0, use_speaker_boost: true },
-      },
-      rachel: {
-        id: '21m00Tcm4TlvDq8ikWAM',
-        name: 'Rachel',
-        settings: { stability: 0.7, similarity_boost: 0.75, style: 0, use_speaker_boost: true },
-      },
-      matilda: {
-        id: 'XrExE9yKIg1WjnnlVkGX',
-        name: 'Matilda',
-        settings: { stability: 0.75, similarity_boost: 0.8, style: 0, use_speaker_boost: true },
-      },
-      thomas: {
-        id: 'GBv7mTt0atIp3Br8iCZE',
-        name: 'Thomas',
-        settings: { stability: 0.8, similarity_boost: 0.75, style: 0, use_speaker_boost: true },
-      },
-      emily: {
-        id: 'LcfcDJNUP1GQjkzn1xUU',
-        name: 'Emily',
-        settings: { stability: 0.8, similarity_boost: 0.8, style: 0, use_speaker_boost: true },
-      },
-      james: {
-        id: 'ZQe5CZNOzWyzPSCn5a3c',
-        name: 'James',
-        settings: { stability: 0.75, similarity_boost: 0.75, style: 0, use_speaker_boost: true },
-      },
+    // Voice options - simple ID mapping (ElevenLabs)
+    const VOICE_IDS = {
+      sage: '7NsaqHdLuKNFvEfjpUno',     // Sage - wise, warm female
+      rachel: '21m00Tcm4TlvDq8ikWAM',   // Rachel - calm, clear female
+      aria: '9BWtsMINqrJLrRacOk9x',     // Aria - expressive female
+      roger: 'CwhRBWXzGAHq8TQ4Fs17',    // Roger - confident male
+      sarah: 'EXAVITQu4vr4xnSDxMaL',    // Sarah - soft female
+      charlie: 'IKne3meq5aSn9XLyUdCD',  // Charlie - casual male
     };
 
-    // Set up metrics listeners
-    llm.on('metrics_collected', logLLMMetrics);
+    const voiceKey = process.env.SAGE_VOICE || 'sage';
+    const voiceId = VOICE_IDS[voiceKey] || VOICE_IDS.sage;
+    console.log(`Using voice: ${voiceKey} (${voiceId})`);
 
-    // Connect to the room first to get user's voice preference from metadata
-    await ctx.connect();
-    console.log(`Connected to room: ${ctx.room.name}`);
-
-    // Wait for user participant and get their metadata (contains voiceKey and context)
-    let userContext = null;
-    let selectedVoiceKey = 'sage'; // default
-
-    const participants = ctx.room.remoteParticipants;
-    for (const [, participant] of participants) {
-      if (participant.metadata) {
-        try {
-          // Parse JSON metadata format: { voiceKey, context }
-          const metadataObj = JSON.parse(participant.metadata);
-          selectedVoiceKey = metadataObj.voiceKey || 'sage';
-          userContext = metadataObj.context || null;
-          console.log('[METADATA] Voice:', selectedVoiceKey, 'Context:', userContext ? userContext.slice(0, 50) + '...' : 'None');
-        } catch (e) {
-          // Backwards compatibility: treat as plain context string
-          userContext = participant.metadata;
-          console.log('[CONTEXT] Legacy format, using default voice');
-        }
-        break;
-      }
-    }
-
-    // Also listen for new participants joining with metadata
-    ctx.room.on('participantConnected', (participant) => {
-      if (participant.metadata && !userContext) {
-        try {
-          const metadataObj = JSON.parse(participant.metadata);
-          selectedVoiceKey = metadataObj.voiceKey || selectedVoiceKey;
-          userContext = metadataObj.context || null;
-          console.log('[METADATA] User joined - Voice:', selectedVoiceKey);
-        } catch (e) {
-          userContext = participant.metadata;
-        }
-      }
-    });
-
-    // Select voice based on user preference
-    const selectedVoice = VOICE_OPTIONS[selectedVoiceKey] || VOICE_OPTIONS.sage;
-    console.log(`Using voice: ${selectedVoice.name} (${selectedVoice.id})`);
-
-    // Create TTS with user-selected voice
+    // Create TTS - ElevenLabs with simple voice ID
     const tts = new elevenlabs.TTS({
-      voice: selectedVoice,
+      voiceId: voiceId,
       modelID: 'eleven_flash_v2_5',
       apiKey: elevenKey,
     });
@@ -255,8 +188,6 @@ export default defineAgent({
       console.error('[TTS ERROR]', error);
     });
 
-    tts.on('metrics_collected', logTTSMetrics);
-
     // Configure the voice session
     const session = new voice.AgentSession({
       vad,
@@ -265,9 +196,60 @@ export default defineAgent({
       tts: tts,
     });
 
-    // Add session event handlers
+    // Add comprehensive session event handlers for debugging
     session.on('error', (error) => {
       console.error('[SESSION ERROR]', error);
+    });
+
+    session.on('user_speech_committed', (text) => {
+      console.log('[USER SPEECH COMMITTED]', text);
+    });
+
+    session.on('agent_speech_committed', (text) => {
+      console.log('[AGENT SPEECH COMMITTED]', text);
+    });
+
+    session.on('agent_started_speaking', () => {
+      console.log('[AGENT] Started speaking');
+    });
+
+    session.on('agent_stopped_speaking', () => {
+      console.log('[AGENT] Stopped speaking');
+    });
+
+    session.on('user_started_speaking', () => {
+      console.log('[USER] Started speaking');
+    });
+
+    session.on('user_stopped_speaking', () => {
+      console.log('[USER] Stopped speaking');
+    });
+
+    // Set up metrics listeners
+    llm.on('metrics_collected', logLLMMetrics);
+    tts.on('metrics_collected', logTTSMetrics);
+
+    // Connect to the room
+    await ctx.connect();
+    console.log(`Connected to room: ${ctx.room.name}`);
+
+    // Wait for user participant and get their metadata (context)
+    let userContext = null;
+    const participants = ctx.room.remoteParticipants;
+    for (const [, participant] of participants) {
+      if (participant.metadata) {
+        userContext = participant.metadata;
+        console.log('[CONTEXT] Found user context:', userContext.slice(0, 100) + '...');
+        break;
+      }
+    }
+
+    // Also listen for new participants joining with metadata
+    ctx.room.on('participantConnected', (participant) => {
+      if (participant.metadata && !userContext) {
+        userContext = participant.metadata;
+        console.log('[CONTEXT] User joined with context:', userContext.slice(0, 100) + '...');
+      }
     });
 
     // Build instructions with context
@@ -287,9 +269,36 @@ export default defineAgent({
 
     console.log('Sage agent ready - waiting for user to speak');
 
+    // Wait for user participant to ensure client audio is initialized
+    const waitForUserReady = async () => {
+      // Check if we already have a user participant
+      for (const [, participant] of ctx.room.remoteParticipants) {
+        if (!participant.identity.includes('agent')) {
+          return participant;
+        }
+      }
+
+      // Wait for a user to join
+      return new Promise((resolve) => {
+        const onParticipantConnected = (participant) => {
+          if (!participant.identity.includes('agent')) {
+            ctx.room.off('participantConnected', onParticipantConnected);
+            resolve(participant);
+          }
+        };
+        ctx.room.on('participantConnected', onParticipantConnected);
+      });
+    };
+
     // Say a brief greeting so user knows Sage is ready
     // This provides immediate audio feedback that connection is working
     try {
+      const userParticipant = await waitForUserReady();
+      console.log('[GREETING] User connected:', userParticipant.identity);
+
+      // Brief delay for client audio initialization (browser autoplay policy)
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       const userName = extractUserName(userContext);
       let greeting;
 

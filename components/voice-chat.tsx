@@ -7,14 +7,14 @@ import {
   RoomAudioRenderer,
   useLocalParticipant,
   useTranscriptions,
+  useAudioPlayback,
+  useRemoteParticipants,
 } from "@livekit/components-react";
 import "@livekit/components-styles";
 import { Mic, MicOff, Phone, PhoneOff, Loader2, X } from "lucide-react";
 import { clsx } from "clsx";
 import type { Message } from "@/lib/types";
-import { VoiceOrb } from "./voice-orb";
-import { VoiceSelector } from "./voice-selector";
-import { DEFAULT_VOICE_KEY } from "@/lib/voices";
+import { VoiceOrb } from "./voice-orb-3d";
 
 interface TranscriptMessage {
   role: "user" | "assistant";
@@ -81,21 +81,6 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
   const [participantName] = useState(generateParticipantName);
   const [error, setError] = useState<string>("");
   const orbSize = useOrbSize();
-
-  // Voice selection state with localStorage persistence
-  const [selectedVoiceKey, setSelectedVoiceKey] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("sage-voice-preference") || DEFAULT_VOICE_KEY;
-    }
-    return DEFAULT_VOICE_KEY;
-  });
-
-  // Persist voice selection to localStorage
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      localStorage.setItem("sage-voice-preference", selectedVoiceKey);
-    }
-  }, [selectedVoiceKey]);
 
   // Transcript and insights state
   const [transcript, setTranscript] = useState<TranscriptMessage[]>([]);
@@ -233,7 +218,6 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
         body: JSON.stringify({
           roomName,
           participantName,
-          voiceKey: selectedVoiceKey,
         }),
       });
 
@@ -256,7 +240,7 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
       setError(err instanceof Error ? err.message : "Connection failed");
       setConnectionState("disconnected");
     }
-  }, [roomName, participantName, selectedVoiceKey, onConnectionChange]);
+  }, [roomName, participantName, onConnectionChange]);
 
   const disconnect = useCallback(() => {
     setToken("");
@@ -377,22 +361,9 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
         {/* Background gradient */}
         <div className="absolute inset-0 bg-gradient-to-b from-stone-900/50 via-transparent to-stone-900/50 pointer-events-none" />
 
-        {/* Sage portrait with orb effect */}
-        <div className="relative z-10">
+        {/* Voice Orb - overflow visible for glow effects */}
+        <div className="relative z-10 overflow-visible">
           <VoiceOrb state="idle" size={orbSize} />
-          {/* Sage face overlay */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div
-              className="rounded-full overflow-hidden opacity-80"
-              style={{ width: orbSize * 0.55, height: orbSize * 0.55 }}
-            >
-              <img
-                src="/sage.png"
-                alt="Sage"
-                className="w-full h-full object-cover object-top scale-150"
-              />
-            </div>
-          </div>
         </div>
 
         <div className="z-10 text-center space-y-2 sm:space-y-4 px-4">
@@ -402,14 +373,6 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
           <p className="text-sm sm:text-base text-stone-400 max-w-md leading-relaxed">
             Have a conversation through voice. Ask questions, explore ideas, and discover answers together.
           </p>
-        </div>
-
-        {/* Voice selector */}
-        <div className="z-10 w-full max-w-xs px-4">
-          <VoiceSelector
-            selectedVoiceKey={selectedVoiceKey}
-            onSelect={setSelectedVoiceKey}
-          />
         </div>
 
         <button
@@ -435,8 +398,8 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
         {/* Background gradient */}
         <div className="absolute inset-0 bg-gradient-to-b from-stone-900/50 via-transparent to-stone-900/50 pointer-events-none" />
 
-        {/* Pulsing orb */}
-        <div className="relative z-10">
+        {/* Pulsing orb - overflow visible for glow effects */}
+        <div className="relative z-10 overflow-visible">
           <VoiceOrb state="thinking" size={orbSize} />
         </div>
 
@@ -482,15 +445,42 @@ function ActiveVoiceChat({ onDisconnect, onTranscript, addTranscriptMessage }: A
   const { state, audioTrack, agentTranscriptions } = useVoiceAssistant();
   const localParticipant = useLocalParticipant();
   const transcriptions = useTranscriptions({});
+  const remoteParticipants = useRemoteParticipants();
+  const { canPlayAudio, startAudio } = useAudioPlayback();
   const [isMuted, setIsMuted] = useState(true); // Start muted until agent is ready
-  const [audioLevel, setAudioLevel] = useState(0);
-  const [agentReady, setAgentReady] = useState(false);
+  const [agentAudioLevel, setAgentAudioLevel] = useState(0);
+  const [userAudioLevel, setUserAudioLevel] = useState(0);
+  const [audioInitialized, setAudioInitialized] = useState(false);
   const transcriptIdRef = useRef(0);
-  const analyserRef = useRef<AnalyserNode | null>(null);
+  const agentAnalyserRef = useRef<AnalyserNode | null>(null);
+  const userAnalyserRef = useRef<AnalyserNode | null>(null);
   const animationRef = useRef<number | undefined>(undefined);
   const processedAgentSegmentsRef = useRef<Set<string>>(new Set<string>());
   const processedUserTextsRef = useRef<Set<string>>(new Set<string>());
-  const hasReceivedAudioRef = useRef(false);
+
+  // Initialize browser audio immediately (user gesture from "Talk to Sage" click satisfies autoplay policy)
+  useEffect(() => {
+    startAudio().then(() => {
+      console.log("[Voice] Audio initialized, canPlayAudio:", canPlayAudio);
+      setAudioInitialized(true);
+    }).catch((err) => {
+      console.error("[Voice] Failed to initialize audio:", err);
+      // Still mark as initialized to avoid blocking UI
+      setAudioInitialized(true);
+    });
+  }, [startAudio, canPlayAudio]);
+
+  // Detect agent readiness via lk.agent.state participant attribute
+  const agentParticipant = remoteParticipants.find(p =>
+    p.attributes?.['lk.agent.state']
+  );
+  const agentState = agentParticipant?.attributes?.['lk.agent.state'];
+  const agentReady = audioInitialized && ['listening', 'thinking', 'speaking'].includes(agentState || '');
+
+  // Debug logging for voice assistant state
+  useEffect(() => {
+    console.log("[Voice] State changed:", state, "| agentReady:", agentReady, "| agentState:", agentState, "| audioInitialized:", audioInitialized);
+  }, [state, agentReady, agentState, audioInitialized]);
 
   // Responsive orb size for active chat (slightly larger)
   const [orbSize, setOrbSize] = useState(200);
@@ -512,16 +502,16 @@ function ActiveVoiceChat({ onDisconnect, onTranscript, addTranscriptMessage }: A
     return () => window.removeEventListener("resize", updateSize);
   }, []);
 
-  // Detect when agent is ready (first audio track or speaking state)
+  // Enable microphone when agent is ready
   useEffect(() => {
-    if (!hasReceivedAudioRef.current && (audioTrack || state === "speaking")) {
-      hasReceivedAudioRef.current = true;
-      setAgentReady(true);
-      // Unmute user's mic once agent is ready
+    if (agentReady && isMuted) {
+      console.log("[Voice] Agent ready, enabling microphone");
       setIsMuted(false);
-      localParticipant.localParticipant?.setMicrophoneEnabled(true);
+      localParticipant.localParticipant?.setMicrophoneEnabled(true).catch((err) => {
+        console.error("[Voice] Failed to enable microphone:", err);
+      });
     }
-  }, [audioTrack, state, localParticipant]);
+  }, [agentReady, isMuted, localParticipant]);
 
   // Handle agent transcriptions - collect for insights
   useEffect(() => {
@@ -564,39 +554,131 @@ function ActiveVoiceChat({ onDisconnect, onTranscript, addTranscriptMessage }: A
     }
   }, [transcriptions, addTranscriptMessage]);
 
-  // Set up audio analysis for visualizer
+  // Set up audio analysis for agent audio (when Sage speaks)
   useEffect(() => {
     if (!audioTrack?.publication?.track) return;
 
-    const track = audioTrack.publication.track;
-    const mediaStream = new MediaStream([track.mediaStreamTrack]);
-    const audioContext = new AudioContext();
-    const source = audioContext.createMediaStreamSource(mediaStream);
-    const analyser = audioContext.createAnalyser();
-    analyser.fftSize = 256;
-    source.connect(analyser);
-    analyserRef.current = analyser;
+    let audioContext: AudioContext | null = null;
+    let isCleanedUp = false;
 
-    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    const setupAudioAnalysis = async () => {
+      try {
+        const track = audioTrack.publication.track;
+        if (!track?.mediaStreamTrack) {
+          console.warn("[Voice] No agent media stream track available");
+          return;
+        }
 
-    const updateLevel = () => {
-      if (analyserRef.current) {
-        analyserRef.current.getByteFrequencyData(dataArray);
-        const average = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
-        setAudioLevel(average / 255);
+        const mediaStream = new MediaStream([track.mediaStreamTrack]);
+        audioContext = new AudioContext();
+
+        if (audioContext.state === "suspended") {
+          await audioContext.resume();
+        }
+
+        const source = audioContext.createMediaStreamSource(mediaStream);
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        source.connect(analyser);
+        agentAnalyserRef.current = analyser;
+      } catch (err) {
+        if (err instanceof Error && err.name !== "AbortError") {
+          console.error("[Voice] Agent audio analysis setup error:", err);
+        }
       }
-      animationRef.current = requestAnimationFrame(updateLevel);
     };
 
-    updateLevel();
+    setupAudioAnalysis();
 
     return () => {
+      isCleanedUp = true;
+      agentAnalyserRef.current = null;
+      if (audioContext) {
+        audioContext.close().catch(() => {});
+      }
+    };
+  }, [audioTrack]);
+
+  // Set up audio analysis for user microphone (when user speaks)
+  useEffect(() => {
+    if (isMuted || !agentReady) return;
+
+    let audioContext: AudioContext | null = null;
+    let isCleanedUp = false;
+
+    const setupUserAudioAnalysis = async () => {
+      try {
+        // Get user's microphone stream
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        if (isCleanedUp) {
+          stream.getTracks().forEach(track => track.stop());
+          return;
+        }
+
+        audioContext = new AudioContext();
+
+        if (audioContext.state === "suspended") {
+          await audioContext.resume();
+        }
+
+        const source = audioContext.createMediaStreamSource(stream);
+        const analyser = audioContext.createAnalyser();
+        analyser.fftSize = 256;
+        source.connect(analyser);
+        userAnalyserRef.current = analyser;
+      } catch (err) {
+        if (err instanceof Error && err.name !== "AbortError") {
+          console.error("[Voice] User audio analysis setup error:", err);
+        }
+      }
+    };
+
+    setupUserAudioAnalysis();
+
+    return () => {
+      isCleanedUp = true;
+      userAnalyserRef.current = null;
+      if (audioContext) {
+        audioContext.close().catch(() => {});
+      }
+    };
+  }, [isMuted, agentReady]);
+
+  // Animation loop for both audio levels
+  useEffect(() => {
+    let isCleanedUp = false;
+    const agentDataArray = new Uint8Array(128);
+    const userDataArray = new Uint8Array(128);
+
+    const updateLevels = () => {
+      if (isCleanedUp) return;
+
+      // Update agent audio level
+      if (agentAnalyserRef.current) {
+        agentAnalyserRef.current.getByteFrequencyData(agentDataArray);
+        const agentAvg = agentDataArray.reduce((a, b) => a + b, 0) / agentDataArray.length;
+        setAgentAudioLevel(agentAvg / 255);
+      }
+
+      // Update user audio level
+      if (userAnalyserRef.current) {
+        userAnalyserRef.current.getByteFrequencyData(userDataArray);
+        const userAvg = userDataArray.reduce((a, b) => a + b, 0) / userDataArray.length;
+        setUserAudioLevel(userAvg / 255);
+      }
+
+      animationRef.current = requestAnimationFrame(updateLevels);
+    };
+
+    updateLevels();
+
+    return () => {
+      isCleanedUp = true;
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
       }
-      audioContext.close();
     };
-  }, [audioTrack]);
+  }, []);
 
   const toggleMute = useCallback(async () => {
     const newMuted = !isMuted;
@@ -605,8 +687,15 @@ function ActiveVoiceChat({ onDisconnect, onTranscript, addTranscriptMessage }: A
   }, [isMuted, localParticipant]);
 
   const getStateLabel = () => {
+    // Show progression of loading states
+    if (!audioInitialized) {
+      return "Initializing audio...";
+    }
+    if (!agentParticipant) {
+      return "Connecting to Sage...";
+    }
     if (!agentReady) {
-      return "Waiting for Sage...";
+      return "Sage is waking up...";
     }
     switch (state) {
       case "listening":
@@ -616,13 +705,19 @@ function ActiveVoiceChat({ onDisconnect, onTranscript, addTranscriptMessage }: A
       case "speaking":
         return "Sage is speaking...";
       default:
-        return "Connected";
+        return "Ready";
     }
   };
 
   const getSubLabel = () => {
+    if (!audioInitialized) {
+      return "Setting up audio playback";
+    }
+    if (!agentParticipant) {
+      return "Establishing connection";
+    }
     if (!agentReady) {
-      return "Sage is preparing to speak";
+      return "Preparing your session";
     }
     if (isMuted) {
       return "Microphone is muted";
@@ -630,40 +725,29 @@ function ActiveVoiceChat({ onDisconnect, onTranscript, addTranscriptMessage }: A
     return "Speak your thoughts";
   };
 
-  const orbState = !agentReady ? "thinking" // Show thinking state while waiting for agent
+  const orbState = (!audioInitialized || !agentReady) ? "thinking" // Show thinking state while initializing/waiting
     : state === "listening" ? "listening"
     : state === "thinking" ? "thinking"
     : state === "speaking" ? "speaking"
     : "idle";
+
+  // Use appropriate audio level based on state
+  const activeAudioLevel = state === "speaking" ? agentAudioLevel
+    : state === "listening" ? userAudioLevel
+    : 0;
 
   return (
     <div className="flex flex-col items-center justify-center h-full min-h-[350px] sm:min-h-[400px] gap-6 sm:gap-8 p-4 sm:p-6 relative">
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-b from-stone-900/50 via-transparent to-stone-900/50 pointer-events-none" />
 
-      {/* Voice Orb with Sage */}
-      <div className="relative z-10">
+      {/* Voice Orb - overflow visible for glow effects */}
+      <div className="relative z-10 overflow-visible">
         <VoiceOrb
           state={orbState}
-          audioLevel={audioLevel}
+          audioLevel={activeAudioLevel}
           size={orbSize}
         />
-        {/* Sage face - fades based on state */}
-        <div
-          className="absolute inset-0 flex items-center justify-center transition-opacity duration-500"
-          style={{ opacity: state === "speaking" ? 0.4 : 0.7 }}
-        >
-          <div
-            className="rounded-full overflow-hidden"
-            style={{ width: orbSize * 0.55, height: orbSize * 0.55 }}
-          >
-            <img
-              src="/sage.png"
-              alt="Sage"
-              className="w-full h-full object-cover object-top scale-150"
-            />
-          </div>
-        </div>
       </div>
 
       {/* Status */}

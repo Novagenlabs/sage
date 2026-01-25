@@ -3,6 +3,7 @@
 import { clsx } from "clsx";
 import type { Message } from "@/lib/types";
 import { User } from "lucide-react";
+import { LogoOrb } from "./voice-orb-3d";
 
 interface ChatMessageProps {
   message: Message;
@@ -21,18 +22,13 @@ export function ChatMessage({ message, isLatest }: ChatMessageProps) {
     >
       {/* Avatar - Smaller on mobile */}
       {isUser ? (
-        <div className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center bg-stone-700">
-          <User className="w-4 h-4 sm:w-5 sm:h-5 text-white/80" />
+        <div className="flex-shrink-0 size-7 sm:size-8 rounded-full flex items-center justify-center bg-stone-700">
+          <User className="size-4 sm:size-5 text-white/80" />
         </div>
       ) : (
-        <div className="flex-shrink-0 w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden ring-1 ring-stone-600/30">
-          <img
-            src="/sage.png"
-            alt="Sage"
-            className="w-full h-full object-cover object-top scale-150"
-          />
-        </div>
+        <LogoOrb size={28} className="sm:hidden" />
       )}
+      {!isUser && <LogoOrb size={32} className="hidden sm:block" />}
 
       <div className="flex-1 min-w-0">
         {/* Header */}
@@ -51,10 +47,10 @@ export function ChatMessage({ message, isLatest }: ChatMessageProps) {
         <div className="prose-chat text-sm sm:text-base text-gray-100 whitespace-pre-wrap leading-relaxed">
           {message.content}
           {isLatest && !isUser && !message.content && (
-            <span className="inline-flex gap-1">
-              <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-stone-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-              <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-stone-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
-              <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-stone-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+            <span className="inline-flex gap-1" role="status" aria-label="Loading">
+              <span className="size-1.5 sm:size-2 bg-stone-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+              <span className="size-1.5 sm:size-2 bg-stone-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+              <span className="size-1.5 sm:size-2 bg-stone-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
             </span>
           )}
         </div>
