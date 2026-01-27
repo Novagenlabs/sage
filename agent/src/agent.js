@@ -16,6 +16,7 @@ import {
 import * as openai from '@livekit/agents-plugin-openai';
 import * as elevenlabs from '@livekit/agents-plugin-elevenlabs';
 import * as silero from '@livekit/agents-plugin-silero';
+import * as deepgram from '@livekit/agents-plugin-deepgram';
 import { fileURLToPath } from 'node:url';
 
 // Metrics logging helpers
@@ -23,16 +24,18 @@ function logLLMMetrics(metrics) {
   console.log('\n--- LLM Metrics ---');
   console.log(`Prompt Tokens: ${metrics.promptTokens}`);
   console.log(`Completion Tokens: ${metrics.completionTokens}`);
-  console.log(`Tokens per second: ${metrics.tokensPerSecond?.toFixed(4) || 'N/A'}`);
-  console.log(`TTFT (Time to First Token): ${metrics.ttft?.toFixed(4) || 'N/A'}s`);
+  console.log(`Tokens per second: ${metrics.tokensPerSecond?.toFixed(2) || 'N/A'}`);
+  console.log(`TTFT: ${metrics.ttftMs != null ? (metrics.ttftMs / 1000).toFixed(4) : 'N/A'}s`);
   console.log('------------------\n');
 }
 
 function logTTSMetrics(metrics) {
   console.log('\n--- TTS Metrics ---');
-  console.log(`TTFB (Time to First Byte): ${metrics.ttfb?.toFixed(4) || 'N/A'}s`);
-  console.log(`Duration: ${metrics.duration?.toFixed(4) || 'N/A'}s`);
-  console.log(`Audio Duration: ${metrics.audioDuration?.toFixed(4) || 'N/A'}s`);
+  console.log(`TTFB: ${metrics.ttfbMs != null ? (metrics.ttfbMs / 1000).toFixed(4) : 'N/A'}s`);
+  console.log(`Duration: ${metrics.durationMs != null ? (metrics.durationMs / 1000).toFixed(4) : 'N/A'}s`);
+  console.log(`Audio Duration: ${metrics.audioDurationMs != null ? (metrics.audioDurationMs / 1000).toFixed(4) : 'N/A'}s`);
+  console.log(`Characters: ${metrics.charactersCount ?? 'N/A'}`);
+  console.log(`Cancelled: ${metrics.cancelled ?? false}`);
   console.log('------------------\n');
 }
 
@@ -98,6 +101,13 @@ function extractUserName(context) {
   return match ? match[1].trim() : null;
 }
 
+// Extract voice key from context metadata
+function extractVoiceKey(context) {
+  if (!context) return null;
+  const match = context.match(/Voice: ([^\n]+)/);
+  return match ? match[1].trim() : null;
+}
+
 // Build full instructions with context if available
 function buildInstructions(context) {
   if (!context) {
@@ -139,8 +149,10 @@ export default defineAgent({
     // Debug: Check environment variables
     const apiKey = process.env.OPENROUTER_API_KEY;
     const elevenKey = process.env.ELEVEN_API_KEY;
+    const deepgramKey = process.env.DEEPGRAM_API_KEY;
     console.log(`[DEBUG] OpenRouter API Key: ${apiKey ? `${apiKey.slice(0, 8)}...${apiKey.slice(-4)}` : 'NOT SET'}`);
     console.log(`[DEBUG] ElevenLabs API Key: ${elevenKey ? `${elevenKey.slice(0, 8)}...${elevenKey.slice(-4)}` : 'NOT SET'}`);
+    console.log(`[DEBUG] Deepgram API Key: ${deepgramKey ? `${deepgramKey.slice(0, 8)}...${deepgramKey.slice(-4)}` : 'NOT SET'}`);
 
     if (!apiKey) {
       console.error('[ERROR] OPENROUTER_API_KEY is not set!');
@@ -148,10 +160,13 @@ export default defineAgent({
     if (!elevenKey) {
       console.error('[ERROR] ELEVEN_API_KEY is not set!');
     }
+    if (!deepgramKey) {
+      console.error('[ERROR] DEEPGRAM_API_KEY is not set!');
+    }
 
     // Create LLM - GPT-4o-mini via OpenRouter
     const llm = new openai.LLM({
-      model: 'openai/gpt-4o-mini',
+      model: 'google/gemini-3-flash-preview',
       apiKey: apiKey,
       baseURL: 'https://openrouter.ai/api/v1',
       temperature: 0.7,
@@ -170,13 +185,72 @@ export default defineAgent({
       roger: 'CwhRBWXzGAHq8TQ4Fs17',    // Roger - confident male
       sarah: 'EXAVITQu4vr4xnSDxMaL',    // Sarah - soft female
       charlie: 'IKne3meq5aSn9XLyUdCD',  // Charlie - casual male
+      emily: 'LcfcDJNUP1GQjkzn1xUU',    // Emily - bright, expressive female
+      matilda: 'XrExE9yKIg1WjnnlVkGX',  // Matilda - soft, nurturing female
+      george: 'JBFqnCBsd6RMkjVDRZzb',   // George - calm, thoughtful male
+      lily: 'pFZP5JQG7iQjIQuC4Bku',     // Lily - gentle, soothing female
+      brian: 'nPczCjzI2devNBz1zQrb',     // Brian - clear, steady male
     };
 
-    const voiceKey = process.env.SAGE_VOICE || 'sage';
-    const voiceId = VOICE_IDS[voiceKey] || VOICE_IDS.sage;
-    console.log(`Using voice: ${voiceKey} (${voiceId})`);
+    // Create STT - Direct Deepgram (bypasses LiveKit inference gateway)
+    const stt = new deepgram.STT({
+      model: 'nova-3',
+      language: 'en',
+      apiKey: deepgramKey,
+    });
 
-    // Create TTS - ElevenLabs with simple voice ID
+    // Add error handlers for STT
+    stt.on('error', (error) => {
+      console.error('[STT ERROR]', error);
+    });
+
+    // Connect to the room first, then wait for user to get their metadata
+    await ctx.connect();
+    console.log(`Connected to room: ${ctx.room.name}`);
+
+    // Wait for a user participant with metadata (voice key + context)
+    const waitForUserMetadata = () => {
+      return new Promise((resolve) => {
+        // Check existing participants first
+        for (const [, participant] of ctx.room.remoteParticipants) {
+          if (participant.metadata) {
+            console.log('[CONTEXT] Found user context from existing participant');
+            resolve(participant.metadata);
+            return;
+          }
+        }
+
+        // Wait for participant to connect with metadata
+        const timeout = setTimeout(() => {
+          console.log('[CONTEXT] Timeout waiting for user metadata, proceeding with defaults');
+          ctx.room.off('participantConnected', onJoin);
+          resolve(null);
+        }, 10000);
+
+        const onJoin = (participant) => {
+          if (participant.metadata) {
+            clearTimeout(timeout);
+            ctx.room.off('participantConnected', onJoin);
+            console.log('[CONTEXT] User joined with metadata');
+            resolve(participant.metadata);
+          }
+        };
+        ctx.room.on('participantConnected', onJoin);
+      });
+    };
+
+    const userContext = await waitForUserMetadata();
+    if (userContext) {
+      console.log('[CONTEXT] Metadata:', userContext.slice(0, 150) + '...');
+    }
+
+    // Determine voice: prefer user's choice from metadata, fall back to env var
+    const metadataVoiceKey = extractVoiceKey(userContext);
+    const voiceKey = metadataVoiceKey || process.env.SAGE_VOICE || 'sage';
+    const voiceId = VOICE_IDS[voiceKey] || VOICE_IDS.sage;
+    console.log(`Using voice: ${voiceKey} (${voiceId})${metadataVoiceKey ? ' [from user selection]' : ' [from env/default]'}`);
+
+    // Create TTS - ElevenLabs with user-selected voice
     const tts = new elevenlabs.TTS({
       voiceId: voiceId,
       modelID: 'eleven_flash_v2_5',
@@ -191,7 +265,7 @@ export default defineAgent({
     // Configure the voice session
     const session = new voice.AgentSession({
       vad,
-      stt: 'deepgram/nova-3:en',
+      stt: stt,
       llm: llm,
       tts: tts,
     });
@@ -229,29 +303,6 @@ export default defineAgent({
     llm.on('metrics_collected', logLLMMetrics);
     tts.on('metrics_collected', logTTSMetrics);
 
-    // Connect to the room
-    await ctx.connect();
-    console.log(`Connected to room: ${ctx.room.name}`);
-
-    // Wait for user participant and get their metadata (context)
-    let userContext = null;
-    const participants = ctx.room.remoteParticipants;
-    for (const [, participant] of participants) {
-      if (participant.metadata) {
-        userContext = participant.metadata;
-        console.log('[CONTEXT] Found user context:', userContext.slice(0, 100) + '...');
-        break;
-      }
-    }
-
-    // Also listen for new participants joining with metadata
-    ctx.room.on('participantConnected', (participant) => {
-      if (participant.metadata && !userContext) {
-        userContext = participant.metadata;
-        console.log('[CONTEXT] User joined with context:', userContext.slice(0, 100) + '...');
-      }
-    });
-
     // Build instructions with context
     const instructions = buildInstructions(userContext);
     console.log('[INSTRUCTIONS] Using context:', userContext ? 'Yes' : 'No');
@@ -269,35 +320,12 @@ export default defineAgent({
 
     console.log('Sage agent ready - waiting for user to speak');
 
-    // Wait for user participant to ensure client audio is initialized
-    const waitForUserReady = async () => {
-      // Check if we already have a user participant
-      for (const [, participant] of ctx.room.remoteParticipants) {
-        if (!participant.identity.includes('agent')) {
-          return participant;
-        }
-      }
-
-      // Wait for a user to join
-      return new Promise((resolve) => {
-        const onParticipantConnected = (participant) => {
-          if (!participant.identity.includes('agent')) {
-            ctx.room.off('participantConnected', onParticipantConnected);
-            resolve(participant);
-          }
-        };
-        ctx.room.on('participantConnected', onParticipantConnected);
-      });
-    };
-
     // Say a brief greeting so user knows Sage is ready
     // This provides immediate audio feedback that connection is working
     try {
-      const userParticipant = await waitForUserReady();
-      console.log('[GREETING] User connected:', userParticipant.identity);
-
-      // Brief delay for client audio initialization (browser autoplay policy)
-      await new Promise(resolve => setTimeout(resolve, 500));
+      // User is already in the room from waitForUserMetadata
+      // Brief delay for browser audio initialization
+      await new Promise(resolve => setTimeout(resolve, 200));
 
       const userName = extractUserName(userContext);
       let greeting;

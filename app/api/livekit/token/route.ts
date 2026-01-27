@@ -4,7 +4,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request: NextRequest) {
-  const { roomName, participantName } = await request.json();
+  const { roomName, participantName, voiceKey } = await request.json();
 
   const apiKey = process.env.LIVEKIT_API_KEY;
   const apiSecret = process.env.LIVEKIT_API_SECRET;
@@ -77,6 +77,14 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       console.error("Failed to fetch voice context:", error);
     }
+  }
+
+  // Always include voice key (works for both authenticated and unauthenticated users)
+  if (voiceKey) {
+    contextMetadata = contextMetadata
+      ? `${contextMetadata}\n\nVoice: ${voiceKey}`
+      : `Voice: ${voiceKey}`;
+    console.log("[Token] Voice key:", voiceKey);
   }
 
   console.log("[Token] Context metadata:", contextMetadata ? `${contextMetadata.slice(0, 200)}...` : "NONE");

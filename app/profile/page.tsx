@@ -194,6 +194,12 @@ export default function ProfilePage() {
                   <span className="text-sm text-white/60">Credits</span>
                 </div>
                 <p className="text-2xl font-bold">{profile.credits.toLocaleString()}</p>
+                <Link
+                  href="/credits"
+                  className="mt-2 inline-block text-xs font-medium text-amber-400 hover:text-amber-300 transition-colors"
+                >
+                  Buy Credits &rarr;
+                </Link>
               </div>
 
               <div className="bg-stone-900/50 border border-stone-700/30 rounded-xl p-4">

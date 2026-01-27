@@ -47,6 +47,11 @@ export default function Home() {
   const [voiceConnected, setVoiceConnected] = useState(false);
   const [voiceInsights, setVoiceInsights] = useState<VoiceInsightsData | null>(null);
   const [voiceTopic, setVoiceTopic] = useState<string>("");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -54,7 +59,6 @@ export default function Home() {
 
   const hasMessages = messages.length > 0;
 
-  // Wrapper to check auth before sending message
   const handleSendMessage = (message: string) => {
     if (!session) {
       router.push("/auth/signin");
@@ -64,17 +68,40 @@ export default function Home() {
   };
 
   return (
-    <div className="flex h-screen-safe bg-[#0a0a0f] text-white overflow-hidden">
-      {/* Ambient background glow - warm subtle tones */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/3 w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-amber-500/[0.03] rounded-full blur-[80px] sm:blur-[120px]" />
-        <div className="absolute bottom-1/4 right-1/3 w-[250px] sm:w-[400px] h-[250px] sm:h-[400px] bg-orange-500/[0.02] rounded-full blur-[60px] sm:blur-[100px]" />
+    <div className="flex h-screen-safe bg-chamber-900 text-chamber-100 overflow-hidden">
+      {/* Grain texture overlay */}
+      <div className="grain-overlay" />
+
+      {/* Atmospheric background */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        {/* Primary ember glow - top left */}
+        <div
+          className="absolute -top-1/4 -left-1/4 w-[600px] sm:w-[900px] h-[600px] sm:h-[900px] rounded-full animate-ambient"
+          style={{
+            background: "radial-gradient(circle, rgba(224, 124, 56, 0.08) 0%, rgba(224, 124, 56, 0.02) 50%, transparent 70%)",
+          }}
+        />
+        {/* Secondary gold glow - bottom right */}
+        <div
+          className="absolute -bottom-1/4 -right-1/4 w-[500px] sm:w-[700px] h-[500px] sm:h-[700px] rounded-full animate-ambient-slow"
+          style={{
+            background: "radial-gradient(circle, rgba(196, 149, 106, 0.06) 0%, rgba(196, 149, 106, 0.01) 50%, transparent 70%)",
+            animationDelay: "-10s",
+          }}
+        />
+        {/* Subtle center glow */}
+        <div
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] sm:w-[600px] h-[400px] sm:h-[600px] rounded-full"
+          style={{
+            background: "radial-gradient(circle, rgba(224, 124, 56, 0.03) 0%, transparent 60%)",
+          }}
+        />
       </div>
 
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 relative z-10">
-        {/* Header - Mobile optimized */}
-        <header className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 border-b border-white/5 bg-black/20 backdrop-blur-xl">
+        {/* Header */}
+        <header className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 border-b border-gold-400/10 glass">
           <div className="flex items-center gap-3 sm:gap-6">
             {/* Ghost Mode Indicator */}
             {ghostMode && (
@@ -84,28 +111,35 @@ export default function Home() {
               </div>
             )}
 
-            {/* Logo - Compact on mobile */}
-            <div className="flex items-center gap-2 sm:gap-3 group cursor-pointer" onClick={reset}>
+            {/* Logo */}
+            <div
+              className={clsx(
+                "flex items-center gap-2 sm:gap-3 group cursor-pointer",
+                mounted && "animate-fade-in"
+              )}
+              onClick={reset}
+            >
               <LogoOrb size={32} className="sm:hidden" />
               <LogoOrb size={40} className="hidden sm:block" animated />
               <div className="hidden xs:block sm:block">
-                <h1 className="text-base sm:text-lg font-semibold tracking-tight text-balance">Sage</h1>
-                <p className="text-[10px] sm:text-xs text-white/40 -mt-0.5">Ask anything</p>
+                <h1 className="text-base sm:text-lg font-display font-semibold tracking-tight text-chamber-50">
+                  Sage
+                </h1>
+                <p className="text-[10px] sm:text-xs text-chamber-400 -mt-0.5">Ask anything</p>
               </div>
             </div>
-
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Mode Toggle - Compact on mobile */}
-            <div className="flex items-center bg-white/5 backdrop-blur-sm rounded-full p-0.5 sm:p-1 border border-white/10">
+            {/* Mode Toggle */}
+            <div className="flex items-center glass rounded-full p-0.5 sm:p-1">
               <button
                 onClick={() => setMode("text")}
                 className={clsx(
                   "flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-medium transition-all duration-300",
                   mode === "text"
-                    ? "bg-white text-black shadow-lg"
-                    : "text-white/60 hover:text-white"
+                    ? "bg-ember-500 text-white shadow-lg shadow-ember-500/25"
+                    : "text-chamber-400 hover:text-chamber-100"
                 )}
               >
                 <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -116,8 +150,8 @@ export default function Home() {
                 className={clsx(
                   "flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-medium transition-all duration-300",
                   mode === "voice"
-                    ? "bg-white text-black shadow-lg"
-                    : "text-white/60 hover:text-white"
+                    ? "bg-ember-500 text-white shadow-lg shadow-ember-500/25"
+                    : "text-chamber-400 hover:text-chamber-100"
                 )}
               >
                 <Mic className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -144,9 +178,9 @@ export default function Home() {
             {/* Sidebar menu button */}
             <button
               onClick={() => setSidebarOpen(true)}
-              className="lg:hidden p-2 sm:p-2.5 hover:bg-white/5 rounded-xl transition-colors border border-white/10"
+              className="lg:hidden p-2 sm:p-2.5 hover:bg-chamber-800/50 rounded-xl transition-colors border border-gold-400/10"
             >
-              <Menu className="w-4 h-4 sm:w-5 sm:h-5 text-white/60" />
+              <Menu className="w-4 h-4 sm:w-5 sm:h-5 text-chamber-400" />
             </button>
           </div>
         </header>
@@ -165,49 +199,80 @@ export default function Home() {
               />
             </div>
           ) : !hasMessages ? (
-            <div className="h-full flex flex-col items-center justify-start px-4 pt-12 sm:pt-24 md:pt-32 pb-12 overflow-y-auto">
+            <div className="h-full flex flex-col items-center justify-start px-4 pt-12 sm:pt-20 md:pt-28 pb-12 overflow-y-auto">
               <div className="max-w-2xl w-full">
-                {/* Hero section - Mobile optimized */}
-                <div className="text-center mb-8 sm:mb-12">
-                  {/* Orb logo - Smaller on mobile */}
-                  <div className="mb-6 sm:mb-8 flex justify-center">
+                {/* Hero section */}
+                <div className="text-center mb-10 sm:mb-14">
+                  {/* Orb logo with entrance animation */}
+                  <div
+                    className={clsx(
+                      "mb-8 sm:mb-10 flex justify-center",
+                      mounted && "animate-scale-in"
+                    )}
+                  >
                     <VoiceOrb state="idle" size={120} className="sm:hidden" />
-                    <VoiceOrb state="idle" size={150} className="hidden sm:block md:hidden" />
-                    <VoiceOrb state="idle" size={180} className="hidden md:block" />
+                    <VoiceOrb state="idle" size={160} className="hidden sm:block md:hidden" />
+                    <VoiceOrb state="idle" size={200} className="hidden md:block" />
                   </div>
 
-                  <h2 className="text-2xl sm:text-4xl md:text-5xl font-bold tracking-tight mb-3 sm:mb-4 text-white text-balance">
+                  <h2
+                    className={clsx(
+                      "font-display text-3xl sm:text-5xl md:text-6xl font-medium tracking-tight mb-4 sm:mb-5 text-chamber-50 text-balance opacity-0",
+                      mounted && "animate-fade-up stagger-2"
+                    )}
+                  >
                     What&apos;s on your mind?
                   </h2>
-                  <p className="text-sm sm:text-lg text-white/50 max-w-md mx-auto leading-relaxed px-4 text-pretty">
-                    Ask anything. I&apos;ll help you find the answers you&apos;re looking for.
+                  <p
+                    className={clsx(
+                      "text-sm sm:text-lg text-chamber-400 max-w-md mx-auto leading-relaxed px-4 text-pretty opacity-0",
+                      mounted && "animate-fade-up stagger-3"
+                    )}
+                  >
+                    Share your thoughts. Together, we&apos;ll discover the answers you seek.
                   </p>
                 </div>
 
-                {/* Example prompts - Touch-friendly */}
-                <div className="space-y-2 sm:space-y-3 max-w-lg mx-auto px-2">
-                  <p className="text-[10px] sm:text-xs uppercase tracking-wider text-white/30 mb-3 sm:mb-4 text-center">
-                    Start exploring
+                {/* Example prompts */}
+                <div
+                  className={clsx(
+                    "space-y-2.5 sm:space-y-3 max-w-lg mx-auto px-2 opacity-0",
+                    mounted && "animate-fade-up stagger-4"
+                  )}
+                >
+                  <p className="text-[10px] sm:text-xs uppercase tracking-widest text-chamber-500 mb-4 sm:mb-5 text-center font-medium">
+                    Begin your inquiry
                   </p>
                   <ExamplePrompt
                     onClick={handleSendMessage}
                     prompt="I'm struggling to decide whether to change careers"
+                    delay={0}
                   />
                   <ExamplePrompt
                     onClick={handleSendMessage}
                     prompt="I feel like I'm not making progress in life"
+                    delay={100}
                   />
                   <ExamplePrompt
                     onClick={handleSendMessage}
                     prompt="I can't seem to maintain good habits"
+                    delay={200}
                   />
                 </div>
 
-                {/* Wisdom quote - Hidden on very small screens */}
-                <div className="hidden sm:block mt-12 md:mt-16 text-center">
-                  <blockquote className="text-white/30 italic text-sm">
+                {/* Wisdom quote */}
+                <div
+                  className={clsx(
+                    "hidden sm:block mt-14 md:mt-20 text-center opacity-0",
+                    mounted && "animate-fade-in stagger-6"
+                  )}
+                >
+                  <blockquote className="font-display text-lg text-chamber-500 italic">
                     &ldquo;The only true wisdom is knowing you know nothing.&rdquo;
                   </blockquote>
+                  <cite className="text-xs text-chamber-600 mt-2 block not-italic tracking-wide">
+                    — Socrates
+                  </cite>
                 </div>
               </div>
             </div>
@@ -229,7 +294,7 @@ export default function Home() {
         {mode === "text" && (
           <div className="relative pb-safe">
             {/* Gradient fade */}
-            <div className="absolute -top-16 sm:-top-20 left-0 right-0 h-16 sm:h-20 bg-gradient-to-t from-[#0a0a0f] to-transparent pointer-events-none" />
+            <div className="absolute -top-20 sm:-top-24 left-0 right-0 h-20 sm:h-24 bg-gradient-to-t from-chamber-900 to-transparent pointer-events-none" />
 
             <div className="max-w-3xl mx-auto w-full px-3 sm:px-4 pb-3 sm:pb-6">
               {hasMessages && (
@@ -237,7 +302,7 @@ export default function Home() {
                   <button
                     onClick={reset}
                     disabled={isResetting}
-                    className="btn-sm flex items-center gap-2 px-3 py-1.5 text-xs text-white/40 hover:text-white/60 hover:bg-white/5 rounded-full transition-colors disabled:opacity-50"
+                    className="btn-sm flex items-center gap-2 px-3 py-1.5 text-xs text-chamber-500 hover:text-chamber-300 hover:bg-chamber-800/50 rounded-full transition-colors disabled:opacity-50"
                   >
                     {isResetting ? (
                       <>
@@ -262,8 +327,8 @@ export default function Home() {
                     : "Share what's on your mind..."
                 }
               />
-              <p className="text-center text-[10px] sm:text-xs text-white/20 mt-2 sm:mt-3">
-                Sage uses AI to help you discover your own answers
+              <p className="text-center text-[10px] sm:text-xs text-chamber-600 mt-2 sm:mt-3">
+                Sage uses AI to guide you toward your own answers
               </p>
             </div>
           </div>
@@ -302,19 +367,24 @@ export default function Home() {
 function ExamplePrompt({
   prompt,
   onClick,
+  delay = 0,
 }: {
   prompt: string;
   onClick: (message: string) => void;
+  delay?: number;
 }) {
   return (
     <button
       onClick={() => onClick(prompt)}
-      className="group w-full p-3 sm:p-4 text-left bg-stone-900/30 hover:bg-stone-800/40 active:bg-stone-800/50 border border-stone-700/20 hover:border-stone-600/30 rounded-xl transition-all duration-200 flex items-center gap-3 sm:gap-4"
+      className="group w-full p-3.5 sm:p-4 text-left glass hover:bg-chamber-800/60 active:bg-chamber-800/80 rounded-xl transition-all duration-300 flex items-center gap-3 sm:gap-4 hover:border-gold-400/20"
+      style={{ animationDelay: `${delay}ms` }}
     >
-      <span className="flex-1 text-sm sm:text-base text-white/60 group-hover:text-white/80 transition-colors leading-relaxed">
+      {/* Decorative element */}
+      <div className="w-1.5 h-1.5 rounded-full bg-ember-500/60 group-hover:bg-ember-500 group-hover:shadow-[0_0_8px_rgba(224,124,56,0.5)] transition-all duration-300 flex-shrink-0" />
+      <span className="flex-1 text-sm sm:text-base text-chamber-300 group-hover:text-chamber-100 transition-colors leading-relaxed">
         {prompt}
       </span>
-      <ChevronRight className="w-4 h-4 text-white/20 group-hover:text-white/40 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
+      <ChevronRight className="w-4 h-4 text-chamber-600 group-hover:text-ember-500 group-hover:translate-x-0.5 transition-all flex-shrink-0" />
     </button>
   );
 }

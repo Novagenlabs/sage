@@ -15,6 +15,8 @@ import { Mic, MicOff, Phone, PhoneOff, Loader2, X } from "lucide-react";
 import { clsx } from "clsx";
 import type { Message } from "@/lib/types";
 import { VoiceOrb } from "./voice-orb-3d";
+import { VoiceSelector } from "./voice-selector";
+import { DEFAULT_VOICE_KEY } from "@/lib/voices";
 
 interface TranscriptMessage {
   role: "user" | "assistant";
@@ -80,6 +82,7 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
   const [roomName] = useState(generateRoomName);
   const [participantName] = useState(generateParticipantName);
   const [error, setError] = useState<string>("");
+  const [selectedVoice, setSelectedVoice] = useState(DEFAULT_VOICE_KEY);
   const orbSize = useOrbSize();
 
   // Transcript and insights state
@@ -218,6 +221,7 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
         body: JSON.stringify({
           roomName,
           participantName,
+          voiceKey: selectedVoice,
         }),
       });
 
@@ -240,7 +244,7 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
       setError(err instanceof Error ? err.message : "Connection failed");
       setConnectionState("disconnected");
     }
-  }, [roomName, participantName, onConnectionChange]);
+  }, [roomName, participantName, selectedVoice, onConnectionChange]);
 
   const disconnect = useCallback(() => {
     setToken("");
@@ -373,6 +377,13 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
           <p className="text-sm sm:text-base text-stone-400 max-w-md leading-relaxed">
             Have a conversation through voice. Ask questions, explore ideas, and discover answers together.
           </p>
+        </div>
+
+        <div className="z-20 w-full max-w-xs relative">
+          <VoiceSelector
+            selectedVoiceKey={selectedVoice}
+            onSelect={setSelectedVoice}
+          />
         </div>
 
         <button

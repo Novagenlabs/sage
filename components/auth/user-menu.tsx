@@ -71,7 +71,13 @@ export function UserMenu({ session }: UserMenuProps) {
                 </span>
               </div>
             </div>
-            <button className="w-full mt-3 px-3 py-2 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 rounded-lg text-sm font-medium text-amber-400 transition-colors">
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                router.push("/credits");
+              }}
+              className="w-full mt-3 px-3 py-2 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/30 rounded-lg text-sm font-medium text-amber-400 transition-colors"
+            >
               Buy Credits
             </button>
           </div>

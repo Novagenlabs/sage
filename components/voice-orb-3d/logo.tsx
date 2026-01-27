@@ -10,11 +10,13 @@ export interface LogoOrbProps {
   animated?: boolean;
 }
 
-// Amber/warm color scheme matching the main orb
+// Oracle's Chamber color scheme
 const COLORS = {
-  primary: "#d97706", // amber-600
-  secondary: "#f59e0b", // amber-500
-  glow: "rgba(217, 119, 6, 0.3)",
+  primary: "#e07c38", // ember-500
+  secondary: "#c4956a", // gold-400
+  tertiary: "#d16426", // ember-600
+  glow: "rgba(224, 124, 56, 0.3)",
+  glowOuter: "rgba(196, 149, 106, 0.15)",
 };
 
 export function LogoOrb({
@@ -22,7 +24,7 @@ export function LogoOrb({
   className,
   animated = false,
 }: LogoOrbProps) {
-  const padding = size * 0.4;
+  const padding = size * 0.5;
   const canvasSize = size + padding * 2;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number | undefined>(undefined);
@@ -62,36 +64,50 @@ export function LogoOrb({
 
       ctx.clearRect(0, 0, canvasSize, canvasSize);
 
-      // Calculate subtle pulse for animated mode (respects reduced motion)
-      const pulse = shouldAnimate ? Math.sin((time / 3000) * Math.PI * 2) * 0.05 : 0;
-      const currentRadius = baseRadius * (1 + pulse);
+      // Calculate breathing pulse for animated mode
+      const breathe = shouldAnimate
+        ? Math.sin((time / 4000) * Math.PI * 2) * 0.04 + Math.sin((time / 2000) * Math.PI * 2) * 0.02
+        : 0;
+      const currentRadius = baseRadius * (1 + breathe);
 
-      // Draw outer glow
+      // Draw outer atmospheric glow
+      const outerGlow = ctx.createRadialGradient(
+        centerX, centerY, currentRadius * 0.2,
+        centerX, centerY, currentRadius * 2
+      );
+      outerGlow.addColorStop(0, COLORS.glowOuter);
+      outerGlow.addColorStop(0.5, "rgba(196, 149, 106, 0.06)");
+      outerGlow.addColorStop(1, "transparent");
+      ctx.fillStyle = outerGlow;
+      ctx.fillRect(0, 0, canvasSize, canvasSize);
+
+      // Draw inner glow
       const glowGradient = ctx.createRadialGradient(
         centerX, centerY, currentRadius * 0.3,
-        centerX, centerY, currentRadius * 1.8
+        centerX, centerY, currentRadius * 1.6
       );
       glowGradient.addColorStop(0, COLORS.glow);
-      glowGradient.addColorStop(0.6, "rgba(217, 119, 6, 0.1)");
+      glowGradient.addColorStop(0.5, "rgba(224, 124, 56, 0.1)");
       glowGradient.addColorStop(1, "transparent");
       ctx.fillStyle = glowGradient;
       ctx.fillRect(0, 0, canvasSize, canvasSize);
 
-      // Draw core orb with gradient
+      // Draw core orb with layered gradient
       ctx.beginPath();
       ctx.arc(centerX, centerY, currentRadius, 0, Math.PI * 2);
 
       const gradient = ctx.createRadialGradient(
         centerX - currentRadius * 0.25,
-        centerY - currentRadius * 0.25,
+        centerY - currentRadius * 0.3,
         0,
-        centerX,
-        centerY,
+        centerX + currentRadius * 0.1,
+        centerY + currentRadius * 0.1,
         currentRadius * 1.2
       );
       gradient.addColorStop(0, COLORS.secondary);
-      gradient.addColorStop(0.5, COLORS.primary);
-      gradient.addColorStop(1, "#92400e"); // amber-800
+      gradient.addColorStop(0.4, COLORS.primary);
+      gradient.addColorStop(0.8, COLORS.tertiary);
+      gradient.addColorStop(1, "#8b4022"); // ember-800
 
       ctx.fillStyle = gradient;
       ctx.fill();
@@ -103,13 +119,26 @@ export function LogoOrb({
         0,
         centerX - currentRadius * 0.3,
         centerY - currentRadius * 0.35,
-        currentRadius * 0.5
+        currentRadius * 0.55
       );
-      highlightGradient.addColorStop(0, "rgba(255, 255, 255, 0.4)");
+      highlightGradient.addColorStop(0, "rgba(255, 255, 255, 0.35)");
+      highlightGradient.addColorStop(0.5, "rgba(255, 255, 255, 0.1)");
       highlightGradient.addColorStop(1, "transparent");
       ctx.fillStyle = highlightGradient;
       ctx.beginPath();
       ctx.arc(centerX, centerY, currentRadius, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Inner light point
+      const innerLight = ctx.createRadialGradient(
+        centerX, centerY, 0,
+        centerX, centerY, currentRadius * 0.25
+      );
+      innerLight.addColorStop(0, "rgba(255, 255, 255, 0.12)");
+      innerLight.addColorStop(1, "transparent");
+      ctx.fillStyle = innerLight;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, currentRadius * 0.25, 0, Math.PI * 2);
       ctx.fill();
 
       if (shouldAnimate) {

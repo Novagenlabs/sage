@@ -96,6 +96,19 @@ export const AVAILABLE_VOICES: Voice[] = [
       use_speaker_boost: true,
     },
   },
+  {
+    key: "emily",
+    id: "LcfcDJNUP1GQjkzn1xUU", // Emily - verified
+    name: "Emily",
+    gender: "female",
+    description: "Bright and expressive",
+    settings: {
+      stability: 0.75,
+      similarity_boost: 0.8,
+      style: 0,
+      use_speaker_boost: true,
+    },
+  },
 ];
 
 export const DEFAULT_VOICE_KEY = "sage";
