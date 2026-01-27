@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -39,6 +39,20 @@ function formatNaira(kobo: number): string {
 }
 
 export default function CreditsPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
+          <Loader2 className="w-8 h-8 text-white/50 animate-spin" />
+        </div>
+      }
+    >
+      <CreditsContent />
+    </Suspense>
+  );
+}
+
+function CreditsContent() {
   const { data: session, status, update: updateSession } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
