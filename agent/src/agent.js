@@ -246,7 +246,7 @@ export default defineAgent({
 
     // Determine voice: prefer user's choice from metadata, fall back to env var
     const metadataVoiceKey = extractVoiceKey(userContext);
-    const voiceKey = metadataVoiceKey || process.env.SAGE_VOICE || 'sage';
+    const voiceKey = metadataVoiceKey || process.env.SAGE_VOICE || 'rachel';
     const voiceId = VOICE_IDS[voiceKey] || VOICE_IDS.sage;
     console.log(`Using voice: ${voiceKey} (${voiceId})${metadataVoiceKey ? ' [from user selection]' : ' [from env/default]'}`);
 
