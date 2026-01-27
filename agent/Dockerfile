@@ -23,6 +23,9 @@ COPY package.json package-lock.json* ./
 # Install dependencies (include all deps to get platform-specific binaries)
 RUN npm ci || npm install
 
+# Cache bust to ensure source updates are picked up
+ARG CACHEBUST=1
+
 # Copy source files
 COPY src ./src
 COPY scripts ./scripts
