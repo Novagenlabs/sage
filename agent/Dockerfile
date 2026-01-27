@@ -24,7 +24,7 @@ COPY package.json package-lock.json* ./
 RUN npm ci || npm install
 
 # Cache bust to ensure source updates are picked up
-ARG CACHEBUST=1
+ARG CACHEBUST=2
 
 # Copy source files
 COPY src ./src
