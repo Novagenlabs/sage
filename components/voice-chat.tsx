@@ -79,8 +79,8 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
   const [connectionState, setConnectionState] = useState<"disconnected" | "connecting" | "connected">("disconnected");
   const [token, setToken] = useState<string>("");
   const [serverUrl, setServerUrl] = useState<string>("");
-  const [roomName] = useState(generateRoomName);
-  const [participantName] = useState(generateParticipantName);
+  const [roomName, setRoomName] = useState(generateRoomName);
+  const [participantName, setParticipantName] = useState(generateParticipantName);
   const [error, setError] = useState<string>("");
   const [selectedVoice, setSelectedVoice] = useState(DEFAULT_VOICE_KEY);
   const orbSize = useOrbSize();
@@ -271,6 +271,9 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
     setInsights(null);
     setCurrentTopic("");
     setConversationId(null);
+    // Generate fresh room/participant names for next call
+    setRoomName(generateRoomName());
+    setParticipantName(generateParticipantName());
     onInsightsChange?.(null);
     onTopicChange?.("");
   }, [onInsightsChange, onTopicChange]);
