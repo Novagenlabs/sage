@@ -166,7 +166,7 @@ export default defineAgent({
 
     // Create LLM - GPT-4o-mini via OpenRouter
     const llm = new openai.LLM({
-      model: 'google/gemini-3-flash-preview',
+      model: 'openai/gpt-4o-mini',
       apiKey: apiKey,
       baseURL: 'https://openrouter.ai/api/v1',
       temperature: 0.7,
