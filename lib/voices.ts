@@ -49,7 +49,7 @@ export const AVAILABLE_VOICES: Voice[] = [
     id: "XrExE9yKIg1WjnnlVkGX", // Matilda - verified
     name: "Matilda",
     gender: "female",
-    description: "Soft and nurturing",
+    description: "Bright and expressive",
     settings: {
       stability: 0.75,
       similarity_boost: 0.8,
@@ -101,7 +101,7 @@ export const AVAILABLE_VOICES: Voice[] = [
     id: "LcfcDJNUP1GQjkzn1xUU", // Emily - verified
     name: "Emily",
     gender: "female",
-    description: "Bright and expressive",
+    description: "Soft and nurturing",
     settings: {
       stability: 0.75,
       similarity_boost: 0.8,
@@ -111,7 +111,7 @@ export const AVAILABLE_VOICES: Voice[] = [
   },
 ];
 
-export const DEFAULT_VOICE_KEY = "sage";
+export const DEFAULT_VOICE_KEY = "emily";
 
 export function getVoiceByKey(key: string): Voice | undefined {
   return AVAILABLE_VOICES.find((v) => v.key === key);

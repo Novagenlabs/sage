@@ -185,8 +185,8 @@ export default defineAgent({
       roger: 'CwhRBWXzGAHq8TQ4Fs17',    // Roger - confident male
       sarah: 'EXAVITQu4vr4xnSDxMaL',    // Sarah - soft female
       charlie: 'IKne3meq5aSn9XLyUdCD',  // Charlie - casual male
-      emily: 'LcfcDJNUP1GQjkzn1xUU',    // Emily - bright, expressive female
-      matilda: 'XrExE9yKIg1WjnnlVkGX',  // Matilda - soft, nurturing female
+      emily: 'LcfcDJNUP1GQjkzn1xUU',    // Emily - soft, nurturing female
+      matilda: 'XrExE9yKIg1WjnnlVkGX',  // Matilda - bright, expressive female
       george: 'JBFqnCBsd6RMkjVDRZzb',   // George - calm, thoughtful male
       lily: 'pFZP5JQG7iQjIQuC4Bku',     // Lily - gentle, soothing female
       brian: 'nPczCjzI2devNBz1zQrb',     // Brian - clear, steady male
@@ -197,6 +197,7 @@ export default defineAgent({
       model: 'nova-3',
       language: 'en',
       apiKey: deepgramKey,
+      endpointing: 300,  // Wait 300ms of silence before finalizing (default is 25ms)
     });
 
     // Add error handlers for STT
@@ -246,7 +247,7 @@ export default defineAgent({
 
     // Determine voice: prefer user's choice from metadata, fall back to env var
     const metadataVoiceKey = extractVoiceKey(userContext);
-    const voiceKey = metadataVoiceKey || process.env.SAGE_VOICE || 'rachel';
+    const voiceKey = metadataVoiceKey || process.env.SAGE_VOICE || 'emily';
     const voiceId = VOICE_IDS[voiceKey] || VOICE_IDS.sage;
     console.log(`Using voice: ${voiceKey} (${voiceId})${metadataVoiceKey ? ' [from user selection]' : ' [from env/default]'}`);
 
@@ -268,6 +269,11 @@ export default defineAgent({
       stt: stt,
       llm: llm,
       tts: tts,
+      turnDetection: 'stt',  // Use Deepgram's endpointing for turn detection
+      voiceOptions: {
+        minEndpointingDelay: 0.5,    // Additional 500ms buffer before responding
+        minInterruptionWords: 2,     // Require 2+ words to interrupt Sage
+      },
     });
 
     // Add comprehensive session event handlers for debugging
