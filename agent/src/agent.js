@@ -17,6 +17,7 @@ import * as openai from '@livekit/agents-plugin-openai';
 import * as elevenlabs from '@livekit/agents-plugin-elevenlabs';
 import * as silero from '@livekit/agents-plugin-silero';
 import * as deepgram from '@livekit/agents-plugin-deepgram';
+import { BackgroundVoiceCancellation } from '@livekit/noise-cancellation-node';
 import { fileURLToPath } from 'node:url';
 
 // Metrics logging helpers
@@ -322,8 +323,12 @@ export default defineAgent({
     await session.start({
       agent: assistant,
       room: ctx.room,
+      inputOptions: {
+        noiseCancellation: BackgroundVoiceCancellation(),
+      },
     });
 
+    console.log('[NC] Background Voice Cancellation enabled');
     console.log('Sage agent ready - waiting for user to speak');
 
     // Say a brief greeting so user knows Sage is ready
