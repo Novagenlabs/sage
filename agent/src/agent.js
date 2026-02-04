@@ -201,17 +201,14 @@ export default defineAgent({
       console.error('[ERROR] DEEPGRAM_API_KEY is not set!');
     }
 
-    // Create LLM - GPT-4o-mini via OpenRouter (prefer OpenAI provider for lowest latency)
+    // Create LLM - GPT-4o-mini via OpenRouter (auto-select fastest provider)
     const llm = new openai.LLM({
       model: 'openai/gpt-4o-mini',
       apiKey: apiKey,
       baseURL: 'https://openrouter.ai/api/v1',
       temperature: 0.7,
       extraBody: {
-        provider: {
-          order: ['OpenAI'],
-          allow_fallbacks: true,
-        },
+        route: 'fallback',  // Let OpenRouter pick the fastest available provider
       },
     });
 
