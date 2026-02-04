@@ -9,14 +9,18 @@ import {
   useTranscriptions,
   useAudioPlayback,
   useRemoteParticipants,
+  useConnectionState,
 } from "@livekit/components-react";
 import "@livekit/components-styles";
-import { Mic, MicOff, Phone, PhoneOff, Loader2, X } from "lucide-react";
+import { Mic, MicOff, Phone, PhoneOff, Loader2, X, Headphones, Volume2, Clock, Wifi, WifiOff } from "lucide-react";
 import { clsx } from "clsx";
 import type { Message } from "@/lib/types";
 import { VoiceOrb } from "./voice-orb-3d";
 import { VoiceSelector } from "./voice-selector";
 import { DEFAULT_VOICE_KEY } from "@/lib/voices";
+
+// localStorage key for priming screen preference
+const PRIMING_DISMISSED_KEY = "sage-priming-dismissed";
 
 interface TranscriptMessage {
   role: "user" | "assistant";
@@ -83,7 +87,16 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
   const [participantName, setParticipantName] = useState(generateParticipantName);
   const [error, setError] = useState<string>("");
   const [selectedVoice, setSelectedVoice] = useState(DEFAULT_VOICE_KEY);
+  const [showPriming, setShowPriming] = useState(false);
+  const [primingChecked, setPrimingChecked] = useState(false);
   const orbSize = useOrbSize();
+
+  // Check if user has dismissed priming screen before
+  useEffect(() => {
+    const dismissed = localStorage.getItem(PRIMING_DISMISSED_KEY);
+    setShowPriming(!dismissed);
+    setPrimingChecked(true);
+  }, []);
 
   // Transcript and insights state
   const [transcript, setTranscript] = useState<TranscriptMessage[]>([]);
@@ -278,7 +291,93 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
     onTopicChange?.("");
   }, [onInsightsChange, onTopicChange]);
 
+  // Handle priming screen dismissal
+  const handlePrimingReady = useCallback(() => {
+    setShowPriming(false);
+  }, []);
+
+  const handlePrimingDontShowAgain = useCallback(() => {
+    localStorage.setItem(PRIMING_DISMISSED_KEY, "true");
+    setShowPriming(false);
+  }, []);
+
   if (connectionState === "disconnected") {
+    // Show priming screen if not dismissed (and we've checked localStorage)
+    if (primingChecked && showPriming && !showSummary) {
+      return (
+        <div className="flex flex-col h-full min-h-[350px] sm:min-h-[400px] p-4 sm:p-6 relative overflow-hidden">
+          {/* Background gradient */}
+          <div className="absolute inset-0 bg-gradient-to-b from-stone-900/50 via-transparent to-stone-900/50 pointer-events-none" />
+
+          <div className="flex-1 flex flex-col items-center justify-center z-10 gap-6 sm:gap-8">
+            {/* Header */}
+            <div className="text-center space-y-2">
+              <h2 className="text-xl sm:text-2xl font-semibold text-white/90">
+                Prepare for your session
+              </h2>
+              <p className="text-sm text-stone-400">
+                A moment to settle in
+              </p>
+            </div>
+
+            {/* Checklist */}
+            <div className="space-y-4 max-w-sm w-full">
+              <div className="flex items-start gap-3 text-white/70">
+                <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Volume2 className="w-4 h-4 text-amber-400/70" />
+                </div>
+                <div>
+                  <p className="text-sm text-white/80">Find a quiet, comfortable space</p>
+                  <p className="text-xs text-stone-500 mt-0.5">Where you can speak freely</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 text-white/70">
+                <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Headphones className="w-4 h-4 text-amber-400/70" />
+                </div>
+                <div>
+                  <p className="text-sm text-white/80">Use headphones for best experience</p>
+                  <p className="text-xs text-stone-500 mt-0.5">Helps with audio clarity</p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3 text-white/70">
+                <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Clock className="w-4 h-4 text-amber-400/70" />
+                </div>
+                <div>
+                  <p className="text-sm text-white/80">Give yourself 5-10 unhurried minutes</p>
+                  <p className="text-xs text-stone-500 mt-0.5">There&apos;s no rush</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Motivational text */}
+            <p className="text-sm text-stone-400 text-center max-w-xs italic">
+              This is a time for reflection.
+            </p>
+
+            {/* Buttons */}
+            <div className="flex flex-col items-center gap-3 w-full max-w-xs">
+              <button
+                onClick={handlePrimingReady}
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 active:from-amber-700 active:to-orange-700 rounded-full transition-all duration-300 text-white font-medium shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 active:scale-95 touch-manipulation"
+              >
+                I&apos;m Ready
+              </button>
+              <button
+                onClick={handlePrimingDontShowAgain}
+                className="text-xs text-stone-500 hover:text-stone-400 transition-colors"
+              >
+                Don&apos;t show this again
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     // Show conversation summary if there was a conversation
     if (showSummary) {
       return (
@@ -460,17 +559,42 @@ function ActiveVoiceChat({ onDisconnect, onTranscript, addTranscriptMessage }: A
   const localParticipant = useLocalParticipant();
   const transcriptions = useTranscriptions({});
   const remoteParticipants = useRemoteParticipants();
+  const connectionState = useConnectionState();
   const { canPlayAudio, startAudio } = useAudioPlayback();
   const [isMuted, setIsMuted] = useState(true); // Start muted until agent is ready
   const [agentAudioLevel, setAgentAudioLevel] = useState(0);
   const [userAudioLevel, setUserAudioLevel] = useState(0);
   const [audioInitialized, setAudioInitialized] = useState(false);
+  const [networkQuality, setNetworkQuality] = useState<"good" | "fair" | "poor">("good");
+  const [showNoiseWarning, setShowNoiseWarning] = useState(false);
+  const noiseHistoryRef = useRef<number[]>([]);
   const transcriptIdRef = useRef(0);
   const agentAnalyserRef = useRef<AnalyserNode | null>(null);
   const userAnalyserRef = useRef<AnalyserNode | null>(null);
   const animationRef = useRef<number | undefined>(undefined);
   const processedAgentSegmentsRef = useRef<Set<string>>(new Set<string>());
   const processedUserTextsRef = useRef<Set<string>>(new Set<string>());
+
+  // Monitor network quality based on connection state
+  useEffect(() => {
+    // LiveKit connection quality tracking
+    // "connected" is good, "reconnecting" indicates issues
+    if (connectionState === "reconnecting") {
+      setNetworkQuality("poor");
+    } else if (connectionState === "connected") {
+      // Check participant connection quality if available
+      const quality = localParticipant.localParticipant?.connectionQuality;
+      if (quality === "poor") {
+        setNetworkQuality("poor");
+      } else if (quality === "good") {
+        setNetworkQuality("fair"); // "good" in LiveKit is actually just okay
+      } else if (quality === "excellent") {
+        setNetworkQuality("good");
+      } else {
+        setNetworkQuality("good"); // Default to good if unknown
+      }
+    }
+  }, [connectionState, localParticipant.localParticipant?.connectionQuality]);
 
   // Initialize browser audio immediately (user gesture from "Talk to Sage" click satisfies autoplay policy)
   useEffect(() => {
@@ -652,17 +776,21 @@ function ActiveVoiceChat({ onDisconnect, onTranscript, addTranscriptMessage }: A
     return () => {
       isCleanedUp = true;
       userAnalyserRef.current = null;
+      // Reset noise detection when microphone state changes
+      noiseHistoryRef.current = [];
+      setShowNoiseWarning(false);
       if (audioContext) {
         audioContext.close().catch(() => {});
       }
     };
   }, [isMuted, agentReady]);
 
-  // Animation loop for both audio levels
+  // Animation loop for both audio levels + background noise detection
   useEffect(() => {
     let isCleanedUp = false;
     const agentDataArray = new Uint8Array(128);
     const userDataArray = new Uint8Array(128);
+    let frameCount = 0;
 
     const updateLevels = () => {
       if (isCleanedUp) return;
@@ -674,11 +802,35 @@ function ActiveVoiceChat({ onDisconnect, onTranscript, addTranscriptMessage }: A
         setAgentAudioLevel(agentAvg / 255);
       }
 
-      // Update user audio level
+      // Update user audio level and detect background noise
       if (userAnalyserRef.current) {
         userAnalyserRef.current.getByteFrequencyData(userDataArray);
         const userAvg = userDataArray.reduce((a, b) => a + b, 0) / userDataArray.length;
-        setUserAudioLevel(userAvg / 255);
+        const normalizedLevel = userAvg / 255;
+        setUserAudioLevel(normalizedLevel);
+
+        // Background noise detection: sample every 10 frames (~6 times/second)
+        frameCount++;
+        if (frameCount % 10 === 0) {
+          // Track noise levels over time (keep last 30 samples = ~5 seconds)
+          noiseHistoryRef.current.push(normalizedLevel);
+          if (noiseHistoryRef.current.length > 30) {
+            noiseHistoryRef.current.shift();
+          }
+
+          // Check for consistent background noise after collecting enough samples
+          if (noiseHistoryRef.current.length >= 20) {
+            // Calculate the minimum level (floor) over the period
+            // If the floor is consistently high, there's background noise
+            const sortedLevels = [...noiseHistoryRef.current].sort((a, b) => a - b);
+            const floorLevel = sortedLevels[Math.floor(sortedLevels.length * 0.2)]; // 20th percentile
+
+            // If the background floor is above 0.08 (8%), show warning
+            // This threshold avoids false positives while catching noisy environments
+            const hasHighNoise = floorLevel > 0.08;
+            setShowNoiseWarning(hasHighNoise);
+          }
+        }
       }
 
       animationRef.current = requestAnimationFrame(updateLevels);
@@ -754,6 +906,36 @@ function ActiveVoiceChat({ onDisconnect, onTranscript, addTranscriptMessage }: A
     <div className="flex flex-col items-center justify-center h-full min-h-[350px] sm:min-h-[400px] gap-6 sm:gap-8 p-4 sm:p-6 relative">
       {/* Background gradient */}
       <div className="absolute inset-0 bg-gradient-to-b from-stone-900/50 via-transparent to-stone-900/50 pointer-events-none" />
+
+      {/* Network quality indicator - only show when there's an issue */}
+      {networkQuality !== "good" && (
+        <div className={clsx(
+          "absolute top-4 right-4 z-20 flex items-center gap-2 px-3 py-1.5 rounded-full text-xs",
+          networkQuality === "poor"
+            ? "bg-red-500/20 text-red-300"
+            : "bg-yellow-500/20 text-yellow-300"
+        )}>
+          {networkQuality === "poor" ? (
+            <>
+              <WifiOff className="w-3.5 h-3.5" />
+              <span>Connection unstable</span>
+            </>
+          ) : (
+            <>
+              <Wifi className="w-3.5 h-3.5" />
+              <span>Weak connection</span>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* Background noise warning - only show when detected and network is fine */}
+      {showNoiseWarning && networkQuality === "good" && (
+        <div className="absolute top-4 right-4 z-20 flex items-center gap-2 px-3 py-1.5 rounded-full text-xs bg-yellow-500/20 text-yellow-300">
+          <Volume2 className="w-3.5 h-3.5" />
+          <span>Background noise detected</span>
+        </div>
+      )}
 
       {/* Voice Orb - overflow visible for glow effects */}
       <div className="relative z-10 overflow-visible">
