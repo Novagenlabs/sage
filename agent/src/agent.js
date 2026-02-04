@@ -314,7 +314,7 @@ export default defineAgent({
       tts: tts,
       turnDetection: 'stt',  // Use Deepgram's endpointing for turn detection
       voiceOptions: {
-        minEndpointingDelay: 0.4,    // Additional 400ms buffer before responding
+        minEndpointingDelay: 0.3,    // Additional 300ms buffer before responding
         minInterruptionWords: 1,     // Single word can interrupt Sage (more responsive)
       },
     });
