@@ -184,15 +184,15 @@ export default defineAgent({
     const vad = ctx.proc.userData.vad;
 
     // Debug: Check environment variables
-    const apiKey = process.env.OPENROUTER_API_KEY;
+    const apiKey = process.env.OPENAI_API_KEY;
     const elevenKey = process.env.ELEVEN_API_KEY;
     const deepgramKey = process.env.DEEPGRAM_API_KEY;
-    console.log(`[DEBUG] OpenRouter API Key: ${apiKey ? `${apiKey.slice(0, 8)}...${apiKey.slice(-4)}` : 'NOT SET'}`);
+    console.log(`[DEBUG] OpenAI API Key: ${apiKey ? `${apiKey.slice(0, 8)}...${apiKey.slice(-4)}` : 'NOT SET'}`);
     console.log(`[DEBUG] ElevenLabs API Key: ${elevenKey ? `${elevenKey.slice(0, 8)}...${elevenKey.slice(-4)}` : 'NOT SET'}`);
     console.log(`[DEBUG] Deepgram API Key: ${deepgramKey ? `${deepgramKey.slice(0, 8)}...${deepgramKey.slice(-4)}` : 'NOT SET'}`);
 
     if (!apiKey) {
-      console.error('[ERROR] OPENROUTER_API_KEY is not set!');
+      console.error('[ERROR] OPENAI_API_KEY is not set!');
     }
     if (!elevenKey) {
       console.error('[ERROR] ELEVEN_API_KEY is not set!');
@@ -201,15 +201,11 @@ export default defineAgent({
       console.error('[ERROR] DEEPGRAM_API_KEY is not set!');
     }
 
-    // Create LLM - GPT-4o-mini via OpenRouter (auto-select fastest provider)
+    // Create LLM - GPT-4o-mini via OpenAI directly (lowest latency)
     const llm = new openai.LLM({
-      model: 'openai/gpt-4o-mini',
+      model: 'gpt-4o-mini',
       apiKey: apiKey,
-      baseURL: 'https://openrouter.ai/api/v1',
       temperature: 0.7,
-      extraBody: {
-        route: 'fallback',  // Let OpenRouter pick the fastest available provider
-      },
     });
 
     // Add error handlers for LLM
