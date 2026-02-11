@@ -391,6 +391,23 @@ export default defineAgent({
     } catch (error) {
       console.error('[GREETING ERROR]', error);
     }
+
+    // CRITICAL: Keep the entry function alive until the room disconnects.
+    // Without this, the entry function returns after the greeting and the
+    // LiveKit framework kills the job process, ending the session.
+    console.log('[ENTRY] Waiting for room disconnect to keep agent alive...');
+    await new Promise((resolve) => {
+      ctx.room.on('disconnected', () => {
+        console.log('[ENTRY] Room disconnected, cleaning up');
+        resolve();
+      });
+      // Safety: if room already disconnected, resolve immediately
+      if (ctx.room.connectionState === 'disconnected') {
+        console.log('[ENTRY] Room already disconnected');
+        resolve();
+      }
+    });
+    console.log('[ENTRY] Agent entry point finished');
   },
 });
 

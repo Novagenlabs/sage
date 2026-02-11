@@ -27,56 +27,62 @@ export async function POST(request: NextRequest) {
   let contextMetadata = "";
   const session = await auth();
   if (session?.user?.id) {
-    try {
-      // Build context string for the agent
-      const contextParts: string[] = [];
+    // Retry Prisma queries to handle Neon cold start connection drops
+    const fetchContext = async (attempt: number): Promise<void> => {
+      try {
+        const contextParts: string[] = [];
 
-      // Get user's name and profile summary
-      const user = await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { name: true, profileSummary: true },
-      });
+        const user = await prisma.user.findUnique({
+          where: { id: session.user.id },
+          select: { name: true, profileSummary: true },
+        });
 
-      if (user?.name) {
-        contextParts.push(`User's name: ${user.name}`);
-        console.log("[Token] User name:", user.name);
-      }
-
-      // Add consolidated profile summary (replaces individual insights)
-      if (user?.profileSummary) {
-        contextParts.push(`About this person: ${user.profileSummary}`);
-        console.log("[Token] Added profile summary");
-      }
-
-      // Fetch recent conversation summaries for additional context (last 5)
-      const recentConversations = await prisma.conversation.findMany({
-        where: {
-          userId: session.user.id,
-          summary: { not: null },
-        },
-        orderBy: { updatedAt: "desc" },
-        select: { summary: true },
-        take: 5,
-      });
-
-      if (recentConversations.length > 0) {
-        const summaries = recentConversations
-          .map(c => c.summary)
-          .filter(Boolean)
-          .join(" | ");
-        if (summaries) {
-          contextParts.push(`Recent sessions: ${summaries}`);
-          console.log("[Token] Added", recentConversations.length, "recent session summaries");
+        if (user?.name) {
+          contextParts.push(`User's name: ${user.name}`);
+          console.log("[Token] User name:", user.name);
         }
-      }
 
-      if (contextParts.length > 0) {
-        contextMetadata = contextParts.join("\n\n");
-        console.log("[Token] Final context metadata length:", contextMetadata.length, "chars");
+        if (user?.profileSummary) {
+          contextParts.push(`About this person: ${user.profileSummary}`);
+          console.log("[Token] Added profile summary");
+        }
+
+        const recentConversations = await prisma.conversation.findMany({
+          where: {
+            userId: session.user.id,
+            summary: { not: null },
+          },
+          orderBy: { updatedAt: "desc" },
+          select: { summary: true },
+          take: 5,
+        });
+
+        if (recentConversations.length > 0) {
+          const summaries = recentConversations
+            .map(c => c.summary)
+            .filter(Boolean)
+            .join(" | ");
+          if (summaries) {
+            contextParts.push(`Recent sessions: ${summaries}`);
+            console.log("[Token] Added", recentConversations.length, "recent session summaries");
+          }
+        }
+
+        if (contextParts.length > 0) {
+          contextMetadata = contextParts.join("\n\n");
+          console.log("[Token] Final context metadata length:", contextMetadata.length, "chars");
+        }
+      } catch (error) {
+        if (attempt < 2) {
+          console.warn(`[Token] DB query failed (attempt ${attempt + 1}), retrying...`, error);
+          await new Promise(r => setTimeout(r, 500));
+          return fetchContext(attempt + 1);
+        }
+        console.error("Failed to fetch voice context after retries:", error);
       }
-    } catch (error) {
-      console.error("Failed to fetch voice context:", error);
-    }
+    };
+
+    await fetchContext(0);
   }
 
   // Always include voice key (works for both authenticated and unauthenticated users)
