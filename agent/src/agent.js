@@ -386,7 +386,7 @@ export default defineAgent({
         greeting = "Hello, I'm Sage. What's on your mind?";
       }
 
-      await session.say(greeting, { allowInterruptions: true });
+      await session.say(greeting, { allowInterruptions: false });
       console.log('[GREETING] Initial greeting sent:', greeting);
     } catch (error) {
       console.error('[GREETING ERROR]', error);
