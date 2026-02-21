@@ -226,6 +226,7 @@ export default defineAgent({
       george: 'JBFqnCBsd6RMkjVDRZzb',   // George - calm, thoughtful male
       lily: 'pFZP5JQG7iQjIQuC4Bku',     // Lily - gentle, soothing female
       brian: 'nPczCjzI2devNBz1zQrb',     // Brian - clear, steady male
+      ify: 'b8XX4QShLFkd3yZQlz8T',       // IFy - Nigerian accent (community)
     };
 
     // Create STT - Direct Deepgram (bypasses LiveKit inference gateway)
@@ -233,7 +234,7 @@ export default defineAgent({
       model: 'nova-3',
       language: 'en',
       apiKey: deepgramKey,
-      endpointing: 300,  // Wait 300ms of silence before finalizing (reduced for responsiveness)
+      endpointing: 200,  // Wait 200ms of silence before finalizing (reduced for faster response)
     });
 
     // Add error handlers for STT
@@ -307,8 +308,8 @@ export default defineAgent({
       tts: tts,
       turnDetection: 'stt',  // Use Deepgram's endpointing for turn detection
       voiceOptions: {
-        minEndpointingDelay: 0.3,    // Additional 300ms buffer before responding
-        minInterruptionWords: 1,     // Single word can interrupt Sage (more responsive)
+        minEndpointingDelay: 0.1,    // Additional 100ms buffer before responding (reduced for speed)
+        minInterruptionWords: 1,     // Single word can interrupt for responsive feel
       },
     });
 

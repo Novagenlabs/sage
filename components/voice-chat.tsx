@@ -596,16 +596,43 @@ function ActiveVoiceChat({ onDisconnect, onTranscript, addTranscriptMessage }: A
     }
   }, [connectionState, localParticipant.localParticipant?.connectionQuality]);
 
-  // Initialize browser audio immediately (user gesture from "Talk to Sage" click satisfies autoplay policy)
+  // Initialize browser audio - retry on user interaction if autoplay blocked
   useEffect(() => {
+    if (canPlayAudio) {
+      console.log("[Voice] Audio already allowed");
+      setAudioInitialized(true);
+      return;
+    }
+
+    // Try startAudio immediately (may work if user gesture context still valid)
     startAudio().then(() => {
-      console.log("[Voice] Audio initialized, canPlayAudio:", canPlayAudio);
+      console.log("[Voice] Audio initialized on mount");
       setAudioInitialized(true);
     }).catch((err) => {
-      console.error("[Voice] Failed to initialize audio:", err);
-      // Still mark as initialized to avoid blocking UI
-      setAudioInitialized(true);
+      console.warn("[Voice] Autoplay blocked, will resume on next user interaction:", err.message);
     });
+
+    // Fallback: resume audio on any user interaction (click/touch/keydown)
+    const resumeAudio = () => {
+      if (canPlayAudio) return;
+      startAudio().then(() => {
+        console.log("[Voice] Audio resumed via user interaction");
+        setAudioInitialized(true);
+        cleanup();
+      }).catch(() => {});
+    };
+
+    const cleanup = () => {
+      document.removeEventListener("click", resumeAudio);
+      document.removeEventListener("touchstart", resumeAudio);
+      document.removeEventListener("keydown", resumeAudio);
+    };
+
+    document.addEventListener("click", resumeAudio);
+    document.addEventListener("touchstart", resumeAudio);
+    document.addEventListener("keydown", resumeAudio);
+
+    return cleanup;
   }, [startAudio, canPlayAudio]);
 
   // Detect agent readiness via lk.agent.state participant attribute

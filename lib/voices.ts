@@ -109,6 +109,19 @@ export const AVAILABLE_VOICES: Voice[] = [
       use_speaker_boost: true,
     },
   },
+  {
+    key: "ify",
+    id: "b8XX4QShLFkd3yZQlz8T", // IFy - community voice
+    name: "IFy",
+    gender: "female",
+    description: "Nigerian accent",
+    settings: {
+      stability: 0.75,
+      similarity_boost: 0.8,
+      style: 0,
+      use_speaker_boost: true,
+    },
+  },
 ];
 
 export const DEFAULT_VOICE_KEY = "emily";
