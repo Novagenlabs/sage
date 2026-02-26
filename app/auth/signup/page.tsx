@@ -4,7 +4,7 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Loader2, Coins } from "lucide-react";
+import { Loader2, Coins, Eye, EyeOff } from "lucide-react";
 import { LogoOrb } from "@/components/voice-orb-3d";
 
 export default function SignUpPage() {
@@ -14,6 +14,7 @@ export default function SignUpPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,18 +144,28 @@ export default function SignUpPage() {
             <label htmlFor="password" className="block text-xs sm:text-sm font-medium text-chamber-300 mb-1.5 sm:mb-2">
               Password
             </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              autoComplete="new-password"
-              className="w-full px-3 sm:px-4 py-3 glass-strong rounded-xl text-chamber-100 placeholder-chamber-500 focus:outline-none focus:ring-2 focus:ring-ember-500/50 focus:border-transparent transition-all text-base"
-              placeholder="At least 6 characters"
-              style={{ fontSize: '16px' }}
-            />
+            <div className="relative">
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+                autoComplete="new-password"
+                className="w-full px-3 sm:px-4 py-3 pr-11 glass-strong rounded-xl text-chamber-100 placeholder-chamber-500 focus:outline-none focus:ring-2 focus:ring-ember-500/50 focus:border-transparent transition-all text-base"
+                placeholder="At least 6 characters"
+                style={{ fontSize: '16px' }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-chamber-400 hover:text-chamber-200 transition-colors"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Eye className="w-4 h-4 sm:w-5 sm:h-5" />}
+              </button>
+            </div>
           </div>
 
           <button

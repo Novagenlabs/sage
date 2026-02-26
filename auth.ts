@@ -3,6 +3,23 @@ import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 
+// Retry wrapper for Prisma queries to handle Neon cold start connection drops
+async function withRetry<T>(fn: () => Promise<T>, retries = 2): Promise<T> {
+  for (let i = 0; i <= retries; i++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (i < retries) {
+        console.warn(`[Auth] DB query failed (attempt ${i + 1}), retrying...`);
+        await new Promise((r) => setTimeout(r, 500 * (i + 1)));
+      } else {
+        throw error;
+      }
+    }
+  }
+  throw new Error("Unreachable");
+}
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: true,
   providers: [
@@ -20,9 +37,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const email = credentials.email as string;
         const password = credentials.password as string;
 
-        const user = await prisma.user.findUnique({
-          where: { email },
-        });
+        const user = await withRetry(() =>
+          prisma.user.findUnique({ where: { email } })
+        );
 
         if (!user || !user.password) {
           return null;
@@ -56,10 +73,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async session({ session, token }) {
       if (session.user && token.id) {
         session.user.id = token.id as string;
-        const dbUser = await prisma.user.findUnique({
-          where: { id: token.id as string },
-          select: { credits: true },
-        });
+        const dbUser = await withRetry(() =>
+          prisma.user.findUnique({
+            where: { id: token.id as string },
+            select: { credits: true },
+          })
+        );
         session.user.credits = dbUser?.credits ?? 0;
       }
       return session;

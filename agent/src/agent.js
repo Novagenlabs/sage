@@ -156,10 +156,17 @@ function buildInstructions(context) {
     ? `\n\nThe user's name is ${userName}. Use their name naturally and warmly in conversation, but don't overuse it.`
     : '';
 
+  // Strip the Voice: line — it's for TTS selection, not the LLM
+  const cleanContext = context.replace(/\n*Voice: [^\n]+/g, '').trim();
+
+  if (!cleanContext) {
+    return `${SAGE_BASE_INSTRUCTIONS}${nameInstruction}`;
+  }
+
   return `${SAGE_BASE_INSTRUCTIONS}
 
 ## Context from Previous Sessions
-${context}
+${cleanContext}
 ${nameInstruction}
 
 Use this context naturally in your responses. If they ask if you remember, you can say "Yes, I recall we've spoken before" and reference relevant context. Don't explicitly state you're reading from notes.`;

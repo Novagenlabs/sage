@@ -318,6 +318,12 @@ export function useSocraticChat() {
 
         if (!response.ok) {
           const errorData = await response.json();
+          if (response.status === 401) {
+            throw new Error("Please sign in to continue the conversation.");
+          }
+          if (response.status === 402) {
+            throw new Error("You're out of credits. Please purchase more to continue.");
+          }
           throw new Error(errorData.error || "Failed to get response");
         }
 

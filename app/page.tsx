@@ -7,7 +7,6 @@ import { Menu, MessageSquare, Mic, RotateCcw, ChevronRight, Ghost, Loader2 } fro
 import { useSocraticChat } from "@/lib/use-chat";
 import { ChatMessage } from "@/components/chat-message";
 import { ChatInput } from "@/components/chat-input";
-import { ModelSelector } from "@/components/model-selector";
 import { Sidebar } from "@/components/sidebar";
 import { VoiceChat } from "@/components/voice-chat";
 import { VoiceOrb, LogoOrb } from "@/components/voice-orb-3d";
@@ -159,17 +158,6 @@ export default function Home() {
               </button>
             </div>
 
-            {/* Model selector - Desktop only */}
-            {mode === "text" && (
-              <div className="hidden md:block">
-                <ModelSelector
-                  selectedModelId={modelId}
-                  onSelect={setModel}
-                  disabled={isLoading}
-                />
-              </div>
-            )}
-
             {/* Auth header - Desktop only */}
             <div className="hidden sm:block">
               <AuthHeader />
@@ -196,6 +184,7 @@ export default function Home() {
                 }}
                 onInsightsChange={setVoiceInsights}
                 onTopicChange={setVoiceTopic}
+                ghostMode={ghostMode}
               />
             </div>
           ) : !hasMessages ? (
@@ -285,6 +274,25 @@ export default function Home() {
                   isLatest={index === messages.length - 1 && isLoading}
                 />
               ))}
+              {/* Thinking indicator: shows after user sends message, before assistant response starts */}
+              {isLoading && messages.length > 0 && messages[messages.length - 1].role === "user" && (
+                <div className="flex gap-3 sm:gap-4 px-3 sm:px-4 py-5 sm:py-6 bg-chamber-800/20">
+                  <LogoOrb size={28} className="sm:hidden" />
+                  <LogoOrb size={32} className="hidden sm:block" animated />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1.5">
+                      <span className="font-medium text-xs sm:text-sm text-ember-500">Sage</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-sm text-chamber-400">
+                      <span className="inline-flex gap-1.5 items-center" role="status" aria-label="Sage is thinking">
+                        <span className="size-1.5 sm:size-2 bg-ember-500/60 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                        <span className="size-1.5 sm:size-2 bg-ember-500/60 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                        <span className="size-1.5 sm:size-2 bg-ember-500/60 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
               <div ref={messagesEndRef} className="h-4" />
             </div>
           )}

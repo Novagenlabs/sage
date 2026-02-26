@@ -12,7 +12,7 @@ import {
   useConnectionState,
 } from "@livekit/components-react";
 import "@livekit/components-styles";
-import { Mic, MicOff, Phone, PhoneOff, Loader2, X, Headphones, Volume2, Clock, Wifi, WifiOff } from "lucide-react";
+import { Mic, MicOff, Phone, PhoneOff, Loader2, X, Headphones, Volume2, Clock, Wifi, WifiOff, Ghost } from "lucide-react";
 import { clsx } from "clsx";
 import type { Message } from "@/lib/types";
 import { VoiceOrb } from "./voice-orb-3d";
@@ -21,6 +21,19 @@ import { DEFAULT_VOICE_KEY } from "@/lib/voices";
 
 // localStorage key for priming screen preference
 const PRIMING_DISMISSED_KEY = "sage-priming-dismissed";
+
+const GHOST_SAYINGS = [
+  "Like a ghost, that conversation never happened.",
+  "Poof. No trace. Just you and your thoughts.",
+  "What conversation? We don't know what you're talking about.",
+  "Gone like whispers in the wind.",
+  "This session will self-destruct in... oh wait, it already did.",
+  "Even Sage forgot this one.",
+  "Nothing to see here. Move along.",
+  "Your secrets are safe. We didn't even keep ours.",
+  "If a conversation happens and nobody saves it, did it really happen?",
+  "Vanished. Like it was never there.",
+];
 
 interface TranscriptMessage {
   role: "user" | "assistant";
@@ -39,6 +52,7 @@ interface VoiceChatProps {
   onConnectionChange?: (connected: boolean) => void;
   onInsightsChange?: (insights: VoiceInsightsData | null) => void;
   onTopicChange?: (topic: string) => void;
+  ghostMode?: boolean;
 }
 
 interface VoiceInsight {
@@ -79,7 +93,7 @@ function useOrbSize() {
   return size;
 }
 
-export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, onTopicChange }: VoiceChatProps) {
+export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, onTopicChange, ghostMode = false }: VoiceChatProps) {
   const [connectionState, setConnectionState] = useState<"disconnected" | "connecting" | "connected">("disconnected");
   const [token, setToken] = useState<string>("");
   const [serverUrl, setServerUrl] = useState<string>("");
@@ -131,17 +145,19 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
         setCurrentTopic(content);
         // Schedule parent notification outside of setState to avoid React warning
         setTimeout(() => onTopicChange?.(content), 0);
-        // Create conversation in database
-        createConversation(content).then((id) => {
-          if (id) {
-            setConversationId(id);
-            console.log("[Voice] Created conversation:", id);
-          }
-        });
+        // Create conversation in database (skip in ghost mode)
+        if (!ghostMode) {
+          createConversation(content).then((id) => {
+            if (id) {
+              setConversationId(id);
+              console.log("[Voice] Created conversation:", id);
+            }
+          });
+        }
       }
       return [...prev, { role, content, timestamp: new Date() }];
     });
-  }, [onTopicChange, createConversation]);
+  }, [onTopicChange, createConversation, ghostMode]);
 
   // Save messages and generate summary/insights via Inngest (durable background processing)
   const saveConversationAndGenerateInsights = useCallback(async (
@@ -240,6 +256,12 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
 
       if (!response.ok) {
         const data = await response.json();
+        if (response.status === 401) {
+          throw new Error("Please sign in to use voice mode.");
+        }
+        if (response.status === 402) {
+          throw new Error("You're out of credits. Please purchase more to use voice mode.");
+        }
         throw new Error(data.error || "Failed to get token");
       }
 
@@ -265,18 +287,20 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
     setConnectionState("disconnected");
     onConnectionChange?.(false);
 
-    // Show summary and generate insights if there was a conversation
+    // Show summary and generate insights if there was a conversation (skip in ghost mode)
     if (transcript.length >= 2) {
       setShowSummary(true);
-      // Save to database if we have a conversation ID (authenticated user)
-      if (conversationId) {
-        saveConversationAndGenerateInsights(conversationId, transcript);
-      } else {
-        // Fallback for unauthenticated users - just generate UI insights
-        generateInsights(transcript);
+      if (!ghostMode) {
+        // Save to database if we have a conversation ID (authenticated user)
+        if (conversationId) {
+          saveConversationAndGenerateInsights(conversationId, transcript);
+        } else {
+          // Fallback for unauthenticated users - just generate UI insights
+          generateInsights(transcript);
+        }
       }
     }
-  }, [onConnectionChange, transcript, conversationId, saveConversationAndGenerateInsights, generateInsights]);
+  }, [onConnectionChange, transcript, conversationId, saveConversationAndGenerateInsights, generateInsights, ghostMode]);
 
   const closeSummary = useCallback(() => {
     setShowSummary(false);
@@ -380,6 +404,30 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
 
     // Show conversation summary if there was a conversation
     if (showSummary) {
+      // Ghost mode: show a fun saying instead of summary
+      if (ghostMode) {
+        const saying = GHOST_SAYINGS[Math.floor(Math.random() * GHOST_SAYINGS.length)];
+        return (
+          <div className="flex flex-col h-full min-h-[350px] sm:min-h-[400px] p-4 sm:p-6 relative overflow-hidden">
+            <div className="flex-1 flex flex-col items-center justify-center z-10 gap-6">
+              <Ghost className="w-12 h-12 text-purple-400/60" />
+              <p className="text-base sm:text-lg text-purple-300/80 text-center max-w-sm leading-relaxed italic">
+                {saying}
+              </p>
+              <p className="text-xs text-white/20">Ghost mode was on</p>
+            </div>
+            <div className="z-10 pt-4">
+              <button
+                onClick={closeSummary}
+                className="w-full py-3 text-sm text-white/60 hover:text-white/80 transition-colors"
+              >
+                Start another conversation
+              </button>
+            </div>
+          </div>
+        );
+      }
+
       return (
         <div className="flex flex-col h-full min-h-[350px] sm:min-h-[400px] p-4 sm:p-6 relative overflow-hidden">
           {/* Header */}

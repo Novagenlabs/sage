@@ -114,7 +114,7 @@ export const AVAILABLE_VOICES: Voice[] = [
     id: "b8XX4QShLFkd3yZQlz8T", // IFy - community voice
     name: "IFy",
     gender: "female",
-    description: "Nigerian accent",
+    description: "Relaxed and conversational",
     settings: {
       stability: 0.75,
       similarity_boost: 0.8,

@@ -2,8 +2,27 @@ import { AccessToken } from "livekit-server-sdk";
 import { NextRequest } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { hasEnoughCredits } from "@/lib/credits";
 
 export async function POST(request: NextRequest) {
+  // Require authentication for voice mode
+  const session = await auth();
+  if (!session?.user?.id) {
+    return new Response(
+      JSON.stringify({ error: "Please sign in to use voice mode." }),
+      { status: 401, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
+  // Check credits before issuing token
+  const hasCredits = await hasEnoughCredits(session.user.id, 5);
+  if (!hasCredits) {
+    return new Response(
+      JSON.stringify({ error: "Insufficient credits. Please purchase more credits to use voice mode." }),
+      { status: 402, headers: { "Content-Type": "application/json" } }
+    );
+  }
+
   const { roomName, participantName, voiceKey } = await request.json();
 
   const apiKey = process.env.LIVEKIT_API_KEY;
@@ -23,10 +42,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Fetch context for authenticated users
+  // Fetch context for authenticated user
   let contextMetadata = "";
-  const session = await auth();
-  if (session?.user?.id) {
+  {
     // Retry Prisma queries to handle Neon cold start connection drops
     const fetchContext = async (attempt: number): Promise<void> => {
       try {
@@ -85,7 +103,7 @@ export async function POST(request: NextRequest) {
     await fetchContext(0);
   }
 
-  // Always include voice key (works for both authenticated and unauthenticated users)
+  // Include voice key in metadata for agent TTS selection
   if (voiceKey) {
     contextMetadata = contextMetadata
       ? `${contextMetadata}\n\nVoice: ${voiceKey}`
