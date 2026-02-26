@@ -124,7 +124,7 @@ export const AVAILABLE_VOICES: Voice[] = [
   },
 ];
 
-export const DEFAULT_VOICE_KEY = "emily";
+export const DEFAULT_VOICE_KEY = "ify";
 
 export function getVoiceByKey(key: string): Voice | undefined {
   return AVAILABLE_VOICES.find((v) => v.key === key);

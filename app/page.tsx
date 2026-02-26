@@ -42,7 +42,7 @@ export default function Home() {
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [mode, setMode] = useState<Mode>("text");
+  const [mode, setMode] = useState<Mode>("voice");
   const [voiceConnected, setVoiceConnected] = useState(false);
   const [voiceInsights, setVoiceInsights] = useState<VoiceInsightsData | null>(null);
   const [voiceTopic, setVoiceTopic] = useState<string>("");
