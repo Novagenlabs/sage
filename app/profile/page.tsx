@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft,
-  User,
   Mail,
   Coins,
   Calendar,
@@ -14,6 +13,7 @@ import {
   Loader2,
   Check,
   Save,
+  Gift,
 } from "lucide-react";
 
 interface UserProfile {
@@ -37,6 +37,11 @@ export default function ProfilePage() {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState("");
   const [name, setName] = useState("");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -99,30 +104,46 @@ export default function ProfilePage() {
 
   if (status === "loading" || isLoading) {
     return (
-      <div className="min-h-screen bg-[#0a0a0f] flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-white/50 animate-spin" />
+      <div className="min-h-screen-safe bg-chamber-900 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-chamber-400 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white">
-      {/* Background effects */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/3 w-[500px] h-[500px] bg-amber-500/[0.03] rounded-full blur-[120px]" />
-        <div className="absolute bottom-1/4 right-1/3 w-[400px] h-[400px] bg-orange-500/[0.02] rounded-full blur-[100px]" />
+    <div className="min-h-screen-safe bg-chamber-900 text-chamber-100">
+      {/* Grain overlay */}
+      <div className="grain-overlay" />
+
+      {/* Atmospheric background */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div
+          className="absolute -top-1/4 -left-1/4 w-[500px] sm:w-[700px] h-[500px] sm:h-[700px] rounded-full animate-ambient"
+          style={{
+            background: "radial-gradient(circle, rgba(224, 124, 56, 0.06) 0%, transparent 60%)",
+          }}
+        />
+        <div
+          className="absolute -bottom-1/4 -right-1/4 w-[400px] sm:w-[600px] h-[400px] sm:h-[600px] rounded-full animate-ambient-slow"
+          style={{
+            background: "radial-gradient(circle, rgba(196, 149, 106, 0.04) 0%, transparent 60%)",
+            animationDelay: "-10s",
+          }}
+        />
       </div>
 
       <div className="relative z-10 max-w-2xl mx-auto px-4 py-8 sm:py-12">
         {/* Header */}
-        <div className="flex items-center gap-4 mb-8">
+        <div className={`flex items-center gap-4 mb-8 ${mounted ? "animate-fade-in" : "opacity-0"}`}>
           <Link
             href="/"
-            className="p-2 hover:bg-white/5 rounded-lg transition-colors"
+            className="p-2 hover:bg-chamber-800/50 rounded-lg transition-colors"
           >
-            <ArrowLeft className="w-5 h-5 text-white/60" />
+            <ArrowLeft className="w-5 h-5 text-chamber-400" />
           </Link>
-          <h1 className="text-2xl font-bold">Profile</h1>
+          <h1 className="font-display text-2xl sm:text-3xl font-medium text-chamber-50">
+            Profile
+          </h1>
         </div>
 
         {error && (
@@ -132,101 +153,114 @@ export default function ProfilePage() {
         )}
 
         {profile && (
-          <div className="space-y-6">
+          <div className="space-y-5 sm:space-y-6">
             {/* Profile Card */}
-            <div className="bg-stone-900/50 border border-stone-700/30 rounded-2xl p-6">
+            <div className={`glass rounded-2xl p-5 sm:p-6 ${mounted ? "animate-fade-up stagger-2" : "opacity-0"}`}>
               {/* Avatar and Name */}
               <div className="flex items-center gap-4 mb-6">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-2xl font-bold">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-ember-500 to-ember-700 flex items-center justify-center text-xl sm:text-2xl font-bold text-white shadow-lg shadow-ember-500/20">
                   {name ? name[0].toUpperCase() : profile.email[0].toUpperCase()}
                 </div>
                 <div>
-                  <h2 className="text-xl font-semibold">
+                  <h2 className="font-display text-lg sm:text-xl font-medium text-chamber-50">
                     {name || "Add your name"}
                   </h2>
-                  <p className="text-white/50 text-sm">{profile.email}</p>
+                  <p className="text-sm text-chamber-500">{profile.email}</p>
                 </div>
               </div>
 
               {/* Name Input */}
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-white/70 mb-2">
-                    Your Name
-                  </label>
-                  <div className="flex gap-3">
-                    <input
-                      type="text"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      placeholder="Enter your name"
-                      className="flex-1 px-4 py-3 bg-stone-800/50 border border-stone-700/30 rounded-xl text-white placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-transparent transition-all"
-                    />
-                    <button
-                      onClick={handleSave}
-                      disabled={!hasChanges || isSaving}
-                      className="px-4 py-3 bg-amber-500 hover:bg-amber-400 disabled:bg-stone-700 disabled:cursor-not-allowed text-black disabled:text-stone-400 font-medium rounded-xl transition-colors flex items-center gap-2"
-                    >
-                      {isSaving ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : saveSuccess ? (
-                        <Check className="w-4 h-4" />
-                      ) : (
-                        <Save className="w-4 h-4" />
-                      )}
+              <div>
+                <label className="block text-xs sm:text-sm font-medium text-chamber-300 mb-2">
+                  Your Name
+                </label>
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="Enter your name"
+                    className="flex-1 px-3 sm:px-4 py-3 glass-strong rounded-xl text-chamber-100 placeholder-chamber-600 focus:outline-none focus:ring-2 focus:ring-ember-500/50 focus:border-transparent transition-all text-base"
+                    style={{ fontSize: '16px' }}
+                  />
+                  <button
+                    onClick={handleSave}
+                    disabled={!hasChanges || isSaving}
+                    className="px-4 py-3 bg-ember-500 hover:bg-ember-400 active:bg-ember-600 disabled:bg-chamber-700 disabled:cursor-not-allowed text-white disabled:text-chamber-500 font-medium rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-ember-500/20 disabled:shadow-none"
+                  >
+                    {isSaving ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : saveSuccess ? (
+                      <Check className="w-4 h-4" />
+                    ) : (
+                      <Save className="w-4 h-4" />
+                    )}
+                    <span className="text-sm">
                       {isSaving ? "Saving" : saveSuccess ? "Saved" : "Save"}
-                    </button>
-                  </div>
-                  <p className="mt-2 text-xs text-white/40">
-                    Sage will use your name to personalize your conversations
-                  </p>
+                    </span>
+                  </button>
                 </div>
+                <p className="mt-2 text-xs text-chamber-600">
+                  Sage will use your name to personalize your conversations
+                </p>
               </div>
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-stone-900/50 border border-stone-700/30 rounded-xl p-4">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 bg-amber-500/10 rounded-lg">
-                    <Coins className="w-4 h-4 text-amber-400" />
+            <div className={`grid grid-cols-3 gap-3 sm:gap-4 ${mounted ? "animate-fade-up stagger-3" : "opacity-0"}`}>
+              <div className="glass rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="p-1.5 bg-ember-500/10 border border-ember-500/15 rounded-lg">
+                    <Coins className="w-3.5 h-3.5 text-ember-400" />
                   </div>
-                  <span className="text-sm text-white/60">Credits</span>
+                  <span className="text-xs text-chamber-500">Credits</span>
                 </div>
-                <p className="text-2xl font-bold">{profile.credits.toLocaleString()}</p>
+                <p className="text-xl sm:text-2xl font-bold text-chamber-50">{profile.credits.toLocaleString()}</p>
                 <Link
                   href="/credits"
-                  className="mt-2 inline-block text-xs font-medium text-amber-400 hover:text-amber-300 transition-colors"
+                  className="mt-2 inline-block text-xs font-medium text-ember-400 hover:text-ember-300 transition-colors"
                 >
-                  Buy Credits &rarr;
+                  Buy more &rarr;
                 </Link>
               </div>
 
-              <div className="bg-stone-900/50 border border-stone-700/30 rounded-xl p-4">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 bg-blue-500/10 rounded-lg">
-                    <MessageSquare className="w-4 h-4 text-blue-400" />
+              <div className="glass rounded-xl p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="p-1.5 bg-sage-900/40 border border-sage-500/15 rounded-lg">
+                    <MessageSquare className="w-3.5 h-3.5 text-sage-400" />
                   </div>
-                  <span className="text-sm text-white/60">Conversations</span>
+                  <span className="text-xs text-chamber-500">Sessions</span>
                 </div>
-                <p className="text-2xl font-bold">{profile._count?.conversations ?? 0}</p>
+                <p className="text-xl sm:text-2xl font-bold text-chamber-50">{profile._count?.conversations ?? 0}</p>
               </div>
+
+              <Link href="/referrals" className="glass rounded-xl p-4 hover:bg-chamber-800/40 transition-colors group">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="p-1.5 bg-gold-400/10 border border-gold-400/15 rounded-lg">
+                    <Gift className="w-3.5 h-3.5 text-gold-400" />
+                  </div>
+                  <span className="text-xs text-chamber-500">Referrals</span>
+                </div>
+                <p className="text-xs text-ember-400 group-hover:text-ember-300 font-medium transition-colors mt-1">
+                  Invite friends &rarr;
+                </p>
+              </Link>
             </div>
 
             {/* Account Info */}
-            <div className="bg-stone-900/50 border border-stone-700/30 rounded-xl p-4 space-y-3">
-              <h3 className="font-medium text-white/80 mb-4">Account Details</h3>
+            <div className={`glass rounded-xl p-4 sm:p-5 space-y-3 ${mounted ? "animate-fade-up stagger-4" : "opacity-0"}`}>
+              <h3 className="font-display text-base font-medium text-chamber-200 mb-4">Account Details</h3>
 
               <div className="flex items-center gap-3 text-sm">
-                <Mail className="w-4 h-4 text-white/40" />
-                <span className="text-white/60">Email:</span>
-                <span className="text-white/90">{profile.email}</span>
+                <Mail className="w-4 h-4 text-chamber-500" />
+                <span className="text-chamber-500">Email:</span>
+                <span className="text-chamber-200">{profile.email}</span>
               </div>
 
               <div className="flex items-center gap-3 text-sm">
-                <Calendar className="w-4 h-4 text-white/40" />
-                <span className="text-white/60">Member since:</span>
-                <span className="text-white/90">
+                <Calendar className="w-4 h-4 text-chamber-500" />
+                <span className="text-chamber-500">Member since:</span>
+                <span className="text-chamber-200">
                   {new Date(profile.createdAt).toLocaleDateString("en-US", {
                     month: "long",
                     day: "numeric",
