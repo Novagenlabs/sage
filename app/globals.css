@@ -3,8 +3,32 @@
 @tailwind utilities;
 
 :root {
-  --background: #0a0a0a;
-  --foreground: #ededed;
+  /* Oracle's Chamber color system */
+  --background: #08080c;
+  --foreground: #e8e4de;
+
+  /* Ember palette */
+  --ember-500: #e07c38;
+  --ember-600: #d16426;
+  --ember-glow: rgba(224, 124, 56, 0.4);
+
+  /* Gold palette */
+  --gold-400: #c4956a;
+  --gold-glow: rgba(196, 149, 106, 0.3);
+
+  /* Sage palette (listening) */
+  --sage-400: #6b9a8d;
+  --sage-glow: rgba(107, 154, 141, 0.4);
+
+  /* Terra palette (speaking) */
+  --terra-500: #d4654a;
+  --terra-glow: rgba(212, 101, 74, 0.5);
+
+  /* Text colors */
+  --text-primary: #e8e4de;
+  --text-secondary: #9a9590;
+  --text-muted: #635f5a;
+
   /* Safe area insets for notched devices */
   --safe-area-inset-top: env(safe-area-inset-top, 0px);
   --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
@@ -14,29 +38,29 @@
 
 /* Mobile-first base styles */
 html {
-  /* Prevent font size adjustment on orientation change */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
-  /* Smooth scrolling */
   scroll-behavior: smooth;
-  /* Better tap highlighting */
   -webkit-tap-highlight-color: transparent;
 }
 
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
-  /* Prevent overscroll bounce on iOS */
+  font-family: var(--font-body), "DM Sans", system-ui, sans-serif;
   overscroll-behavior: none;
-  /* Mobile-first font size (16px prevents zoom on iOS) */
   font-size: 16px;
-  line-height: 1.5;
-  /* Safe area padding for notched devices */
+  line-height: 1.6;
   padding-top: var(--safe-area-inset-top);
   padding-left: var(--safe-area-inset-left);
   padding-right: var(--safe-area-inset-right);
+  letter-spacing: -0.01em;
+}
+
+/* Display font for headlines */
+.font-display {
+  font-family: var(--font-display), "Cormorant Garamond", Georgia, serif;
+  letter-spacing: -0.02em;
 }
 
 /* Prevent zoom on input focus (iOS Safari) */
@@ -46,13 +70,10 @@ input, textarea, select {
 
 /* Touch-friendly interactions */
 button, a, [role="button"] {
-  /* Minimum touch target size (44px as per Apple HIG) */
   min-height: 44px;
-  /* Remove touch delay */
   touch-action: manipulation;
 }
 
-/* Allow smaller buttons when explicitly sized */
 button.btn-sm, .btn-sm {
   min-height: auto;
 }
@@ -62,12 +83,11 @@ button.btn-sm, .btn-sm {
   -webkit-overflow-scrolling: touch;
 }
 
-/* Custom scrollbar - hide on mobile, show on desktop */
+/* Custom scrollbar */
 @media (max-width: 768px) {
   ::-webkit-scrollbar {
     display: none;
   }
-
   * {
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -76,20 +96,17 @@ button.btn-sm, .btn-sm {
 
 @media (min-width: 769px) {
   ::-webkit-scrollbar {
-    width: 8px;
+    width: 6px;
   }
-
   ::-webkit-scrollbar-track {
     background: transparent;
   }
-
   ::-webkit-scrollbar-thumb {
-    background: #333;
-    border-radius: 4px;
+    background: rgba(196, 149, 106, 0.2);
+    border-radius: 3px;
   }
-
   ::-webkit-scrollbar-thumb:hover {
-    background: #444;
+    background: rgba(196, 149, 106, 0.35);
   }
 }
 
@@ -107,9 +124,8 @@ button.btn-sm, .btn-sm {
   padding-right: max(1rem, var(--safe-area-inset-right));
 }
 
-/* Mobile keyboard awareness - apply to input containers */
+/* Mobile keyboard awareness */
 .keyboard-aware {
-  /* Helps with virtual keyboard on mobile */
   position: fixed;
   bottom: 0;
   left: 0;
@@ -128,7 +144,7 @@ button.btn-sm, .btn-sm {
   button:active,
   a:active,
   [role="button"]:active {
-    opacity: 0.7;
+    opacity: 0.8;
     transform: scale(0.98);
   }
 }
@@ -159,12 +175,12 @@ button.btn-sm, .btn-sm {
 }
 
 .text-responsive-4xl {
-  font-size: clamp(2.25rem, 8vw, 3rem);
+  font-size: clamp(2.25rem, 8vw, 3.5rem);
 }
 
 /* Markdown styling in messages */
 .prose-chat {
-  @apply text-gray-100;
+  @apply text-chamber-100;
 }
 
 .prose-chat p {
@@ -177,28 +193,27 @@ button.btn-sm, .btn-sm {
 }
 
 .prose-chat li {
-  @apply mb-1;
+  @apply mb-1.5;
 }
 
 .prose-chat strong {
-  @apply font-semibold text-white;
+  @apply font-semibold text-chamber-50;
 }
 
 .prose-chat em {
-  @apply italic text-gray-300;
+  @apply italic text-chamber-200;
 }
 
 .prose-chat code {
-  @apply bg-gray-800 px-1.5 py-0.5 rounded text-sm font-mono;
+  @apply bg-chamber-800/60 px-1.5 py-0.5 rounded text-sm font-mono text-gold-300;
 }
 
 .prose-chat blockquote {
-  @apply border-l-2 border-gray-600 pl-4 italic text-gray-400 my-3;
+  @apply border-l-2 border-gold-400/30 pl-4 italic text-chamber-300 my-3;
 }
 
 /* Mobile-specific utilities */
 @layer utilities {
-  /* Full height accounting for mobile browser chrome */
   .h-screen-safe {
     height: 100dvh;
   }
@@ -207,18 +222,16 @@ button.btn-sm, .btn-sm {
     min-height: 100dvh;
   }
 
-  /* Touch-friendly spacing */
   .touch-spacing {
     @apply p-3 sm:p-4;
   }
 
-  /* Mobile-first container */
   .container-mobile {
     @apply w-full px-4 sm:px-6 lg:px-8;
   }
 }
 
-/* Animated gradient background for special elements */
+/* Animated gradient background */
 @keyframes gradient-shift {
   0%, 100% {
     background-position: 0% 50%;
@@ -233,6 +246,34 @@ button.btn-sm, .btn-sm {
   animation: gradient-shift 8s ease infinite;
 }
 
+/* Atmospheric ambient glow animation */
+@keyframes ambient-drift {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.6;
+  }
+  25% {
+    transform: translate(5%, -3%) scale(1.05);
+    opacity: 0.8;
+  }
+  50% {
+    transform: translate(-3%, 5%) scale(0.95);
+    opacity: 0.5;
+  }
+  75% {
+    transform: translate(-5%, -2%) scale(1.02);
+    opacity: 0.7;
+  }
+}
+
+.animate-ambient {
+  animation: ambient-drift 20s ease-in-out infinite;
+}
+
+.animate-ambient-slow {
+  animation: ambient-drift 30s ease-in-out infinite;
+}
+
 /* Pulse animation for loading states */
 @keyframes subtle-pulse {
   0%, 100% {
@@ -245,4 +286,65 @@ button.btn-sm, .btn-sm {
 
 .animate-subtle-pulse {
   animation: subtle-pulse 2s ease-in-out infinite;
+}
+
+/* Grain/noise overlay */
+.grain-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.03;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+}
+
+/* Staggered animation delays */
+.stagger-1 { animation-delay: 100ms; }
+.stagger-2 { animation-delay: 200ms; }
+.stagger-3 { animation-delay: 300ms; }
+.stagger-4 { animation-delay: 400ms; }
+.stagger-5 { animation-delay: 500ms; }
+.stagger-6 { animation-delay: 600ms; }
+
+/* Oracle glow effect */
+.oracle-glow {
+  box-shadow:
+    0 0 20px rgba(224, 124, 56, 0.15),
+    0 0 40px rgba(224, 124, 56, 0.1),
+    0 0 80px rgba(224, 124, 56, 0.05);
+}
+
+.oracle-glow-strong {
+  box-shadow:
+    0 0 30px rgba(224, 124, 56, 0.25),
+    0 0 60px rgba(224, 124, 56, 0.15),
+    0 0 100px rgba(224, 124, 56, 0.08);
+}
+
+/* Text selection */
+::selection {
+  background: rgba(224, 124, 56, 0.3);
+  color: #fff;
+}
+
+::-moz-selection {
+  background: rgba(224, 124, 56, 0.3);
+  color: #fff;
+}
+
+/* Focus ring styling */
+.focus-ring {
+  @apply focus:outline-none focus:ring-2 focus:ring-ember-500/50 focus:ring-offset-2 focus:ring-offset-chamber-900;
+}
+
+/* Glassmorphism */
+.glass {
+  @apply bg-chamber-900/60 backdrop-blur-xl border border-gold-400/10;
+}
+
+.glass-strong {
+  @apply bg-chamber-900/80 backdrop-blur-2xl border border-gold-400/15;
 }

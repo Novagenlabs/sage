@@ -4,7 +4,8 @@ import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Loader2, Coins } from "lucide-react";
+import { Loader2, Coins, Eye, EyeOff } from "lucide-react";
+import { LogoOrb } from "@/components/voice-orb-3d";
 
 export default function SignUpPage() {
   const router = useRouter();
@@ -13,6 +14,7 @@ export default function SignUpPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,34 +55,47 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="min-h-screen-safe bg-[#0a0a0f] flex items-center justify-center px-4 py-8 sm:py-12">
-      {/* Background effects - smaller on mobile */}
-      <div className="fixed inset-0 pointer-events-none">
-        <div className="absolute top-1/4 left-1/3 w-[300px] sm:w-[500px] h-[300px] sm:h-[500px] bg-amber-500/[0.03] rounded-full blur-[80px] sm:blur-[120px]" />
-        <div className="absolute bottom-1/4 right-1/3 w-[250px] sm:w-[400px] h-[250px] sm:h-[400px] bg-orange-500/[0.02] rounded-full blur-[60px] sm:blur-[100px]" />
+    <div className="min-h-screen-safe bg-chamber-900 flex items-center justify-center px-4 py-8 sm:py-12">
+      {/* Grain overlay */}
+      <div className="grain-overlay" />
+
+      {/* Background effects */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden">
+        <div
+          className="absolute -top-1/4 -left-1/4 w-[500px] sm:w-[700px] h-[500px] sm:h-[700px] rounded-full animate-ambient"
+          style={{
+            background: "radial-gradient(circle, rgba(224, 124, 56, 0.06) 0%, transparent 60%)",
+          }}
+        />
+        <div
+          className="absolute -bottom-1/4 -right-1/4 w-[400px] sm:w-[600px] h-[400px] sm:h-[600px] rounded-full animate-ambient-slow"
+          style={{
+            background: "radial-gradient(circle, rgba(196, 149, 106, 0.04) 0%, transparent 60%)",
+            animationDelay: "-10s",
+          }}
+        />
       </div>
 
       <div className="w-full max-w-md relative z-10">
         {/* Header */}
         <div className="text-center mb-6 sm:mb-8">
           <div className="mb-4 sm:mb-6 flex justify-center">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden ring-1 ring-stone-500/20 shadow-xl shadow-black/40">
-              <img
-                src="/sage.png"
-                alt="Sage"
-                className="w-full h-full object-cover object-top scale-150"
-              />
-            </div>
+            <LogoOrb size={64} className="sm:hidden" />
+            <LogoOrb size={80} className="hidden sm:block" animated />
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white mb-1 sm:mb-2">Create your account</h1>
-          <p className="text-sm sm:text-base text-white/50">Start your journey of self-discovery</p>
+          <h1 className="font-display text-2xl sm:text-3xl font-medium text-chamber-50 mb-2 text-balance">
+            Create your account
+          </h1>
+          <p className="text-sm sm:text-base text-chamber-400 text-pretty">
+            Start your journey of self-discovery
+          </p>
         </div>
 
         {/* Free credits banner */}
-        <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex items-center gap-2 sm:gap-3">
-          <Coins className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 flex-shrink-0" />
-          <p className="text-xs sm:text-sm text-amber-200/80">
-            Get <span className="font-semibold text-amber-400">1,000 free credits</span> when you sign up
+        <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-ember-500/10 border border-ember-500/20 rounded-xl flex items-center gap-2 sm:gap-3">
+          <Coins className="w-4 h-4 sm:w-5 sm:h-5 text-ember-400 flex-shrink-0" />
+          <p className="text-xs sm:text-sm text-gold-200">
+            Get <span className="font-semibold text-ember-400">1,000 free credits</span> when you sign up
           </p>
         </div>
 
@@ -93,8 +108,8 @@ export default function SignUpPage() {
           )}
 
           <div>
-            <label htmlFor="name" className="block text-xs sm:text-sm font-medium text-white/70 mb-1.5 sm:mb-2">
-              Name <span className="text-white/40">(optional)</span>
+            <label htmlFor="name" className="block text-xs sm:text-sm font-medium text-chamber-300 mb-1.5 sm:mb-2">
+              Name <span className="text-chamber-500">(optional)</span>
             </label>
             <input
               id="name"
@@ -102,14 +117,14 @@ export default function SignUpPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               autoComplete="name"
-              className="w-full px-3 sm:px-4 py-3 bg-stone-900/50 border border-stone-700/30 rounded-xl text-white placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-stone-500/50 focus:border-transparent transition-all text-base"
+              className="w-full px-3 sm:px-4 py-3 glass-strong rounded-xl text-chamber-100 placeholder-chamber-500 focus:outline-none focus:ring-2 focus:ring-ember-500/50 focus:border-transparent transition-all text-base"
               placeholder="Your name"
               style={{ fontSize: '16px' }}
             />
           </div>
 
           <div>
-            <label htmlFor="email" className="block text-xs sm:text-sm font-medium text-white/70 mb-1.5 sm:mb-2">
+            <label htmlFor="email" className="block text-xs sm:text-sm font-medium text-chamber-300 mb-1.5 sm:mb-2">
               Email
             </label>
             <input
@@ -119,34 +134,44 @@ export default function SignUpPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
               autoComplete="email"
-              className="w-full px-3 sm:px-4 py-3 bg-stone-900/50 border border-stone-700/30 rounded-xl text-white placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-stone-500/50 focus:border-transparent transition-all text-base"
+              className="w-full px-3 sm:px-4 py-3 glass-strong rounded-xl text-chamber-100 placeholder-chamber-500 focus:outline-none focus:ring-2 focus:ring-ember-500/50 focus:border-transparent transition-all text-base"
               placeholder="you@example.com"
               style={{ fontSize: '16px' }}
             />
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-xs sm:text-sm font-medium text-white/70 mb-1.5 sm:mb-2">
+            <label htmlFor="password" className="block text-xs sm:text-sm font-medium text-chamber-300 mb-1.5 sm:mb-2">
               Password
             </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-              autoComplete="new-password"
-              className="w-full px-3 sm:px-4 py-3 bg-stone-900/50 border border-stone-700/30 rounded-xl text-white placeholder-stone-500 focus:outline-none focus:ring-2 focus:ring-stone-500/50 focus:border-transparent transition-all text-base"
-              placeholder="At least 6 characters"
-              style={{ fontSize: '16px' }}
-            />
+            <div className="relative">
+              <input
+                id="password"
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={6}
+                autoComplete="new-password"
+                className="w-full px-3 sm:px-4 py-3 pr-11 glass-strong rounded-xl text-chamber-100 placeholder-chamber-500 focus:outline-none focus:ring-2 focus:ring-ember-500/50 focus:border-transparent transition-all text-base"
+                placeholder="At least 6 characters"
+                style={{ fontSize: '16px' }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-chamber-400 hover:text-chamber-200 transition-colors"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Eye className="w-4 h-4 sm:w-5 sm:h-5" />}
+              </button>
+            </div>
           </div>
 
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-3 bg-white text-black font-medium rounded-xl hover:bg-white/90 active:bg-white/80 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center gap-2 touch-manipulation"
+            className="w-full py-3 bg-ember-500 hover:bg-ember-400 active:bg-ember-600 text-white font-medium rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 touch-manipulation shadow-lg shadow-ember-500/20"
           >
             {isLoading ? (
               <>
@@ -160,9 +185,9 @@ export default function SignUpPage() {
         </form>
 
         {/* Footer link */}
-        <p className="mt-4 sm:mt-6 text-center text-white/50 text-xs sm:text-sm">
+        <p className="mt-4 sm:mt-6 text-center text-chamber-500 text-xs sm:text-sm">
           Already have an account?{" "}
-          <Link href="/auth/signin" className="text-white hover:underline">
+          <Link href="/auth/signin" className="text-ember-400 hover:text-ember-300 hover:underline transition-colors">
             Sign in
           </Link>
         </p>
