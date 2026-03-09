@@ -242,6 +242,31 @@ export const processConversationEnd = inngest.createFunction(
       return { saved: true };
     });
 
+    // Step 3.5: Notify user that insights are ready
+    await step.run("notify-insights-ready", async () => {
+      const { sendPushToUser } = await import("@/lib/push");
+
+      const insightCount = result.insights?.length ?? 0;
+      if (insightCount === 0) return { skipped: true };
+
+      try {
+        await sendPushToUser(userId, {
+          title: "Your insights are ready",
+          body:
+            insightCount === 1
+              ? "Sage discovered a new insight from your conversation."
+              : `Sage discovered ${insightCount} insights from your conversation.`,
+          url: "/chat",
+          tag: `insights-${conversationId}`,
+        });
+        return { notified: true };
+      } catch (error) {
+        // Non-critical — don't fail the function if push fails
+        console.warn("[Inngest] Push notification failed:", error);
+        return { notified: false };
+      }
+    });
+
     // Step 4: Update user profile summary
     await step.run("update-profile", async () => {
       const apiKey = process.env.OPENROUTER_API_KEY;

@@ -20,6 +20,16 @@ const dmSans = DM_Sans({
 export const metadata: Metadata = {
   title: "Sage",
   description: "Ask anything. Discover everything.",
+  manifest: "/manifest.json",
+  icons: {
+    icon: "/icons/favicon-32.png",
+    apple: "/icons/apple-touch-icon.png",
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Sage",
+  },
 };
 
 export const viewport: Viewport = {

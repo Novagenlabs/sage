@@ -15,6 +15,7 @@ import {
   Save,
   Gift,
 } from "lucide-react";
+import { NotificationPrompt } from "@/components/notification-prompt";
 
 interface UserProfile {
   id: string;
@@ -245,6 +246,11 @@ export default function ProfilePage() {
                   Invite friends &rarr;
                 </p>
               </Link>
+            </div>
+
+            {/* Notifications */}
+            <div className={`${mounted ? "animate-fade-up stagger-4" : "opacity-0"}`}>
+              <NotificationPrompt />
             </div>
 
             {/* Account Info */}
