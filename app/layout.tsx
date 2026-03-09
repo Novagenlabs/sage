@@ -73,11 +73,6 @@ export default function RootLayout({
               animation: "pulse-orb 2s ease-in-out infinite",
             }}
           />
-          <style
-            dangerouslySetInnerHTML={{
-              __html: `@keyframes pulse-orb { 0%, 100% { transform: scale(1); opacity: 0.9; } 50% { transform: scale(1.08); opacity: 1; } }`,
-            }}
-          />
         </div>
         <Providers>{children}</Providers>
       </body>
