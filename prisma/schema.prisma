@@ -20,13 +20,12 @@ model User {
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 
-  accounts          Account[]
-  sessions          Session[]
-  usageRecords      UsageRecord[]
-  conversations     Conversation[]
-  userInsights      UserInsight[]
-  payments          Payment[]
-  pushSubscriptions PushSubscription[]
+  accounts      Account[]
+  sessions      Session[]
+  usageRecords  UsageRecord[]
+  conversations Conversation[]
+  userInsights  UserInsight[]
+  payments      Payment[]
 }
 
 model Account {
@@ -134,19 +133,6 @@ model Payment {
   status    String   @default("pending") // pending, success, failed
   provider  String   @default("paystack")
   metadata  Json?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-}
-
-model PushSubscription {
-  id        String   @id @default(cuid())
-  userId    String
-  endpoint  String   @unique
-  p256dh    String
-  auth      String
-  userAgent String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

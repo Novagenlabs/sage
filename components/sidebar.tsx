@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { clsx } from "clsx";
 import { Lightbulb, RotateCcw, Info, X, FileText, Sparkles, LogOut, User, Coins, Brain, Settings, Ghost, Loader2 } from "lucide-react";
 import { signOut } from "next-auth/react";
@@ -29,6 +30,13 @@ interface SidebarProps {
 }
 
 export function Sidebar({ insights, problemStatement, onReset, isOpen, onClose, voiceSummary, voiceReflections, user, profileSummary, ghostMode, onToggleGhostMode, isResetting }: SidebarProps) {
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
+  const handleSignOut = async () => {
+    setIsSigningOut(true);
+    await signOut({ callbackUrl: "/" });
+  };
+
   return (
     <>
       {/* Mobile overlay */}
@@ -113,11 +121,16 @@ export function Sidebar({ insights, problemStatement, onReset, isOpen, onClose, 
                     <span className="text-sm">Settings</span>
                   </Link>
                   <button
-                    onClick={() => signOut()}
-                    className="flex items-center gap-2 px-3 py-2 text-red-400/70 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
+                    onClick={handleSignOut}
+                    disabled={isSigningOut}
+                    className="flex items-center gap-2 px-3 py-2 text-red-400/70 hover:text-red-300 hover:bg-red-500/10 disabled:opacity-50 rounded-lg transition-colors"
                   >
-                    <LogOut className="w-4 h-4" />
-                    <span className="text-sm">Sign out</span>
+                    {isSigningOut ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <LogOut className="w-4 h-4" />
+                    )}
+                    <span className="text-sm">{isSigningOut ? "Signing out..." : "Sign out"}</span>
                   </button>
                 </div>
               </div>
