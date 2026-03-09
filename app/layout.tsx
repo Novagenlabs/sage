@@ -48,6 +48,37 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${cormorant.variable} ${dmSans.variable}`}>
       <body className="antialiased font-body">
+        {/* PWA loading screen — visible until React hydrates and removes it */}
+        <div
+          id="pwa-splash"
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            backgroundColor: "#08080c",
+            transition: "opacity 0.3s ease-out",
+          }}
+        >
+          <div
+            style={{
+              width: 48,
+              height: 48,
+              borderRadius: "50%",
+              background:
+                "radial-gradient(circle at 35% 30%, #c4956a 0%, #e07c38 40%, #d16426 80%, #8b4022 100%)",
+              boxShadow: "0 0 40px rgba(224, 124, 56, 0.3), 0 0 80px rgba(196, 149, 106, 0.15)",
+              animation: "pulse-orb 2s ease-in-out infinite",
+            }}
+          />
+          <style
+            dangerouslySetInnerHTML={{
+              __html: `@keyframes pulse-orb { 0%, 100% { transform: scale(1); opacity: 0.9; } 50% { transform: scale(1.08); opacity: 1; } }`,
+            }}
+          />
+        </div>
         <Providers>{children}</Providers>
       </body>
     </html>

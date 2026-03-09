@@ -4,12 +4,10 @@ import { Bell, BellOff, BellRing, Loader2, Send } from "lucide-react";
 import { usePushNotifications } from "@/lib/use-push-notifications";
 
 export function NotificationPrompt() {
-  const { permission, isSubscribed, isLoading, subscribe, unsubscribe, sendTest } =
+  const { permission, isSubscribed, isLoading, error, subscribe, unsubscribe, sendTest } =
     usePushNotifications();
 
-  if (permission === "unsupported") {
-    return null;
-  }
+  const isUnavailable = permission === "unsupported";
 
   return (
     <div className="glass rounded-xl p-4 sm:p-5">
@@ -33,11 +31,15 @@ export function NotificationPrompt() {
               Notifications
             </h3>
             <p className="text-xs text-chamber-500 mt-0.5">
-              {permission === "denied"
-                ? "Blocked in browser settings"
-                : isSubscribed
-                  ? "You'll be notified when insights are ready"
-                  : "Get notified when your insights are ready"}
+              {error
+                ? error
+                : isUnavailable
+                  ? "Not available on this device"
+                  : permission === "denied"
+                    ? "Blocked in browser settings"
+                    : isSubscribed
+                      ? "You will be notified when insights are ready"
+                      : "Get notified when your insights are ready"}
             </p>
           </div>
         </div>
@@ -54,7 +56,11 @@ export function NotificationPrompt() {
             </button>
           )}
 
-          {permission === "denied" ? (
+          {isUnavailable ? (
+            <span className="text-xs text-chamber-600 px-3 py-1.5">
+              Not supported
+            </span>
+          ) : permission === "denied" ? (
             <span className="text-xs text-chamber-600 px-3 py-1.5">
               Re-enable in browser
             </span>
@@ -70,8 +76,6 @@ export function NotificationPrompt() {
             >
               {isLoading ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : isSubscribed ? (
-                <Bell className="w-3.5 h-3.5" />
               ) : (
                 <Bell className="w-3.5 h-3.5" />
               )}

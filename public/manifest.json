@@ -1,8 +1,10 @@
 {
-  "name": "Sage - Ask anything. Discover everything.",
+  "name": "Answers with Sage",
   "short_name": "Sage",
   "description": "AI-powered Socratic dialogue for self-discovery",
+  "id": "/chat",
   "start_url": "/chat",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#08080c",
   "theme_color": "#08080c",

@@ -9,25 +9,38 @@ export function usePushNotifications() {
   const [permission, setPermission] = useState<PermissionState>("default");
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (
-      typeof window === "undefined" ||
-      !("Notification" in window) ||
-      !("serviceWorker" in navigator)
-    ) {
+    try {
+      if (typeof window === "undefined") {
+        setPermission("unsupported");
+        return;
+      }
+
+      const hasNotification = "Notification" in window;
+      const hasSW = "serviceWorker" in navigator;
+
+      if (!hasNotification || !hasSW) {
+        setPermission("unsupported");
+        return;
+      }
+
+      setPermission(Notification.permission as PermissionState);
+
+      // Check if already subscribed
+      navigator.serviceWorker.ready
+        .then((reg) => reg.pushManager.getSubscription())
+        .then((sub) => setIsSubscribed(!!sub))
+        .catch((err) => {
+          console.error("[Push] Failed to check subscription:", err);
+          setError("Could not check notification status");
+        });
+    } catch (err) {
+      console.error("[Push] Init error:", err);
       setPermission("unsupported");
-      return;
+      setError("Notifications not available");
     }
-
-    setPermission(Notification.permission as PermissionState);
-
-    // Check if already subscribed
-    navigator.serviceWorker.ready.then((reg) => {
-      reg.pushManager.getSubscription().then((sub) => {
-        setIsSubscribed(!!sub);
-      });
-    });
   }, []);
 
   const subscribe = useCallback(async () => {
@@ -98,7 +111,7 @@ export function usePushNotifications() {
     return response.ok;
   }, []);
 
-  return { permission, isSubscribed, isLoading, subscribe, unsubscribe, sendTest };
+  return { permission, isSubscribed, isLoading, error, subscribe, unsubscribe, sendTest };
 }
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
