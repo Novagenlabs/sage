@@ -209,12 +209,28 @@ function ReferralsContent() {
         {/* ====== SHARE CARD ====== */}
         {data && (
           <section className="pb-16 sm:pb-20">
-            <div className="flex justify-center overflow-x-auto -mx-6 px-6">
-              <ReferralCard
-                ref={cardRef}
-                userName={session?.user?.name || ""}
-                referralCode={data.referralCode}
-              />
+            {/* Scale card to fit mobile viewports — 600px card in ~360px screen */}
+            <div className="flex justify-center -mx-6 px-6">
+              <div
+                className="origin-top"
+                style={{ transform: "scale(var(--card-scale, 1))" }}
+                ref={(el) => {
+                  if (!el) return;
+                  const update = () => {
+                    const maxW = el.parentElement?.clientWidth ?? 600;
+                    el.style.setProperty("--card-scale", String(Math.min(1, maxW / 600)));
+                    el.style.height = `${315 * Math.min(1, maxW / 600)}px`;
+                  };
+                  update();
+                  window.addEventListener("resize", update);
+                }}
+              >
+                <ReferralCard
+                  ref={cardRef}
+                  userName={session?.user?.name || ""}
+                  referralCode={data.referralCode}
+                />
+              </div>
             </div>
 
             {/* Card actions */}
