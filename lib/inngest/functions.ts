@@ -1,6 +1,8 @@
 import { inngest } from "./client";
 import { prisma } from "@/lib/prisma";
-import { calculateCreditsUsed, deductCredits, hasEnoughCredits } from "@/lib/credits";
+import { calculateCreditsUsed, deductCredits, hasEnoughCredits, addCredits } from "@/lib/credits";
+import { checkQualification } from "@/lib/referral";
+import { REFERRAL_CONFIG } from "@/lib/referral-config";
 
 // Define event types for type safety
 type ConversationEndedEvent = {
@@ -439,5 +441,58 @@ export const reconcileStreamingUsage = inngest.createFunction(
   }
 );
 
+/**
+ * Check if a referred user qualifies their referrer for a credit reward.
+ * Triggered from chat route on early messages (<=5 user messages).
+ */
+export const processReferralQualification = inngest.createFunction(
+  { id: "sage-app-process-referral-qualification" },
+  { event: "referral/check-qualification" },
+  async ({ event, step }) => {
+    const { userId } = event.data;
+
+    const result = await step.run("check-and-pay-referral", async () => {
+      // Find pending referral where this user was referred
+      const referral = await prisma.referral.findFirst({
+        where: { referredUserId: userId, status: "pending" },
+        select: { id: true, referrerId: true },
+      });
+
+      if (!referral) return { status: "no_pending_referral" };
+
+      // Check if user qualifies
+      const qualified = await checkQualification(userId);
+      if (!qualified) return { status: "not_yet_qualified" };
+
+      // Check referrer hasn't hit cap
+      const referrerTotal = await prisma.referral.count({
+        where: { referrerId: referral.referrerId, status: "qualified" },
+      });
+      if (referrerTotal >= REFERRAL_CONFIG.MAX_REFERRALS_PER_USER) {
+        await prisma.referral.update({
+          where: { id: referral.id },
+          data: { status: "rejected" },
+        });
+        return { status: "referrer_at_cap" };
+      }
+
+      // Pay referrer
+      await addCredits(referral.referrerId, REFERRAL_CONFIG.REFERRER_REWARD);
+      await prisma.referral.update({
+        where: { id: referral.id },
+        data: {
+          status: "qualified",
+          creditsPaid: REFERRAL_CONFIG.REFERRER_REWARD,
+          qualifiedAt: new Date(),
+        },
+      });
+
+      return { status: "qualified", creditsPaid: REFERRAL_CONFIG.REFERRER_REWARD };
+    });
+
+    return result;
+  }
+);
+
 // Export all functions for the Inngest serve handler
-export const functions = [processConversationEnd, reconcileStreamingUsage];
+export const functions = [processConversationEnd, reconcileStreamingUsage, processReferralQualification];

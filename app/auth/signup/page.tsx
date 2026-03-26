@@ -1,20 +1,43 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import { Loader2, Coins, Eye, EyeOff } from "lucide-react";
+import { Loader2, Coins, Eye, EyeOff, Gift } from "lucide-react";
 import { LogoOrb } from "@/components/voice-orb-3d";
 
 export default function SignUpPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen-safe bg-chamber-900 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 text-chamber-400 animate-spin" />
+      </div>
+    }>
+      <SignUpContent />
+    </Suspense>
+  );
+}
+
+function SignUpContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [referralCode, setReferralCode] = useState<string | null>(null);
+
+  useEffect(() => {
+    const refParam = searchParams.get("ref");
+    const storedRef = typeof window !== "undefined" ? localStorage.getItem("sage_referral_code") : null;
+    const code = refParam || storedRef;
+    if (code) {
+      setReferralCode(code);
+    }
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +48,7 @@ export default function SignUpPage() {
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, password, referralCode }),
       });
 
       const data = await res.json();
@@ -44,6 +67,9 @@ export default function SignUpPage() {
       if (result?.error) {
         setError("Account created but failed to sign in. Please try signing in manually.");
       } else {
+        if (typeof window !== "undefined") {
+          localStorage.removeItem("sage_referral_code");
+        }
         router.push("/chat");
         router.refresh();
       }
@@ -91,13 +117,22 @@ export default function SignUpPage() {
           </p>
         </div>
 
-        {/* Free credits banner */}
-        <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-ember-500/10 border border-ember-500/20 rounded-xl flex items-center gap-2 sm:gap-3">
-          <Coins className="w-4 h-4 sm:w-5 sm:h-5 text-ember-400 flex-shrink-0" />
-          <p className="text-xs sm:text-sm text-gold-200">
-            Get <span className="font-semibold text-ember-400">1,000 free credits</span> when you sign up
-          </p>
-        </div>
+        {/* Credits banner */}
+        {referralCode ? (
+          <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center gap-2 sm:gap-3">
+            <Gift className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 flex-shrink-0" />
+            <p className="text-xs sm:text-sm text-emerald-200">
+              You were invited! Get <span className="font-semibold text-emerald-400">120 bonus credits</span> (2 min voice) on top of your free credits
+            </p>
+          </div>
+        ) : (
+          <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-ember-500/10 border border-ember-500/20 rounded-xl flex items-center gap-2 sm:gap-3">
+            <Coins className="w-4 h-4 sm:w-5 sm:h-5 text-ember-400 flex-shrink-0" />
+            <p className="text-xs sm:text-sm text-gold-200">
+              Get <span className="font-semibold text-ember-400">200 free credits</span> when you sign up
+            </p>
+          </div>
+        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">

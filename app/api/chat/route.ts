@@ -204,6 +204,15 @@ export async function POST(request: Request) {
           }).catch((err: Error) => {
             console.error("[Chat] Credit deduction failed:", err.message);
           });
+
+          // Check referral qualification on early messages
+          const userMsgCount = messages.filter((m: ChatMessage) => m.role === "user").length;
+          if (userMsgCount <= 5) {
+            inngest.send({
+              name: "referral/check-qualification",
+              data: { userId },
+            }).catch(() => {});
+          }
         } catch (error) {
           controller.error(error);
         }

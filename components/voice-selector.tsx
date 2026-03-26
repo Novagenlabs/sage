@@ -36,10 +36,10 @@ export function VoiceSelector({
   const selectedAccent = VOICE_ACCENTS[selectedVoiceKey] || VOICE_ACCENTS.sage;
 
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div className="flex flex-col items-center gap-2.5 sm:gap-4 w-full px-2 sm:px-0">
       {/* Hint label */}
       <motion.p
-        className="text-[11px] uppercase tracking-[0.2em] font-medium"
+        className="text-[10px] sm:text-[11px] uppercase tracking-[0.2em] font-medium"
         style={{ color: "rgba(196,149,106,0.4)" }}
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
@@ -51,7 +51,7 @@ export function VoiceSelector({
       {/* Dock container */}
       <motion.div
         ref={dockRef}
-        className="relative flex items-center gap-2 sm:gap-2.5 rounded-2xl px-4 sm:px-5 py-3 sm:py-3.5"
+        className="relative flex items-center gap-1.5 sm:gap-2.5 rounded-xl sm:rounded-2xl px-2.5 sm:px-5 py-2.5 sm:py-3.5"
         style={{
           background: "rgba(8,8,12,0.6)",
           border: "1px solid rgba(196,149,106,0.12)",
@@ -96,7 +96,7 @@ export function VoiceSelector({
                 onClick={() => !disabled && onSelect(voice.key)}
                 disabled={disabled}
                 className={clsx(
-                  "relative w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center cursor-pointer select-none overflow-hidden",
+                  "relative w-8 h-8 sm:w-11 sm:h-11 rounded-full flex items-center justify-center cursor-pointer select-none overflow-hidden",
                   disabled && "opacity-40 cursor-not-allowed"
                 )}
                 style={{
@@ -129,7 +129,7 @@ export function VoiceSelector({
               >
                 {/* Single serif letter */}
                 <span
-                  className="font-display text-base sm:text-lg font-semibold italic"
+                  className="font-display text-sm sm:text-lg font-semibold italic"
                   style={{
                     color: isSelected ? accent.color : "rgba(232,228,222,0.35)",
                     transition: "color 0.3s ease",
@@ -212,12 +212,12 @@ export function VoiceSelector({
               layoutId="voice-dot"
             />
             <span
-              className="text-sm font-medium tracking-tight"
+              className="text-xs sm:text-sm font-medium tracking-tight"
               style={{ color: selectedAccent.color }}
             >
               {selectedVoice.name}
             </span>
-            <span className="text-xs" style={{ color: "rgba(196,149,106,0.35)" }}>
+            <span className="text-[10px] sm:text-xs hidden xs:inline" style={{ color: "rgba(196,149,106,0.35)" }}>
               {selectedVoice.description}
             </span>
           </motion.div>

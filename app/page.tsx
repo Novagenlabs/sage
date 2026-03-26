@@ -75,6 +75,15 @@ export default function LandingPage() {
 
   useEffect(() => {
     setMounted(true);
+    // Capture referral code from URL and store for signup
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const ref = params.get("ref");
+      if (ref) {
+        localStorage.setItem("sage_referral_code", ref);
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    }
   }, []);
 
   return (

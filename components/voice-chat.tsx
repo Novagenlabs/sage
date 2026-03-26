@@ -12,7 +12,7 @@ import {
   useConnectionState,
 } from "@livekit/components-react";
 import "@livekit/components-styles";
-import { Mic, MicOff, Phone, PhoneOff, Loader2, X, Headphones, Volume2, Clock, Wifi, WifiOff, Ghost } from "lucide-react";
+import { Mic, MicOff, AudioLines, Phone, PhoneOff, Loader2, X, Headphones, Volume2, Clock, Wifi, WifiOff, Ghost } from "lucide-react";
 import { clsx } from "clsx";
 import type { Message } from "@/lib/types";
 import { VoiceOrb } from "./voice-orb-3d";
@@ -609,7 +609,7 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
           onClick={connect}
           className="z-10 flex items-center gap-2 sm:gap-3 px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 active:from-amber-700 active:to-orange-700 rounded-full transition-all duration-300 text-white font-medium shadow-lg shadow-amber-500/25 hover:shadow-amber-500/40 active:scale-95 touch-manipulation"
         >
-          <Phone className="w-4 h-4 sm:w-5 sm:h-5" />
+          <AudioLines className="w-4 h-4 sm:w-5 sm:h-5" />
           <span className="text-sm sm:text-base">Talk to Sage</span>
         </button>
 
