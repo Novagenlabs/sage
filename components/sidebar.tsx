@@ -186,7 +186,7 @@ export function Sidebar({ insights, problemStatement, onReset, isOpen, onClose, 
                   <Brain className="w-4 h-4 text-sage-400" />
                   <h3 className="text-sm font-medium text-chamber-200">What I Know About You</h3>
                 </div>
-                <p className="text-sm text-chamber-300 bg-sage-900/20 border border-sage-500/20 rounded-lg p-3 leading-relaxed">
+                <p className="text-sm text-chamber-300 bg-sage-900/20 border border-sage-500/20 rounded-lg p-3 leading-relaxed max-h-28 overflow-y-auto">
                   {profileSummary}
                 </p>
               </div>

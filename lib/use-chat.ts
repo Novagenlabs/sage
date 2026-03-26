@@ -312,6 +312,7 @@ export function useSocraticChat() {
             phase: state.phase,
             sessionStartTime: sessionStartTime,
             context: isFirstMessage ? state.context : undefined, // Only send context on first message
+            conversationId: conversationId || undefined,
           }),
           signal: abortControllerRef.current.signal,
         });

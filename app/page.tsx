@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import { useSession } from "next-auth/react";
 import {
   ArrowRight,
   Mic,
@@ -66,9 +67,11 @@ const EXAMPLE_TOPICS = [
 ];
 
 export default function LandingPage() {
+  const { data: session, status } = useSession();
   const [mounted, setMounted] = useState(false);
   const [showMoreFeatures, setShowMoreFeatures] = useState(false);
   const topicsRef = useRef<HTMLDivElement>(null);
+  const isSignedIn = status === "authenticated" && !!session;
 
   useEffect(() => {
     setMounted(true);
@@ -93,17 +96,19 @@ export default function LandingPage() {
             </div>
 
             <div className="flex items-center gap-3">
-              <Link
-                href="/auth/signin"
-                className="btn-sm text-sm font-medium text-chamber-300 hover:text-chamber-100 transition-colors px-4 py-2"
-              >
-                Sign In
-              </Link>
+              {!isSignedIn && (
+                <Link
+                  href="/auth/signin"
+                  className="btn-sm text-sm font-medium text-chamber-300 hover:text-chamber-100 transition-colors px-4 py-2"
+                >
+                  Sign In
+                </Link>
+              )}
               <Link
                 href="/chat"
                 className="btn-sm inline-flex items-center gap-2 rounded-full bg-ember-500 px-5 py-2 text-sm font-semibold text-white transition-all hover:bg-ember-600 active:scale-[0.98]"
               >
-                Open Sage
+                {isSignedIn ? "Go to Sage" : "Open Sage"}
                 <ArrowRight className="w-3.5 h-3.5" />
               </Link>
             </div>

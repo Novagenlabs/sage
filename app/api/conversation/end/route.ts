@@ -1,6 +1,5 @@
 import { auth } from "@/auth";
 import { inngest } from "@/lib/inngest/client";
-import { calculateCreditsUsed, deductCredits } from "@/lib/credits";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -8,6 +7,10 @@ export const dynamic = "force-dynamic";
 /**
  * Unified endpoint to end a conversation (voice or text)
  * Triggers durable background processing via Inngest
+ *
+ * Note: Voice credits are deducted by the client-side countdown timer
+ * via /api/credits/deduct (post-call). This endpoint only triggers
+ * background processing (summary, insights, profile update).
  */
 export async function POST(req: Request) {
   const session = await auth();
@@ -35,18 +38,6 @@ export async function POST(req: Request) {
         { error: "type must be 'voice' or 'text'" },
         { status: 400 }
       );
-    }
-
-    // Deduct credits for voice calls based on transcript length
-    if (type === "voice" && transcript?.length > 0) {
-      const totalChars = transcript.reduce(
-        (sum: number, msg: { content?: string }) => sum + (msg.content?.length || 0),
-        0
-      );
-      const estimatedTokens = Math.ceil(totalChars / 4);
-      const creditsUsed = Math.max(5, calculateCreditsUsed(estimatedTokens, 0));
-      await deductCredits(session.user.id, creditsUsed, estimatedTokens, "voice");
-      console.log(`[ConversationEnd] Deducted ${creditsUsed} credits for voice call (${estimatedTokens} est. tokens)`);
     }
 
     // Send event to Inngest for durable background processing

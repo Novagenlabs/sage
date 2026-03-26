@@ -349,9 +349,26 @@ export default defineAgent({
       console.log('[USER] Stopped speaking');
     });
 
-    // Set up metrics listeners
-    llm.on('metrics_collected', logLLMMetrics);
-    tts.on('metrics_collected', logTTSMetrics);
+    // Session-level usage accumulators for background analytics
+    const sessionUsage = {
+      llm: { promptTokens: 0, completionTokens: 0, calls: 0 },
+      tts: { characters: 0, audioDurationMs: 0, calls: 0 },
+      sessionStartTime: Date.now(),
+    };
+
+    // Set up metrics listeners — accumulate + log
+    llm.on('metrics_collected', (metrics) => {
+      logLLMMetrics(metrics);
+      sessionUsage.llm.promptTokens += metrics.promptTokens || 0;
+      sessionUsage.llm.completionTokens += metrics.completionTokens || 0;
+      sessionUsage.llm.calls++;
+    });
+    tts.on('metrics_collected', (metrics) => {
+      logTTSMetrics(metrics);
+      sessionUsage.tts.characters += metrics.charactersCount || 0;
+      sessionUsage.tts.audioDurationMs += metrics.audioDurationMs || 0;
+      sessionUsage.tts.calls++;
+    });
 
     // Build instructions with context
     const instructions = buildInstructions(userContext);
@@ -405,8 +422,42 @@ export default defineAgent({
     // LiveKit framework kills the job process, ending the session.
     console.log('[ENTRY] Waiting for room disconnect to keep agent alive...');
     await new Promise((resolve) => {
-      ctx.room.on('disconnected', () => {
+      ctx.room.on('disconnected', async () => {
         console.log('[ENTRY] Room disconnected, cleaning up');
+
+        // Report accumulated usage to main app (async, best-effort)
+        const sessionDurationMs = Date.now() - sessionUsage.sessionStartTime;
+        console.log('[USAGE] Session usage:', JSON.stringify({
+          sessionDurationMs,
+          llm: sessionUsage.llm,
+          tts: sessionUsage.tts,
+        }));
+
+        try {
+          const appUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+          const internalKey = process.env.SAGE_INTERNAL_API_KEY;
+          if (appUrl && internalKey) {
+            await fetch(`${appUrl}/api/voice/usage`, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${internalKey}`,
+              },
+              body: JSON.stringify({
+                roomName: ctx.room.name,
+                sessionDurationMs,
+                llm: sessionUsage.llm,
+                tts: sessionUsage.tts,
+              }),
+            });
+            console.log('[USAGE] Reported to main app');
+          } else {
+            console.log('[USAGE] Skipped report (missing NEXT_PUBLIC_SITE_URL or SAGE_INTERNAL_API_KEY)');
+          }
+        } catch (err) {
+          console.error('[USAGE] Failed to report:', err.message);
+        }
+
         resolve();
       });
       // Safety: if room already disconnected, resolve immediately

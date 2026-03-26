@@ -15,7 +15,7 @@ export async function POST(request: NextRequest) {
   }
 
   // Check credits before issuing token
-  const hasCredits = await hasEnoughCredits(session.user.id, 5);
+  const hasCredits = await hasEnoughCredits(session.user.id, 10);
   if (!hasCredits) {
     return new Response(
       JSON.stringify({ error: "Insufficient credits. Please purchase more credits to use voice mode." }),

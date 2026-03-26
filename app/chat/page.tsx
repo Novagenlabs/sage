@@ -22,7 +22,7 @@ interface VoiceInsightsData {
 }
 
 export default function Home() {
-  const { data: session } = useSession();
+  const { data: session, update: updateSession } = useSession();
   const router = useRouter();
 
   const {
@@ -100,7 +100,7 @@ export default function Home() {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 relative z-10">
         {/* Header */}
-        <header className="flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 border-b border-gold-400/10 glass">
+        <header className="relative z-50 flex items-center justify-between px-3 sm:px-6 py-3 sm:py-4 border-b border-gold-400/10 glass">
           <div className="flex items-center gap-3 sm:gap-6">
             {/* Ghost Mode Indicator */}
             {ghostMode && (
@@ -130,32 +130,36 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Mode Toggle */}
-            <div className="flex items-center glass rounded-full p-0.5 sm:p-1">
+            {/* Mode Toggle — glassmorphism radio */}
+            <div className="relative flex items-center rounded-2xl bg-white/[0.06] backdrop-blur-xl shadow-[inset_1px_1px_4px_rgba(255,255,255,0.2),inset_-1px_-1px_6px_rgba(0,0,0,0.3),0_4px_12px_rgba(0,0,0,0.15)] overflow-hidden">
               <button
                 onClick={() => setMode("text")}
-                className={clsx(
-                  "flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-medium transition-all duration-300",
-                  mode === "text"
-                    ? "bg-ember-500 text-white shadow-lg shadow-ember-500/25"
-                    : "text-chamber-400 hover:text-chamber-100"
-                )}
+                className="relative z-[2] flex items-center justify-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2.5 text-xs sm:text-sm font-semibold tracking-wide cursor-pointer transition-colors duration-300 text-gray-300 hover:text-white"
+                style={mode === "text" ? { color: "#fff" } : {}}
               >
                 <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 <span className="hidden xs:inline sm:inline">Text</span>
               </button>
               <button
                 onClick={() => setMode("voice")}
-                className={clsx(
-                  "flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-medium transition-all duration-300",
-                  mode === "voice"
-                    ? "bg-ember-500 text-white shadow-lg shadow-ember-500/25"
-                    : "text-chamber-400 hover:text-chamber-100"
-                )}
+                className="relative z-[2] flex items-center justify-center gap-1.5 sm:gap-2 px-4 sm:px-5 py-2.5 text-xs sm:text-sm font-semibold tracking-wide cursor-pointer transition-colors duration-300 text-gray-300 hover:text-white"
+                style={mode === "voice" ? { color: "#fff" } : {}}
               >
                 <Mic className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 <span className="hidden xs:inline sm:inline">Voice</span>
               </button>
+              {/* Glider */}
+              <div
+                className="absolute top-0 bottom-0 w-1/2 rounded-2xl z-[1] transition-all duration-500"
+                style={{
+                  transform: mode === "text" ? "translateX(0%)" : "translateX(100%)",
+                  transitionTimingFunction: "cubic-bezier(0.37, 1.95, 0.66, 0.56)",
+                  background: mode === "text"
+                    ? "linear-gradient(135deg, rgba(224,124,56,0.3), #e07c38)"
+                    : "linear-gradient(135deg, rgba(224,124,56,0.3), #e07c38)",
+                  boxShadow: "0 0 18px rgba(224,124,56,0.5), inset 0 0 10px rgba(255,180,120,0.4)",
+                }}
+              />
             </div>
 
             {/* Auth header - Desktop only */}
@@ -185,6 +189,8 @@ export default function Home() {
                 onInsightsChange={setVoiceInsights}
                 onTopicChange={setVoiceTopic}
                 ghostMode={ghostMode}
+                userCredits={(session?.user as { credits?: number })?.credits ?? 0}
+                onCreditsUpdate={() => updateSession()}
               />
             </div>
           ) : !hasMessages ? (

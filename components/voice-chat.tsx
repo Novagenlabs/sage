@@ -18,6 +18,7 @@ import type { Message } from "@/lib/types";
 import { VoiceOrb } from "./voice-orb-3d";
 import { VoiceSelector } from "./voice-selector";
 import { DEFAULT_VOICE_KEY } from "@/lib/voices";
+import { SECONDS_PER_CREDIT, LOW_CREDITS_WARNING_SECS, AUTO_DISCONNECT_TIMEOUT_SECS } from "@/lib/credit-costs";
 
 // localStorage key for priming screen preference
 const PRIMING_DISMISSED_KEY = "sage-priming-dismissed";
@@ -52,7 +53,9 @@ interface VoiceChatProps {
   onConnectionChange?: (connected: boolean) => void;
   onInsightsChange?: (insights: VoiceInsightsData | null) => void;
   onTopicChange?: (topic: string) => void;
+  onCreditsUpdate?: (credits: number) => void;
   ghostMode?: boolean;
+  userCredits?: number;
 }
 
 interface VoiceInsight {
@@ -93,13 +96,14 @@ function useOrbSize() {
   return size;
 }
 
-export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, onTopicChange, ghostMode = false }: VoiceChatProps) {
+export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, onTopicChange, onCreditsUpdate, ghostMode = false, userCredits = 0 }: VoiceChatProps) {
   const [connectionState, setConnectionState] = useState<"disconnected" | "connecting" | "connected">("disconnected");
   const [token, setToken] = useState<string>("");
   const [serverUrl, setServerUrl] = useState<string>("");
   const [roomName, setRoomName] = useState(generateRoomName);
   const [participantName, setParticipantName] = useState(generateParticipantName);
   const [error, setError] = useState<string>("");
+  const [disconnecting, setDisconnecting] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState(DEFAULT_VOICE_KEY);
   const [showPriming, setShowPriming] = useState(false);
   const [primingChecked, setPrimingChecked] = useState(false);
@@ -119,6 +123,15 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
   const [showSummary, setShowSummary] = useState(false);
   const [currentTopic, setCurrentTopic] = useState<string>("");
   const [conversationId, setConversationId] = useState<string | null>(null);
+
+  // Countdown timer state
+  const maxSeconds = userCredits * SECONDS_PER_CREDIT;
+  const [timeLeft, setTimeLeft] = useState(maxSeconds);
+  const [timerStarted, setTimerStarted] = useState(false);
+  const [showExpiring, setShowExpiring] = useState(false);
+  const timerIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const disconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const timerStartTimeRef = useRef<number>(0);
 
   // Create a conversation in the database
   const createConversation = useCallback(async (problemStatement: string): Promise<string | null> => {
@@ -281,7 +294,51 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
     }
   }, [roomName, participantName, selectedVoice, onConnectionChange]);
 
-  const disconnect = useCallback(() => {
+  const disconnect = useCallback(async () => {
+    if (disconnecting) return;
+    setDisconnecting(true);
+
+    // Stop timer
+    if (timerIntervalRef.current) {
+      clearInterval(timerIntervalRef.current);
+      timerIntervalRef.current = null;
+    }
+    if (disconnectTimeoutRef.current) {
+      clearTimeout(disconnectTimeoutRef.current);
+      disconnectTimeoutRef.current = null;
+    }
+
+    // Deduct credits based on actual time used
+    if (timerStarted && timerStartTimeRef.current > 0) {
+      const secondsUsed = Math.ceil((Date.now() - timerStartTimeRef.current) / 1000);
+      const creditsUsed = Math.ceil(secondsUsed / SECONDS_PER_CREDIT);
+      if (creditsUsed > 0) {
+        try {
+          const res = await fetch("/api/credits/deduct", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              amount: creditsUsed,
+              conversationId,
+              type: "voice",
+              durationSeconds: secondsUsed,
+            }),
+          });
+          if (res.ok) {
+            const data = await res.json();
+            onCreditsUpdate?.(data.remainingCredits);
+          }
+        } catch (err) {
+          console.error("[Voice] Failed to deduct credits:", err);
+        }
+      }
+    }
+
+    // Reset timer state
+    setTimerStarted(false);
+    setShowExpiring(false);
+    timerStartTimeRef.current = 0;
+
     setToken("");
     setServerUrl("");
     setConnectionState("disconnected");
@@ -291,16 +348,26 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
     if (transcript.length >= 2) {
       setShowSummary(true);
       if (!ghostMode) {
-        // Save to database if we have a conversation ID (authenticated user)
         if (conversationId) {
           saveConversationAndGenerateInsights(conversationId, transcript);
         } else {
-          // Fallback for unauthenticated users - just generate UI insights
           generateInsights(transcript);
         }
       }
     }
-  }, [onConnectionChange, transcript, conversationId, saveConversationAndGenerateInsights, generateInsights, ghostMode]);
+  }, [onConnectionChange, onCreditsUpdate, transcript, conversationId, saveConversationAndGenerateInsights, generateInsights, ghostMode, timerStarted, disconnecting]);
+
+  // Keep a stable ref to disconnect for use in timers (avoids stale closure)
+  const disconnectRef = useRef(disconnect);
+  useEffect(() => { disconnectRef.current = disconnect; }, [disconnect]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (timerIntervalRef.current) clearInterval(timerIntervalRef.current);
+      if (disconnectTimeoutRef.current) clearTimeout(disconnectTimeoutRef.current);
+    };
+  }, []);
 
   const closeSummary = useCallback(() => {
     setShowSummary(false);
@@ -308,12 +375,14 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
     setInsights(null);
     setCurrentTopic("");
     setConversationId(null);
+    setDisconnecting(false);
+    setTimeLeft(userCredits * SECONDS_PER_CREDIT);
     // Generate fresh room/participant names for next call
     setRoomName(generateRoomName());
     setParticipantName(generateParticipantName());
     onInsightsChange?.(null);
     onTopicChange?.("");
-  }, [onInsightsChange, onTopicChange]);
+  }, [onInsightsChange, onTopicChange, userCredits]);
 
   // Handle priming screen dismissal
   const handlePrimingReady = useCallback(() => {
@@ -529,7 +598,7 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
           </p>
         </div>
 
-        <div className="z-20 w-full max-w-xs relative">
+        <div className="z-20 w-full max-w-md relative">
           <VoiceSelector
             selectedVoiceKey={selectedVoice}
             onSelect={setSelectedVoice}
@@ -590,6 +659,27 @@ export function VoiceChat({ onTranscript, onConnectionChange, onInsightsChange, 
         onDisconnect={disconnect}
         onTranscript={onTranscript}
         addTranscriptMessage={addTranscriptMessage}
+        timeLeft={timeLeft}
+        showExpiring={showExpiring}
+        disconnecting={disconnecting}
+        onAgentReady={() => {
+          if (!timerStarted) {
+            setTimerStarted(true);
+            timerStartTimeRef.current = Date.now();
+            setTimeLeft(maxSeconds);
+            timerIntervalRef.current = setInterval(() => {
+              setTimeLeft((prev) => {
+                if (prev === LOW_CREDITS_WARNING_SECS + 1) setShowExpiring(true);
+                if (prev <= 1) {
+                  // Auto-disconnect after timeout if no action
+                  disconnectTimeoutRef.current = setTimeout(() => disconnectRef.current(), AUTO_DISCONNECT_TIMEOUT_SECS * 1000);
+                  return 0;
+                }
+                return prev - 1;
+              });
+            }, 1000);
+          }
+        }}
       />
       <RoomAudioRenderer />
     </LiveKitRoom>
@@ -600,9 +690,13 @@ interface ActiveVoiceChatProps {
   onDisconnect: () => void;
   onTranscript?: (message: Message) => void;
   addTranscriptMessage: (role: "user" | "assistant", content: string) => void;
+  timeLeft: number;
+  showExpiring: boolean;
+  disconnecting: boolean;
+  onAgentReady: () => void;
 }
 
-function ActiveVoiceChat({ onDisconnect, onTranscript, addTranscriptMessage }: ActiveVoiceChatProps) {
+function ActiveVoiceChat({ onDisconnect, onTranscript, addTranscriptMessage, timeLeft, showExpiring, disconnecting, onAgentReady }: ActiveVoiceChatProps) {
   const { state, audioTrack, agentTranscriptions } = useVoiceAssistant();
   const localParticipant = useLocalParticipant();
   const transcriptions = useTranscriptions({});
@@ -615,13 +709,17 @@ function ActiveVoiceChat({ onDisconnect, onTranscript, addTranscriptMessage }: A
   const [audioInitialized, setAudioInitialized] = useState(false);
   const [networkQuality, setNetworkQuality] = useState<"good" | "fair" | "poor">("good");
   const [showNoiseWarning, setShowNoiseWarning] = useState(false);
+  const [liveAgentText, setLiveAgentText] = useState("");
+  const [liveUserText, setLiveUserText] = useState("");
   const noiseHistoryRef = useRef<number[]>([]);
   const transcriptIdRef = useRef(0);
+  const processedAgentSegmentsRef = useRef(new Set<string>());
+  const processedUserTextsRef = useRef(new Set<string>());
+  const agentClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const userClearTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const agentAnalyserRef = useRef<AnalyserNode | null>(null);
   const userAnalyserRef = useRef<AnalyserNode | null>(null);
   const animationRef = useRef<number | undefined>(undefined);
-  const processedAgentSegmentsRef = useRef<Set<string>>(new Set<string>());
-  const processedUserTextsRef = useRef<Set<string>>(new Set<string>());
 
   // Monitor network quality based on connection state
   useEffect(() => {
@@ -690,6 +788,15 @@ function ActiveVoiceChat({ onDisconnect, onTranscript, addTranscriptMessage }: A
   const agentState = agentParticipant?.attributes?.['lk.agent.state'];
   const agentReady = audioInitialized && ['listening', 'thinking', 'speaking'].includes(agentState || '');
 
+  // Start countdown timer when agent becomes ready
+  const agentReadyNotifiedRef = useRef(false);
+  useEffect(() => {
+    if (agentReady && !agentReadyNotifiedRef.current) {
+      agentReadyNotifiedRef.current = true;
+      onAgentReady();
+    }
+  }, [agentReady, onAgentReady]);
+
   // Debug logging for voice assistant state
   useEffect(() => {
     console.log("[Voice] State changed:", state, "| agentReady:", agentReady, "| agentState:", agentState, "| audioInitialized:", audioInitialized);
@@ -726,46 +833,62 @@ function ActiveVoiceChat({ onDisconnect, onTranscript, addTranscriptMessage }: A
     }
   }, [agentReady, isMuted, localParticipant]);
 
-  // Handle agent transcriptions - collect for insights
+  // Handle agent transcriptions - live display + collect for insights
   useEffect(() => {
-    if (agentTranscriptions && agentTranscriptions.length > 0) {
-      const latest = agentTranscriptions[agentTranscriptions.length - 1];
-      // Only process final segments to avoid duplicates
-      if (latest.text && latest.final) {
-        const segmentId = `${latest.firstReceivedTime}-${latest.text.slice(0, 20)}`;
-        if (!processedAgentSegmentsRef.current.has(segmentId)) {
-          processedAgentSegmentsRef.current.add(segmentId);
-          addTranscriptMessage("assistant", latest.text);
-          onTranscript?.({
-            id: `agent-${transcriptIdRef.current++}`,
-            role: "assistant",
-            content: latest.text,
-            timestamp: new Date(),
-          });
-        }
+    if (!agentTranscriptions?.length) return;
+    const latest = agentTranscriptions[agentTranscriptions.length - 1];
+    if (!latest.text) return;
+
+    // Show live text (partial or final) for real-time subtitles
+    setLiveAgentText(latest.text);
+    if (agentClearTimerRef.current) clearTimeout(agentClearTimerRef.current);
+    agentClearTimerRef.current = setTimeout(() => setLiveAgentText(""), 2000);
+
+    // Only add to permanent transcript on final segments
+    if (latest.final) {
+      const segmentId = `${latest.firstReceivedTime}-${latest.text.slice(0, 20)}`;
+      if (!processedAgentSegmentsRef.current.has(segmentId)) {
+        processedAgentSegmentsRef.current.add(segmentId);
+        addTranscriptMessage("assistant", latest.text);
+        onTranscript?.({
+          id: `agent-${transcriptIdRef.current++}`,
+          role: "assistant",
+          content: latest.text,
+          timestamp: new Date(),
+        });
       }
     }
   }, [agentTranscriptions, onTranscript, addTranscriptMessage]);
 
-  // Handle user transcriptions from LiveKit text streams
+  // Handle user transcriptions from LiveKit text streams - live display + collect
   useEffect(() => {
-    if (transcriptions && transcriptions.length > 0) {
-      transcriptions.forEach((stream) => {
-        // Check if this is user text (not from agent)
-        if (stream.text && stream.participantInfo?.identity) {
-          // Skip if it's agent text or already processed
+    if (!transcriptions?.length) return;
+    transcriptions.forEach((stream) => {
+      if (stream.text && stream.participantInfo?.identity) {
+        if (!stream.participantInfo.identity.includes("agent")) {
+          // Show live text for real-time subtitles
+          setLiveUserText(stream.text);
+          if (userClearTimerRef.current) clearTimeout(userClearTimerRef.current);
+          userClearTimerRef.current = setTimeout(() => setLiveUserText(""), 1500);
+
+          // Add to permanent transcript (deduped)
           const textKey = `${stream.participantInfo.identity}-${stream.text.slice(0, 30)}`;
           if (!processedUserTextsRef.current.has(textKey)) {
-            // Only add if not from agent participant
-            if (!stream.participantInfo.identity.includes('agent')) {
-              processedUserTextsRef.current.add(textKey);
-              addTranscriptMessage("user", stream.text);
-            }
+            processedUserTextsRef.current.add(textKey);
+            addTranscriptMessage("user", stream.text);
           }
         }
-      });
-    }
+      }
+    });
   }, [transcriptions, addTranscriptMessage]);
+
+  // Cleanup live transcription timers on unmount
+  useEffect(() => {
+    return () => {
+      if (agentClearTimerRef.current) clearTimeout(agentClearTimerRef.current);
+      if (userClearTimerRef.current) clearTimeout(userClearTimerRef.current);
+    };
+  }, []);
 
   // Set up audio analysis for agent audio (when Sage speaks)
   useEffect(() => {
@@ -1031,6 +1154,40 @@ function ActiveVoiceChat({ onDisconnect, onTranscript, addTranscriptMessage }: A
         </p>
       </div>
 
+      {/* Live transcription subtitles */}
+      {agentReady && (liveAgentText || liveUserText) && (
+        <div className="z-10 max-w-sm w-full px-4 min-h-[1.5rem]">
+          {state === "speaking" && liveAgentText && (
+            <p className="text-sm text-white/50 text-center italic leading-relaxed line-clamp-3">
+              &ldquo;{liveAgentText}&rdquo;
+            </p>
+          )}
+          {state === "listening" && liveUserText && (
+            <p className="text-sm text-amber-300/50 text-center leading-relaxed line-clamp-2">
+              {liveUserText}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Countdown Timer */}
+      {agentReady && (
+        <div className="z-10 flex items-center gap-2">
+          <Clock className="w-4 h-4 text-stone-400" />
+          <span className={clsx(
+            "text-sm font-mono font-medium tabular-nums",
+            timeLeft <= 10 ? "text-red-400" :
+            timeLeft <= 20 ? "text-yellow-400" :
+            "text-stone-300"
+          )}>
+            {Math.floor(timeLeft / 60)}:{String(timeLeft % 60).padStart(2, "0")}
+          </span>
+          {showExpiring && (
+            <span className="text-xs text-red-400 animate-pulse">Credits expiring</span>
+          )}
+        </div>
+      )}
+
       {/* Controls - Large touch targets */}
       <div className="flex items-center gap-4 sm:gap-6 z-10 pb-safe">
         <button
@@ -1055,10 +1212,20 @@ function ActiveVoiceChat({ onDisconnect, onTranscript, addTranscriptMessage }: A
 
         <button
           onClick={onDisconnect}
-          className="p-4 sm:p-5 rounded-full bg-red-500/90 hover:bg-red-400 active:bg-red-600 transition-all duration-300 shadow-lg shadow-red-500/20 touch-manipulation active:scale-95"
+          disabled={disconnecting}
+          className={clsx(
+            "p-4 sm:p-5 rounded-full transition-all duration-300 shadow-lg touch-manipulation active:scale-95",
+            disconnecting
+              ? "bg-red-500/50 cursor-not-allowed shadow-red-500/10"
+              : "bg-red-500/90 hover:bg-red-400 active:bg-red-600 shadow-red-500/20"
+          )}
           aria-label="End call"
         >
-          <PhoneOff className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+          {disconnecting ? (
+            <Loader2 className="w-6 h-6 sm:w-7 sm:h-7 text-white animate-spin" />
+          ) : (
+            <PhoneOff className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+          )}
         </button>
       </div>
     </div>

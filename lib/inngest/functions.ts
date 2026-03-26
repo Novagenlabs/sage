@@ -81,6 +81,9 @@ export const processConversationEnd = inngest.createFunction(
       userPatterns?: Array<{ content: string; category: string; confidence: number }>;
       creditsUsed?: number;
       tokensUsed?: number;
+      promptTokens?: number;
+      completionTokens?: number;
+      isEstimate?: boolean;
     }> => {
       const apiKey = process.env.OPENROUTER_API_KEY;
       if (!apiKey) {
@@ -163,6 +166,7 @@ export const processConversationEnd = inngest.createFunction(
 
       // Calculate credits used
       const usage = data.usage || {};
+      const isEstimate = !usage.prompt_tokens;
       const promptTokens = usage.prompt_tokens || Math.ceil(conversationText.length / 4);
       const completionTokens = usage.completion_tokens || Math.ceil(content.length / 4);
       const creditsUsed = calculateCreditsUsed(promptTokens, completionTokens);
@@ -173,6 +177,9 @@ export const processConversationEnd = inngest.createFunction(
         userPatterns: parsed.userPatterns || [],
         creditsUsed,
         tokensUsed: promptTokens + completionTokens,
+        promptTokens,
+        completionTokens,
+        isEstimate,
       };
     });
 
@@ -289,6 +296,24 @@ Write a warm, insightful summary that feels personal, not clinical. Return only 
             data: { profileSummary },
           });
           console.log("[Inngest] Updated user profile summary");
+
+          // Track profile summary LLM call (previously untracked)
+          const profileUsage = profileData.usage || {};
+          const profilePromptTokens = profileUsage.prompt_tokens || Math.ceil(profilePrompt.length / 4);
+          const profileCompletionTokens = profileUsage.completion_tokens || Math.ceil(profileSummary.length / 4);
+          const profileCreditsUsed = calculateCreditsUsed(profilePromptTokens, profileCompletionTokens);
+
+          await deductCredits(userId, profileCreditsUsed, profilePromptTokens + profileCompletionTokens, "profile", "openai/gpt-4o-mini", {
+            service: "openrouter",
+            category: "background",
+            conversationId,
+            source: "inngest/update-profile",
+            promptTokens: profilePromptTokens,
+            completionTokens: profileCompletionTokens,
+            isEstimate: !profileUsage.prompt_tokens,
+          });
+          console.log("[Inngest] Deducted", profileCreditsUsed, "credits for profile summary");
+
           return { updated: true };
         }
       }
@@ -304,16 +329,18 @@ Write a warm, insightful summary that feels personal, not clinical. Return only 
         data: { isActive: false },
       });
 
-      // Deduct credits
+      // Deduct credits for summary generation
       if (result.creditsUsed && result.tokensUsed) {
-        await deductCredits(
-          userId,
-          result.creditsUsed,
-          result.tokensUsed,
-          type === "voice" ? "voice" : "chat",
-          "openai/gpt-4o-mini"
-        );
-        console.log("[Inngest] Deducted", result.creditsUsed, "credits");
+        await deductCredits(userId, result.creditsUsed, result.tokensUsed, "summary", "openai/gpt-4o-mini", {
+          service: "openrouter",
+          category: "background",
+          conversationId,
+          source: "inngest/generate-summary",
+          promptTokens: result.promptTokens,
+          completionTokens: result.completionTokens,
+          isEstimate: result.isEstimate,
+        });
+        console.log("[Inngest] Deducted", result.creditsUsed, "credits for summary");
       }
 
       return { finalized: true };
@@ -324,5 +351,93 @@ Write a warm, insightful summary that feels personal, not clinical. Return only 
   }
 );
 
+/**
+ * Reconcile streaming chat usage with real USD cost from OpenRouter.
+ * Fired after a streaming chat completes. Queries the OpenRouter generation
+ * endpoint to get actual cost and native token counts, then updates the
+ * UsageRecord with real data.
+ *
+ * Does NOT adjust user credits — the user-facing deduction already happened
+ * post-stream. This is analytics-only.
+ */
+export const reconcileStreamingUsage = inngest.createFunction(
+  {
+    id: "reconcile-streaming-usage",
+    retries: 2,
+    onFailure: async ({ error, event }) => {
+      console.error("[Inngest] reconcileStreamingUsage failed:", error, event);
+    },
+  },
+  { event: "usage/reconcile" },
+  async ({ event, step }) => {
+    const { generationId, usageRecordId } = event.data as {
+      generationId: string;
+      usageRecordId: string;
+    };
+
+    // Wait for OpenRouter to finalize generation stats
+    await step.sleep("wait-for-stats", "10s");
+
+    const result = await step.run("fetch-generation-stats", async () => {
+      const apiKey = process.env.OPENROUTER_API_KEY;
+      if (!apiKey) {
+        return { skipped: true, reason: "no_api_key" };
+      }
+
+      const response = await fetch(
+        `https://openrouter.ai/api/v1/generation?id=${generationId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        console.warn(`[Reconcile] OpenRouter generation API returned ${response.status} for ${generationId}`);
+        return { skipped: true, reason: `api_error_${response.status}` };
+      }
+
+      const { data } = await response.json();
+
+      if (!data) {
+        return { skipped: true, reason: "no_data" };
+      }
+
+      // Update the UsageRecord with real data
+      await prisma.usageRecord.update({
+        where: { id: usageRecordId },
+        data: {
+          costUsd: data.total_cost ?? undefined,
+          promptTokens: data.native_tokens_prompt ?? undefined,
+          completionTokens: data.native_tokens_completion ?? undefined,
+          tokensUsed: (data.native_tokens_prompt || 0) + (data.native_tokens_completion || 0) || undefined,
+          isEstimate: false,
+          metadata: {
+            generationId,
+            model: data.model,
+            providerName: data.provider_name,
+            streamed: data.streamed,
+            latency: data.latency,
+            generationTime: data.generation_time,
+            cacheDiscount: data.cache_discount,
+          },
+        },
+      });
+
+      console.log(`[Reconcile] Updated UsageRecord ${usageRecordId} with real cost: $${data.total_cost}`);
+
+      return {
+        updated: true,
+        costUsd: data.total_cost,
+        nativePromptTokens: data.native_tokens_prompt,
+        nativeCompletionTokens: data.native_tokens_completion,
+      };
+    });
+
+    return result;
+  }
+);
+
 // Export all functions for the Inngest serve handler
-export const functions = [processConversationEnd];
+export const functions = [processConversationEnd, reconcileStreamingUsage];

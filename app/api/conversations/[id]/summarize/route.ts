@@ -250,23 +250,42 @@ Write a warm, insightful summary that feels personal, not clinical. Return only 
             data: { profileSummary },
           });
           console.log("[Summarize] Updated user profile summary");
+
+          // Track profile summary LLM call (previously untracked)
+          const profileUsage = profileData.usage || {};
+          const profilePromptTokens = profileUsage.prompt_tokens || Math.ceil(profilePrompt.length / 4);
+          const profileCompletionTokens = profileUsage.completion_tokens || Math.ceil(profileSummary.length / 4);
+          const profileCreditsUsed = calculateCreditsUsed(profilePromptTokens, profileCompletionTokens);
+
+          await deductCredits(userId, profileCreditsUsed, profilePromptTokens + profileCompletionTokens, "profile", "openai/gpt-4o-mini", {
+            service: "openrouter",
+            category: "system",
+            conversationId: id,
+            source: "api/conversations/summarize/profile",
+            promptTokens: profilePromptTokens,
+            completionTokens: profileCompletionTokens,
+            isEstimate: !profileUsage.prompt_tokens,
+          });
+          console.log("[Summarize] Deducted", profileCreditsUsed, "credits for profile summary");
         }
       }
     }
 
-    // Deduct credits
+    // Deduct credits for summarization
     const usage = data.usage || {};
     const promptTokens = usage.prompt_tokens || Math.ceil(conversationText.length / 4);
     const completionTokens = usage.completion_tokens || Math.ceil(content.length / 4);
     const creditsUsed = calculateCreditsUsed(promptTokens, completionTokens);
 
-    await deductCredits(
-      userId,
-      creditsUsed,
-      promptTokens + completionTokens,
-      "chat",
-      "openai/gpt-4o-mini"
-    );
+    await deductCredits(userId, creditsUsed, promptTokens + completionTokens, "summary", "openai/gpt-4o-mini", {
+      service: "openrouter",
+      category: "user",
+      conversationId: id,
+      source: "api/conversations/summarize",
+      promptTokens,
+      completionTokens,
+      isEstimate: !usage.prompt_tokens,
+    });
 
     return new Response(
       JSON.stringify({

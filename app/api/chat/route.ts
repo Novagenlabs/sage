@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { buildSystemPrompt, type DialoguePhase, type ConversationContext } from "@/lib/prompts";
 import { calculateCreditsUsed, deductCredits, hasEnoughCredits } from "@/lib/credits";
+import { inngest } from "@/lib/inngest/client";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,6 +18,7 @@ interface RequestBody {
   phase: DialoguePhase;
   sessionStartTime?: number; // Unix timestamp when session started
   context?: ConversationContext; // Past session summaries and user insights
+  conversationId?: string; // For usage tracking attribution
 }
 
 async function fetchWithRetry(
@@ -82,7 +84,7 @@ export async function POST(request: Request) {
 
   try {
     const body: RequestBody = await request.json();
-    const { messages, modelId, phase, sessionStartTime, context } = body;
+    const { messages, modelId, phase, sessionStartTime, context, conversationId } = body;
 
     // Calculate session duration in minutes
     const sessionMinutes = sessionStartTime
@@ -116,6 +118,7 @@ export async function POST(request: Request) {
           stream: true,
           temperature: 0.7,
           max_tokens: 1024,
+          user: userId,
         }),
       }
     );
@@ -132,6 +135,7 @@ export async function POST(request: Request) {
 
     const promptTokens = apiMessages.reduce((sum, m) => sum + Math.ceil(m.content.length / 4), 0);
     let completionTokens = 0;
+    let generationId: string | null = null;
 
     const reader = response.body?.getReader();
     if (!reader) {
@@ -155,6 +159,10 @@ export async function POST(request: Request) {
               if (line.startsWith("data: ") && line !== "data: [DONE]") {
                 try {
                   const json = JSON.parse(line.slice(6));
+                  // Capture generation ID from OpenRouter response
+                  if (json.id && !generationId) {
+                    generationId = json.id;
+                  }
                   const content = json.choices?.[0]?.delta?.content;
                   if (content) {
                     completionTokens += Math.ceil(content.length / 4);
@@ -166,12 +174,36 @@ export async function POST(request: Request) {
             }
           }
 
+          // Close stream immediately so user sees response end with zero lag
+          controller.close();
+
+          // Deduct credits and reconcile in background (stream already closed)
           const creditsUsed = calculateCreditsUsed(promptTokens, completionTokens);
           const totalTokens = promptTokens + completionTokens;
 
-          await deductCredits(userId, creditsUsed, totalTokens, "chat", modelId);
-
-          controller.close();
+          deductCredits(userId, creditsUsed, totalTokens, "chat", modelId, {
+            service: "openrouter",
+            category: "user",
+            conversationId: conversationId || undefined,
+            source: "api/chat",
+            promptTokens,
+            completionTokens,
+            isEstimate: true,
+          }).then((deductResult) => {
+            if (generationId && deductResult.success && deductResult.usageRecordId) {
+              inngest.send({
+                name: "usage/reconcile",
+                data: {
+                  generationId,
+                  usageRecordId: deductResult.usageRecordId,
+                },
+              }).catch((err: Error) => {
+                console.error("[Chat] Failed to queue reconciliation:", err.message);
+              });
+            }
+          }).catch((err: Error) => {
+            console.error("[Chat] Credit deduction failed:", err.message);
+          });
         } catch (error) {
           controller.error(error);
         }

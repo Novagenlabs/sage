@@ -11,6 +11,7 @@ interface TranscriptMessage {
 
 interface RequestBody {
   transcript: TranscriptMessage[];
+  conversationId?: string;
 }
 
 const INSIGHTS_PROMPT = `Extract the substance of this conversation. No fluff.
@@ -63,7 +64,7 @@ export async function POST(request: Request) {
 
   try {
     const body: RequestBody = await request.json();
-    const { transcript } = body;
+    const { transcript, conversationId } = body;
 
     if (!transcript || transcript.length === 0) {
       return new Response(
@@ -136,13 +137,15 @@ export async function POST(request: Request) {
     const completionTokens = usage.completion_tokens || Math.ceil(content.length / 4);
     const creditsUsed = calculateCreditsUsed(promptTokens, completionTokens);
 
-    await deductCredits(
-      userId,
-      creditsUsed,
-      promptTokens + completionTokens,
-      "voice",
-      "openai/gpt-4o-mini"
-    );
+    await deductCredits(userId, creditsUsed, promptTokens + completionTokens, "insights", "openai/gpt-4o-mini", {
+      service: "openrouter",
+      category: "user",
+      conversationId: conversationId || undefined,
+      source: "api/insights",
+      promptTokens,
+      completionTokens,
+      isEstimate: !usage.prompt_tokens,
+    });
 
     return new Response(JSON.stringify(insights), {
       headers: { "Content-Type": "application/json" },

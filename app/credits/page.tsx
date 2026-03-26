@@ -10,32 +10,101 @@ import {
   Loader2,
   CheckCircle2,
   XCircle,
-  Sparkles,
-  Zap,
-  Crown,
 } from "lucide-react";
 
-interface Package {
-  id: string;
-  name: string;
-  credits: number;
-  priceInKobo: number;
+import { CREDIT_PACKAGES, type CreditPackage, formatNaira as formatNairaUtil } from "@/lib/paystack";
+
+const formatNaira = formatNairaUtil;
+
+function formatVoiceTime(credits: number): string {
+  const totalSeconds = credits;
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes === 0) return `${seconds}s`;
+  if (seconds === 0) return `${minutes}m`;
+  return `${minutes}m ${seconds}s`;
 }
 
-const PACKAGES: Package[] = [
-  { id: "starter", name: "Starter", credits: 500, priceInKobo: 100000 },
-  { id: "plus", name: "Plus", credits: 1500, priceInKobo: 250000 },
-  { id: "pro", name: "Pro", credits: 5000, priceInKobo: 700000 },
-];
+const PACKAGE_META: Record<string, { tag: string; tagStyle: "light" | "dark"; features: string[] }> = {
+  starter: {
+    tag: "Starter",
+    tagStyle: "light",
+    features: [
+      "200 credits",
+      "~3 min voice",
+      "Chat included",
+      "Email support",
+    ],
+  },
+  plus: {
+    tag: "Popular",
+    tagStyle: "light",
+    features: [
+      "1,000 credits",
+      "~16 min voice",
+      "Chat included",
+      "Priority support",
+      "Session insights",
+    ],
+  },
+  pro: {
+    tag: "Best Value",
+    tagStyle: "dark",
+    features: [
+      "3,000 credits",
+      "~50 min voice",
+      "Chat included",
+      "Priority support",
+      "Session insights",
+      "Profile memory",
+    ],
+  },
+};
 
-const PACKAGE_ICONS = [Sparkles, Zap, Crown];
+function LightCheckIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <circle cx="8" cy="8" r="8" className="fill-neutral-900" />
+      <path
+        d="M5.5 8.5L7 10L11 6"
+        stroke="white"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
 
-function formatNaira(kobo: number): string {
-  return new Intl.NumberFormat("en-NG", {
-    style: "currency",
-    currency: "NGN",
-    minimumFractionDigits: 0,
-  }).format(kobo / 100);
+function DarkCheckIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      className={className}
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <circle cx="8" cy="8" r="7.5" className="stroke-neutral-500" />
+      <path
+        d="M5.5 8.5L7 10L11 6"
+        stroke="white"
+        strokeWidth="1.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
 
 export default function CreditsPage() {
@@ -118,12 +187,11 @@ function CreditsContent() {
     const reference = searchParams.get("reference");
     if (reference && status === "authenticated") {
       verifyPayment(reference);
-      // Clean URL
       window.history.replaceState({}, "", "/credits");
     }
   }, [searchParams, status, verifyPayment]);
 
-  const handleBuy = async (pkg: Package) => {
+  const handleBuy = async (pkg: CreditPackage) => {
     setLoadingPackage(pkg.id);
     setResult(null);
 
@@ -167,11 +235,11 @@ function CreditsContent() {
         <div className="absolute bottom-1/4 right-1/3 w-[400px] h-[400px] bg-orange-500/[0.02] rounded-full blur-[100px]" />
       </div>
 
-      <div className="relative z-10 max-w-3xl mx-auto px-4 py-8 sm:py-12">
+      <div className="relative z-10 max-w-5xl mx-auto px-4 py-8 sm:py-12">
         {/* Header */}
         <div className="flex items-center gap-4 mb-8">
           <Link
-            href="/"
+            href="/chat"
             className="p-2 hover:bg-white/5 rounded-lg transition-colors"
           >
             <ArrowLeft className="w-5 h-5 text-white/60" />
@@ -180,7 +248,7 @@ function CreditsContent() {
         </div>
 
         {/* Current Balance */}
-        <div className="mb-8 bg-stone-900/50 border border-stone-700/30 rounded-2xl p-6 flex items-center gap-4">
+        <div className="mb-8 bg-white/[0.04] backdrop-blur-md border border-white/10 rounded-2xl p-6 flex items-center gap-4 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.3)] ring-1 ring-inset ring-white/5 max-w-md">
           <div className="p-3 bg-amber-500/10 rounded-xl">
             <Coins className="w-6 h-6 text-amber-400" />
           </div>
@@ -226,71 +294,86 @@ function CreditsContent() {
           </div>
         )}
 
-        {/* Packages */}
-        <div className="grid gap-4 sm:grid-cols-3">
-          {PACKAGES.map((pkg, i) => {
-            const Icon = PACKAGE_ICONS[i];
+        {/* Pricing Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {CREDIT_PACKAGES.map((pkg, i) => {
+            const meta = PACKAGE_META[pkg.id] || PACKAGE_META.starter;
             const isLoading = loadingPackage === pkg.id;
             const pricePerCredit = pkg.priceInKobo / 100 / pkg.credits;
+            const isDark = i === 2;
+            const CheckIcon = isDark ? DarkCheckIcon : LightCheckIcon;
 
             return (
               <div
                 key={pkg.id}
-                className={`relative bg-stone-900/50 border rounded-2xl p-6 flex flex-col transition-colors ${
-                  i === 2
-                    ? "border-amber-500/40 ring-1 ring-amber-500/20"
-                    : "border-stone-700/30"
-                }`}
+                className={[
+                  "rounded-3xl p-2 transition-transform hover:scale-[1.02]",
+                  isDark
+                    ? "bg-neutral-900/60 backdrop-blur-md border border-neutral-800 shadow-[0_12px_50px_-15px_rgba(0,0,0,0.55)] ring-1 ring-inset ring-white/5"
+                    : "bg-white/[0.065] backdrop-blur-md border border-neutral-200/20 shadow-[0_12px_40px_-15px_rgba(0,0,0,0.25)] ring-1 ring-inset ring-white/10",
+                ].join(" ")}
               >
-                {i === 2 && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-amber-500 text-black text-xs font-semibold rounded-full">
-                    Best Value
+                {/* Top section */}
+                <div
+                  className={[
+                    "rounded-2xl p-6 sm:p-8 mb-2",
+                    isDark
+                      ? "bg-neutral-900/70 backdrop-blur-sm border border-neutral-800 ring-1 ring-inset ring-white/10"
+                      : "bg-white/[0.08] backdrop-blur-sm border border-white/10 ring-1 ring-inset ring-white/5",
+                  ].join(" ")}
+                >
+                  <div className="mb-5 flex items-center justify-between">
+                    <h2
+                      className={[
+                        "text-2xl sm:text-3xl font-bold tracking-tight",
+                        isDark ? "text-neutral-50" : "text-white",
+                      ].join(" ")}
+                    >
+                      {pkg.name}
+                    </h2>
+                    <span
+                      className={[
+                        "inline-flex items-center rounded-full px-3 py-1 text-xs font-medium backdrop-blur",
+                        isDark
+                          ? "border border-amber-500/40 bg-amber-500/20 text-amber-300"
+                          : "border border-white/15 bg-white/10 text-white/70",
+                      ].join(" ")}
+                    >
+                      {meta.tag}
+                    </span>
                   </div>
-                )}
 
-                <div className="flex items-center gap-3 mb-4">
-                  <div
-                    className={`p-2 rounded-lg ${
-                      i === 2
-                        ? "bg-amber-500/20"
-                        : i === 1
-                        ? "bg-blue-500/10"
-                        : "bg-white/5"
-                    }`}
-                  >
-                    <Icon
-                      className={`w-5 h-5 ${
-                        i === 2
-                          ? "text-amber-400"
-                          : i === 1
-                          ? "text-blue-400"
-                          : "text-white/60"
-                      }`}
-                    />
-                  </div>
-                  <h3 className="text-lg font-semibold">{pkg.name}</h3>
-                </div>
-
-                <p className="text-3xl font-bold mb-1">
-                  {pkg.credits.toLocaleString()}
-                </p>
-                <p className="text-sm text-white/50 mb-1">credits</p>
-                <p className="text-xs text-white/30 mb-6">
-                  {formatNaira(pricePerCredit * 100)}/credit
-                </p>
-
-                <div className="mt-auto">
-                  <p className="text-xl font-semibold mb-3">
-                    {formatNaira(pkg.priceInKobo)}
+                  <p className="text-sm text-white/40 mb-1">
+                    {formatVoiceTime(pkg.credits)} of voice
                   </p>
+
+                  <div className="flex items-baseline mb-6">
+                    <span
+                      className={[
+                        "text-4xl sm:text-5xl font-bold tracking-tighter",
+                        isDark ? "text-white" : "text-white/95",
+                      ].join(" ")}
+                    >
+                      {formatNaira(pkg.priceInKobo)}
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-white/30 mb-6">
+                    {formatNaira(pricePerCredit * 100)}/credit
+                  </p>
+
                   <button
                     onClick={() => handleBuy(pkg)}
                     disabled={isLoading || loadingPackage !== null}
-                    className={`w-full py-3 rounded-xl font-medium transition-colors flex items-center justify-center gap-2 ${
-                      i === 2
-                        ? "bg-amber-500 hover:bg-amber-400 text-black disabled:bg-amber-500/50"
-                        : "bg-white/10 hover:bg-white/15 text-white disabled:bg-white/5 disabled:text-white/30"
-                    }`}
+                    className={[
+                      "w-full rounded-xl font-semibold text-base py-4",
+                      "hover:opacity-90 transition-all duration-200",
+                      "flex items-center justify-center gap-2.5",
+                      "disabled:opacity-50 disabled:cursor-not-allowed",
+                      isDark
+                        ? "bg-white text-neutral-900 shadow-[0_4px_18px_-6px_rgba(255,255,255,0.35)] ring-1 ring-inset ring-white/30"
+                        : "bg-white/90 text-neutral-900 shadow-[0_4px_18px_-6px_rgba(255,255,255,0.15)] ring-1 ring-inset ring-white/20",
+                    ].join(" ")}
                   >
                     {isLoading ? (
                       <>
@@ -302,12 +385,38 @@ function CreditsContent() {
                     )}
                   </button>
                 </div>
+
+                {/* Features section */}
+                <div
+                  className={[
+                    "px-5 pb-5 pt-4 rounded-2xl",
+                    isDark
+                      ? "bg-neutral-900/55 backdrop-blur-sm border border-neutral-800 ring-1 ring-inset ring-white/10"
+                      : "bg-white/[0.05] backdrop-blur-sm border border-white/10 ring-1 ring-inset ring-white/5",
+                  ].join(" ")}
+                >
+                  <div className="space-y-3">
+                    {meta.features.map((feature) => (
+                      <div key={feature} className="flex items-center gap-3">
+                        <CheckIcon className="w-4 h-4 flex-shrink-0" />
+                        <span
+                          className={[
+                            "text-sm font-medium",
+                            isDark ? "text-neutral-300" : "text-white/80",
+                          ].join(" ")}
+                        >
+                          {feature}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             );
           })}
         </div>
 
-        <p className="mt-6 text-center text-xs text-white/30">
+        <p className="mt-8 text-center text-xs text-white/30">
           Payments are processed securely by Paystack. Credits are non-refundable.
         </p>
       </div>
