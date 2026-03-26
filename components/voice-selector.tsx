@@ -153,11 +153,14 @@ export function VoiceSelector({
                 )}
               </motion.button>
 
-              {/* Tooltip */}
+              {/* Tooltip — edge-aware positioning */}
               <AnimatePresence>
                 {isHovered && (
                   <motion.div
-                    className="absolute -top-11 left-1/2 -translate-x-1/2 px-3 py-1.5 rounded-lg whitespace-nowrap pointer-events-none z-50"
+                    className={clsx(
+                      "absolute -top-11 px-3 py-1.5 rounded-lg whitespace-nowrap pointer-events-none z-50",
+                      index >= AVAILABLE_VOICES.length - 2 ? "right-0" : index <= 1 ? "left-0" : "left-1/2 -translate-x-1/2"
+                    )}
                     style={{
                       background: "rgba(12,12,18,0.92)",
                       border: "1px solid rgba(196,149,106,0.15)",
@@ -179,7 +182,10 @@ export function VoiceSelector({
                     </span>
                     {/* Caret */}
                     <div
-                      className="absolute -bottom-[5px] left-1/2 -translate-x-1/2 w-2.5 h-2.5 rotate-45"
+                      className={clsx(
+                        "absolute -bottom-[5px] w-2.5 h-2.5 rotate-45",
+                        index >= AVAILABLE_VOICES.length - 2 ? "right-3" : index <= 1 ? "left-3" : "left-1/2 -translate-x-1/2"
+                      )}
                       style={{
                         background: "rgba(12,12,18,0.92)",
                         borderRight: "1px solid rgba(196,149,106,0.15)",
