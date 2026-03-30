@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, Suspense } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
@@ -134,6 +134,7 @@ function CreditsContent() {
     message: string;
     added?: number;
   } | null>(null);
+  const verifiedRef = useRef(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
@@ -147,9 +148,16 @@ function CreditsContent() {
     }
   }, [session]);
 
-  const verifyPayment = useCallback(
-    async (reference: string) => {
-      if (verifying) return;
+  // Auto-verify on callback redirect — runs once per reference
+  useEffect(() => {
+    const reference = searchParams.get("reference");
+    if (!reference || status !== "authenticated" || verifiedRef.current) return;
+    verifiedRef.current = true;
+
+    // Clear reference from URL immediately
+    window.history.replaceState({}, "", "/credits");
+
+    (async () => {
       setVerifying(true);
       setResult(null);
 
@@ -178,18 +186,8 @@ function CreditsContent() {
       } finally {
         setVerifying(false);
       }
-    },
-    [verifying, updateSession]
-  );
-
-  // Auto-verify on callback redirect
-  useEffect(() => {
-    const reference = searchParams.get("reference");
-    if (reference && status === "authenticated") {
-      verifyPayment(reference);
-      window.history.replaceState({}, "", "/credits");
-    }
-  }, [searchParams, status, verifyPayment]);
+    })();
+  }, [searchParams, status, updateSession]);
 
   const handleBuy = async (pkg: CreditPackage) => {
     setLoadingPackage(pkg.id);

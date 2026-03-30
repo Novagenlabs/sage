@@ -42,20 +42,30 @@ export async function GET(req: Request) {
   }
 
   try {
+    console.log(`[VERIFY] Verifying payment: ${reference} for user ${session.user.id}`);
     const txn = await verifyTransaction(reference);
+    console.log(`[VERIFY] Paystack status: ${txn.status}, amount: ${txn.amount}`);
 
     if (txn.status === "success") {
+      // Verify amount matches expected (security check)
+      if (txn.amount !== payment.amount) {
+        console.error(`[VERIFY] Amount mismatch for ${reference}: expected ${payment.amount}, got ${txn.amount}`);
+        return NextResponse.json({ status: "failed", message: "Amount mismatch" });
+      }
+
       await prisma.payment.update({
         where: { reference },
         data: { status: "success", metadata: txn as unknown as Prisma.InputJsonValue },
       });
       const newBalance = await addCredits(session.user.id, payment.credits);
+      console.log(`[VERIFY] Credited ${payment.credits} credits. New balance: ${newBalance}`);
       return NextResponse.json({
         status: "success",
         credits: newBalance,
         added: payment.credits,
       });
     } else {
+      console.log(`[VERIFY] Payment not successful: ${txn.status}`);
       await prisma.payment.update({
         where: { reference },
         data: { status: "failed", metadata: txn as unknown as Prisma.InputJsonValue },
@@ -63,7 +73,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ status: "failed", message: "Payment was not successful" });
     }
   } catch (error) {
-    console.error("Paystack verify error:", error);
+    console.error("[VERIFY] Paystack verify error:", error);
     return NextResponse.json(
       { error: "Failed to verify payment" },
       { status: 500 }
