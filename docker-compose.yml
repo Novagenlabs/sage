@@ -25,6 +25,20 @@ services:
       - INNGEST_SIGNING_KEY=${INNGEST_SIGNING_KEY}
       - PAYSTACK_SECRET_KEY=${PAYSTACK_SECRET_KEY}
       - NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY=${NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY}
+      # Feedback (Resend). Leave RESEND_API_KEY unset to skip emails — feedback
+      # rows still land in the Feedback table.
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - FEEDBACK_TO_EMAIL=${FEEDBACK_TO_EMAIL}
+      - FEEDBACK_FROM_EMAIL=${FEEDBACK_FROM_EMAIL}
+      # Anam video-avatar mode (/v2/chat/video).
+      - ANAM_API_KEY=${ANAM_API_KEY}
+      - ANAM_AVATAR_ID=${ANAM_AVATAR_ID}
+      - ANAM_VOICE_ID=${ANAM_VOICE_ID}
+      - ANAM_LLM_ID=${ANAM_LLM_ID}
+      - ANAM_PROXY_SECRET=${ANAM_PROXY_SECRET}
+      # Shared secret used by the LiveKit agent to POST voice usage to
+      # /api/voice/usage. Must match the value set in the agent service.
+      - SAGE_INTERNAL_API_KEY=${SAGE_INTERNAL_API_KEY}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://localhost:3000/api/health').then(r => r.ok ? process.exit(0) : process.exit(1)).catch(() => process.exit(1))"]
@@ -47,4 +61,9 @@ services:
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - ELEVEN_API_KEY=${ELEVEN_API_KEY}
       - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY}
+      # Used by the agent to POST voice usage back to the web app's
+      # /api/voice/usage endpoint when a session ends. The URL is read from
+      # NEXT_PUBLIC_SITE_URL; the key must match the web service's value.
+      - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
+      - SAGE_INTERNAL_API_KEY=${SAGE_INTERNAL_API_KEY}
     restart: unless-stopped
