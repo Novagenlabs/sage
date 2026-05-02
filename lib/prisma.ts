@@ -15,7 +15,10 @@ export const prisma =
     datasourceUrl: appendPoolParams(process.env.DATABASE_URL),
   });
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+// Cache globally in ALL environments:
+// - Development: prevents hot-reload from creating multiple clients
+// - Production: prevents serverless cold starts from exhausting Neon pool
+globalForPrisma.prisma = prisma;
 
 function appendPoolParams(url: string | undefined): string | undefined {
   if (!url) return url;

@@ -10,33 +10,44 @@ type ConversationEndedEvent = {
   data: {
     conversationId: string;
     userId: string;
-    type: "voice" | "text";
+    type: "voice" | "text" | "video";
     transcript?: Array<{ role: string; content: string }>;
   };
 };
 
-const SUMMARIZE_PROMPT = `Analyze this Socratic dialogue and generate a summary for future context.
+const SUMMARIZE_PROMPT = `You are summarising a Socratic dialogue for long-term memory. The summary you produce will be stored on a server. The original conversation will NOT be stored. Therefore your output MUST contain no information that could re-identify the user or any third party.
 
-Return JSON:
+ABSTRACTION RULES — apply rigorously:
+1. Strip every proper noun. Replace specific names with roles: "a partner", "a parent", "a sibling", "a friend", "a colleague", "their child", "an ex", "a manager", "a therapist", "a teacher". Never use first names, last names, nicknames, or initials.
+2. Strip places, addresses, neighbourhoods, cities, countries, named venues. Use generic categories: "their home", "their workplace", "a familiar place", "abroad", "at school".
+3. Strip employers, schools, companies, products, brands, named services. Replace with categories: "their job", "their school", "a software project", "a product they use".
+4. Strip specific dates, ages, ZIP codes, phone numbers, emails, URLs. Use relative time: "recently", "earlier this year", "for a long time", "as a child".
+5. Strip identifying medical, financial, or legal specifics (diagnoses, dollar amounts, case numbers). Keep only the emotional or relational shape: "a health concern", "a money pressure", "a legal worry".
+6. Never quote the user's exact words. Paraphrase always.
+7. If a detail is required to make the summary coherent and would re-identify someone if removed, omit the surrounding sentence rather than abstract it poorly.
+
+WHAT TO KEEP:
+- Themes, emotional arcs, decisions weighed
+- Recurring patterns (e.g., "tends to delay decisions when they affect someone close")
+- Tensions and dilemmas in archetypal form (e.g., "a tension between independence and belonging")
+- Whether the person reached resolution or sat with uncertainty
+
+Return JSON only — no wrapper, no markdown:
 {
-  "summary": "A 2-3 sentence summary of what was discussed and any realizations the person had. Write in past tense. Be specific, not generic.",
+  "summary": "2-3 sentences in past tense, second person ('you reflected on...'). Pattern-level, no specifics.",
   "insights": [
-    {"content": "Specific insight or realization", "type": "realization|assumption|pattern|question"}
+    {"content": "An insight phrased as a pattern, not a specific event", "type": "realization|assumption|pattern|question"}
   ],
   "userPatterns": [
-    {"content": "Observable pattern about this person", "category": "pattern|preference|goal|behavior", "confidence": 0.0-1.0}
+    {"content": "A general observation about how this person tends to think, feel, or act", "category": "pattern|preference|goal|behavior", "confidence": 0.0-1.0}
   ]
 }
 
-Guidelines:
-- Summary should help Sage understand context if this person returns
-- Insights are specific things discovered in THIS conversation
-- UserPatterns are broader observations about the person that might apply across conversations
-- Quote their words where possible
-- Be concrete, not abstract
-- If they didn't reach conclusions, say so - don't fabricate resolution
-- Confidence for patterns: 0.3 for weak signals, 0.5 for moderate, 0.8+ for strong patterns
-- JSON only, no wrapper text`;
+CONFIDENCE: 0.3 weak signal, 0.5 moderate, 0.8+ strong pattern observed across multiple turns.
+
+If the dialogue is too short or shallow to summarise meaningfully, return: {"summary": "", "insights": [], "userPatterns": []}.
+
+Self-check before returning: scan your output for any proper noun, specific date, address, employer, or quote. If you find one, rewrite that sentence.`;
 
 /**
  * Durable function to process conversation end (voice or text)
@@ -56,25 +67,11 @@ export const processConversationEnd = inngest.createFunction(
 
     console.log(`[Inngest] Processing ${type} conversation:`, conversationId);
 
-    // Step 1: Save voice messages (voice only)
-    if (type === "voice" && transcript?.length) {
-      await step.run("save-messages", async () => {
-        console.log(`[Inngest] Saving ${transcript.length} voice messages`);
-        for (const msg of transcript) {
-          await prisma.message.create({
-            data: {
-              conversationId,
-              role: msg.role as "user" | "assistant",
-              content: msg.content,
-              phase: "voice",
-            },
-          });
-        }
-        return { savedCount: transcript.length };
-      });
-    }
+    // Note: as of the summary-only persistence change, transcripts are NEVER
+    // written to the Message table. The full transcript travels in the event
+    // payload, gets summarised in-memory, and is discarded after this run.
 
-    // Step 2: Generate summary via LLM
+    // Step 1: Generate pattern-only summary via LLM (no DB read)
     const result = await step.run("generate-summary", async (): Promise<{
       skipped?: boolean;
       reason?: string;
@@ -99,21 +96,24 @@ export const processConversationEnd = inngest.createFunction(
         return { skipped: true, reason: "insufficient_credits" };
       }
 
-      // Get conversation with messages
+      // Verify the conversation exists (and the user owns it) — but do NOT read messages.
       const conversation = await prisma.conversation.findFirst({
         where: { id: conversationId, userId },
-        include: {
-          messages: { orderBy: { createdAt: "asc" } },
-        },
+        select: { id: true },
       });
 
-      if (!conversation || conversation.messages.length < 2) {
-        console.log("[Inngest] Not enough messages to summarize");
+      if (!conversation) {
+        console.log("[Inngest] Conversation not found or not owned by user");
+        return { skipped: true, reason: "conversation_not_found" };
+      }
+
+      if (!transcript || transcript.length < 2) {
+        console.log("[Inngest] Transcript missing or too short to summarise");
         return { skipped: true, reason: "insufficient_messages" };
       }
 
-      // Format conversation for analysis
-      const conversationText = conversation.messages
+      // Format the in-memory transcript for the summariser
+      const conversationText = transcript
         .map((m) => `${m.role === "user" ? "User" : "Sage"}: ${m.content}`)
         .join("\n\n");
 
@@ -266,12 +266,19 @@ export const processConversationEnd = inngest.createFunction(
         return { skipped: true, reason: "no_insights" };
       }
 
-      const profilePrompt = `Based on these observations about a person from past conversations, write a single cohesive paragraph (3-5 sentences) summarizing what you know about them. Focus on their personality, goals, patterns, and what matters to them. Write in second person ("You tend to...").
+      const profilePrompt = `You are writing a memory note about a person, in second person ("you tend to..."). The note will be stored on a server. It must contain ZERO information that could re-identify the person or anyone in their life.
+
+ABSTRACTION RULES:
+- No proper nouns. Roles only ("a partner", "a parent", "a colleague", "a friend").
+- No places, employers, schools, products. Categories only ("their job", "their home").
+- No specific dates or ages. Relative time only ("recently", "for a while").
+- No quotes. Paraphrase only.
+- Focus on personality patterns, recurring tensions, what tends to matter to them, how they tend to think and decide.
 
 Observations:
 ${allInsights.map((i) => `- ${i.content}`).join("\n")}
 
-Write a warm, insightful summary that feels personal, not clinical. Return only the paragraph, no JSON.`;
+Write 3-5 sentences. Warm and insightful, not clinical. Pattern-level, never specific. Return only the paragraph, no JSON, no preamble.`;
 
       const profileResponse = await fetch("https://openrouter.ai/api/v1/chat/completions", {
         method: "POST",

@@ -37,12 +37,15 @@ export async function POST(request: Request) {
       );
     }
 
+    // Attribute the spend to the right service so analytics stay clean.
+    const service = type === "video" ? "anam" : "livekit";
+
     const result = await deductCreditsWithOptions({
       userId: session.user.id,
       creditsUsed: Math.ceil(amount),
       tokensUsed: 0,
       type,
-      service: "livekit",
+      service,
       category: "user",
       conversationId: conversationId || undefined,
       source: "api/credits/deduct",

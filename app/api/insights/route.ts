@@ -1,8 +1,38 @@
 import { auth } from "@/auth";
 import { calculateCreditsUsed, deductCredits, hasEnoughCredits } from "@/lib/credits";
+import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+
+// GET /api/insights — return the user's accumulated UserInsight rows.
+// Used by /v2/patterns to render themes/patterns/preferences/behaviours
+// that Sage has noticed across sessions.
+export async function GET() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return Response.json({ error: "Authentication required" }, { status: 401 });
+  }
+
+  const insights = await prisma.userInsight.findMany({
+    where: {
+      userId: session.user.id,
+      confidence: { gte: 0.3 },
+    },
+    orderBy: [{ confidence: "desc" }, { updatedAt: "desc" }],
+    take: 50,
+    select: {
+      id: true,
+      content: true,
+      category: true,
+      confidence: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
+
+  return Response.json(insights);
+}
 
 interface TranscriptMessage {
   role: "user" | "assistant";

@@ -99,7 +99,25 @@ function saveToStorage(state: ExtendedDialogueState): void {
 export function useSocraticChat() {
   const [state, setState] = useState<ExtendedDialogueState>(INITIAL_STATE);
   const [isHydrated, setIsHydrated] = useState(false);
+  // Ghost mode is shared across screens via localStorage so the v2 ghost
+  // toggle (/v2/ghost) reflects + controls the same flag the chat uses.
   const [ghostMode, setGhostMode] = useState(false);
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("sage-ghost-mode");
+      if (stored === "1") setGhostMode(true);
+    } catch {
+      /* ignore */
+    }
+    // Sync if another tab toggles it.
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "sage-ghost-mode") setGhostMode(e.newValue === "1");
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("storage", onStorage);
+      return () => window.removeEventListener("storage", onStorage);
+    }
+  }, []);
   const [isResetting, setIsResetting] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -170,38 +188,25 @@ export function useSocraticChat() {
     return null;
   };
 
-  // Save a message to the database
-  const saveMessage = async (
+  // End conversation via Inngest. The full in-memory transcript travels in
+  // the request body — it is summarised once and never persisted as messages.
+  const endConversation = async (
     conversationId: string,
-    role: "user" | "assistant",
-    content: string,
-    phase: DialoguePhase
+    messages: Message[]
   ) => {
-    try {
-      await fetch(`/api/conversations/${conversationId}/messages`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ role, content, phase }),
-      });
-    } catch (error) {
-      console.error("Failed to save message:", error);
-    }
-  };
-
-  // End conversation via Inngest (durable background processing)
-  // Handles: summarize, extract insights, update profile, mark inactive
-  const endConversation = async (conversationId: string) => {
     try {
       console.log("[Chat] Ending conversation via Inngest:", conversationId);
 
-      // Queue durable background processing
-      // Processing continues even if user refreshes/leaves the page
       const response = await fetch("/api/conversation/end", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           conversationId,
           type: "text",
+          transcript: messages.map((m) => ({
+            role: m.role,
+            content: m.content,
+          })),
         }),
       });
 
@@ -225,7 +230,7 @@ export function useSocraticChat() {
     if (state.conversationId && state.messages.length >= 2 && !ghostMode) {
       setIsResetting(true);
       try {
-        await endConversation(state.conversationId);
+        await endConversation(state.conversationId, state.messages);
       } finally {
         setIsResetting(false);
       }
@@ -294,10 +299,9 @@ export function useSocraticChat() {
         isLoading: true,
       }));
 
-      // Save user message to DB (skip if ghost mode)
-      if (conversationId && !ghostMode) {
-        saveMessage(conversationId, "user", content, state.phase);
-      }
+      // Per the summary-only persistence change, individual messages are
+      // never written to the DB. The transcript is sent in one shot via
+      // /api/conversation/end when the session ends.
 
       try {
         const response = await fetch("/api/chat", {
@@ -398,10 +402,7 @@ export function useSocraticChat() {
         // Ensure final content is clean (without phase marker)
         const cleanContent = stripPhaseMarker(fullContent);
 
-        // Save assistant message to DB (skip if ghost mode)
-        if (conversationId && !ghostMode) {
-          saveMessage(conversationId, "assistant", cleanContent, newPhase);
-        }
+        // No per-message DB write — transcript is sent only at session end.
 
         setState((prev) => ({
           ...prev,
@@ -443,7 +444,16 @@ export function useSocraticChat() {
 
   // Toggle ghost mode
   const toggleGhostMode = useCallback(() => {
-    setGhostMode((prev) => !prev);
+    setGhostMode((prev) => {
+      const next = !prev;
+      try {
+        if (next) localStorage.setItem("sage-ghost-mode", "1");
+        else localStorage.removeItem("sage-ghost-mode");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
   }, []);
 
   return {

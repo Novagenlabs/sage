@@ -16,8 +16,14 @@ export async function GET() {
   }
 
   try {
+    // Only return conversations that have a generated summary. Empty/active
+    // sessions (mid-conversation or failed-to-summarise) are noise in the
+    // entries list and don't have anything useful to render.
     const conversations = await prisma.conversation.findMany({
-      where: { userId: session.user.id },
+      where: {
+        userId: session.user.id,
+        summary: { not: null },
+      },
       orderBy: { updatedAt: "desc" },
       select: {
         id: true,
@@ -25,6 +31,8 @@ export async function GET() {
         summary: true,
         phase: true,
         isActive: true,
+        color: true,
+        moods: true,
         createdAt: true,
         updatedAt: true,
         _count: {

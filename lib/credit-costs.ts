@@ -30,6 +30,24 @@ export function secondsToCredits(seconds: number): number {
   return Math.ceil(seconds / SECONDS_PER_CREDIT);
 }
 
+// --- Video billing (Anam avatar) ---
+
+/**
+ * Avatar streaming is roughly 3x the cost of voice (avatar GPU + lip-sync
+ * + voice). Pricing reflects that: 3 credits per second of video.
+ */
+export const VIDEO_CREDITS_PER_SECOND = 3;
+
+/** Convert credit balance to max video session duration in seconds */
+export function creditsToVideoSeconds(credits: number): number {
+  return Math.floor(credits / VIDEO_CREDITS_PER_SECOND);
+}
+
+/** Convert used video seconds to credits consumed (rounded up) */
+export function videoSecondsToCredits(seconds: number): number {
+  return Math.ceil(seconds * VIDEO_CREDITS_PER_SECOND);
+}
+
 // --- USD conversion (background analytics) ---
 
 /** Base unit: 1 credit = $0.005 USD (200 credits = $1) */

@@ -38,17 +38,20 @@ export async function GET() {
       select: { profileSummary: true, name: true },
     });
 
-    // Get active conversation if any
+    // Get active conversation envelope only — transcripts are not stored,
+    // so resume relies on the client's localStorage. We just return id +
+    // title so the client can re-bind to the right conversation row.
     const activeConversation = await prisma.conversation.findFirst({
       where: {
         userId: session.user.id,
         isActive: true,
       },
-      include: {
-        messages: {
-          orderBy: { createdAt: "asc" },
-          take: 50, // Limit messages for context
-        },
+      select: {
+        id: true,
+        title: true,
+        phase: true,
+        createdAt: true,
+        updatedAt: true,
       },
     });
 
