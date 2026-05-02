@@ -18,6 +18,11 @@ model User {
   emailVerified  DateTime?
   credits        Int       @default(200)
   profileSummary String?   @db.Text // Consolidated summary of what Sage knows about user
+  // v2 onboarding fields — set during /v2/onboarding/*
+  birthday       DateTime?
+  preferredTopics String[] @default([])
+  // App-lock passcode (4-digit, bcrypt hash). Empty = no lock.
+  passcodeHash   String?
   referralCode  String?   @unique
   referredById  String?
   createdAt     DateTime  @default(now())
@@ -32,6 +37,7 @@ model User {
   userInsights  UserInsight[]
   payments      Payment[]
   referrals     Referral[]
+  feedback      Feedback[]
 }
 
 model Account {
@@ -76,6 +82,9 @@ model Conversation {
   phase     String   @default("opening")
   summary   String?  @db.Text // AI-generated summary for context injection
   isActive  Boolean  @default(true) // Is this the current active conversation?
+  // v2 post-session annotations — set on /v2/entries/active
+  color     String?  // hex or palette key chosen by user (e.g. "ember", "plum")
+  moods     String[] @default([]) // mood chips selected on /v2/mood
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -178,4 +187,19 @@ model Referral {
 
   @@index([referrerId])
   @@index([status])
+}
+
+// v2 product feedback — submitted from /v2/profile/feedback.
+// userId is optional so future unauth feedback paths still work.
+model Feedback {
+  id        String   @id @default(cuid())
+  userId    String?
+  email     String?  // optional reply address the user types in
+  message   String   @db.Text
+  source    String   @default("v2") // "v2" | future surfaces
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
 }
