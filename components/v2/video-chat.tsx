@@ -373,13 +373,13 @@ export function VideoChat({ userCredits, onClose, onCreditsUpdate }: Props) {
           <div className="relative z-10 flex h-full flex-col items-center justify-center pb-32">
             <span className="lg:hidden">
               <VoiceOrb
-                state={phase === "connecting" ? "thinking" : "idle"}
+                state={phase === "idle" ? "idle" : "thinking"}
                 size={240}
               />
             </span>
             <span className="hidden lg:inline-block">
               <VoiceOrb
-                state={phase === "connecting" ? "thinking" : "idle"}
+                state={phase === "idle" ? "idle" : "thinking"}
                 size={360}
               />
             </span>
@@ -465,6 +465,15 @@ export function VideoChat({ userCredits, onClose, onCreditsUpdate }: Props) {
                 <span className="text-[10px] text-chamber-100 lowercase">finish</span>
               </button>
             </div>
+          </div>
+        ) : phase === "ending" ? (
+          // Don't flash the start screen while /api/conversation/end + the
+          // navigate to /v2/entries/active complete.
+          <div className="flex flex-col items-center gap-3">
+            <Loader2 className="h-5 w-5 animate-spin text-chamber-200" />
+            <p className="text-sm text-chamber-300 lowercase tracking-wide">
+              saving your session...
+            </p>
           </div>
         ) : (
           <div className="flex flex-col items-center gap-4">
