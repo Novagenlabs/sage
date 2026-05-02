@@ -198,6 +198,21 @@ export default function VoiceChatPage() {
           <RoomAudioRenderer />
           <LiveSession onFinish={finish} onTurn={recordTurn} />
         </LiveKitRoom>
+      ) : phase === "ending" ? (
+        // Wrapping up — keep the orb visible so we don't flash the start
+        // screen while /api/conversation/end + the navigate to
+        // /entries/active complete.
+        <div className="relative z-10 flex-1 flex flex-col items-center justify-center gap-6 px-6 pb-10">
+          <span className="lg:hidden">
+            <VoiceOrb state="thinking" size={240} />
+          </span>
+          <span className="hidden lg:inline-block">
+            <VoiceOrb state="thinking" size={440} />
+          </span>
+          <p className="text-sm text-chamber-300 lowercase tracking-wide">
+            saving your session...
+          </p>
+        </div>
       ) : (
         // IdleSession's root already uses `flex-1 flex flex-col` so it can
         // be a direct child of the v2-screen flex column without a wrapper.
