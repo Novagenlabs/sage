@@ -93,7 +93,7 @@ export default function LandingPage() {
   // once v2 is fully validated we can flip this to always redirect.
   useEffect(() => {
     if (status === "authenticated") {
-      router.replace("/v2/home");
+      router.replace("/home");
     }
   }, [status, router]);
 

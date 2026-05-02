@@ -20,21 +20,21 @@ import { useEffect, useRef, useState } from "react";
 import { SageMark } from "./sage-mark";
 
 const TABS = [
-  { href: "/v2/home", label: "today", icon: Home },
-  { href: "/v2/explore", label: "explore", icon: Compass },
-  { href: "/v2/entries", label: "entries", icon: ScrollText },
-  { href: "/v2/patterns", label: "patterns", icon: Layers },
+  { href: "/home", label: "today", icon: Home },
+  { href: "/explore", label: "explore", icon: Compass },
+  { href: "/entries", label: "entries", icon: ScrollText },
+  { href: "/patterns", label: "patterns", icon: Layers },
 ];
 
 // Routes where the desktop top nav would get in the way.
 const HIDE_ON_PREFIXES = [
-  "/v2/auth",
-  "/v2/onboarding",
-  "/v2/chat", // chat surfaces have their own headers
-  "/v2/paywall",
-  "/v2/ghost",
-  "/v2/mood",
-  "/v2/people",
+  "/auth",
+  "/onboarding",
+  "/chat", // chat surfaces have their own headers
+  "/paywall",
+  "/ghost",
+  "/mood",
+  "/people",
 ];
 
 export function TopNav() {
@@ -58,7 +58,7 @@ export function TopNav() {
 
   const shouldHide =
     !pathname ||
-    pathname === "/v2" ||
+    pathname === "/" ||
     HIDE_ON_PREFIXES.some((p) => pathname.startsWith(p)) ||
     status !== "authenticated";
 
@@ -72,7 +72,7 @@ export function TopNav() {
 
   return (
     <nav className="v2-topnav">
-      <Link href="/v2/home" className="inline-flex items-center gap-2.5">
+      <Link href="/home" className="inline-flex items-center gap-2.5">
         <SageMark size={28} animated />
         <span className="font-display text-2xl tracking-tight lowercase">
           sage
@@ -102,7 +102,7 @@ export function TopNav() {
 
       <div className="flex items-center gap-3">
         <Link
-          href="/v2/credits"
+          href="/credits"
           className="inline-flex items-center gap-1.5 rounded-full bg-chamber-800/60 px-3 py-1.5 text-xs text-chamber-200 hover:bg-chamber-800 lowercase"
         >
           <Flame className="h-3 w-3 text-ember-400" />
@@ -124,7 +124,7 @@ export function TopNav() {
           {menuOpen && (
             <div className="absolute right-0 top-full mt-2 w-56 rounded-2xl border border-chamber-800 bg-chamber-900/95 backdrop-blur-xl shadow-xl overflow-hidden">
               <Link
-                href="/v2/profile"
+                href="/profile"
                 onClick={() => setMenuOpen(false)}
                 className="flex items-center gap-3 px-4 py-2.5 text-sm text-chamber-100 hover:bg-chamber-800/60"
               >
@@ -140,23 +140,23 @@ export function TopNav() {
               </Link>
               <div className="border-t border-chamber-800" />
               <MenuItem
-                href="/v2/credits"
+                href="/credits"
                 icon={<CreditCard className="h-4 w-4" />}
                 label="credits"
               />
               <MenuItem
-                href="/v2/referrals"
+                href="/referrals"
                 icon={<Gift className="h-4 w-4" />}
                 label="invite a friend"
               />
               <MenuItem
-                href="/v2/profile/feedback"
+                href="/profile/feedback"
                 icon={<HelpCircle className="h-4 w-4" />}
                 label="feedback"
               />
               <div className="border-t border-chamber-800" />
               <button
-                onClick={() => signOut({ callbackUrl: "/v2/auth/signin" })}
+                onClick={() => signOut({ callbackUrl: "/auth/signin" })}
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-chamber-300 hover:bg-chamber-800/60"
               >
                 <LogOut className="h-4 w-4" />

@@ -2,7 +2,7 @@
 
 // v2 Anam video-avatar session.
 //
-// Mirrors /v2/chat/voice's UX (idle → start → live → finish) but the orb is
+// Mirrors /chat/voice's UX (idle → start → live → finish) but the orb is
 // replaced with a streaming avatar. Same transcript-to-summary persistence:
 // turns are buffered in a ref via Anam's MESSAGE_HISTORY_UPDATED event, then
 // shipped to /api/conversation/end on finish.
@@ -355,7 +355,7 @@ export function VideoChat({ userCredits, onClose, onCreditsUpdate }: Props) {
         }`}
       />
 
-      {/* Idle/connecting fallback — orb + halo, same vocabulary as /v2/chat/voice */}
+      {/* Idle/connecting fallback — orb + halo, same vocabulary as /chat/voice */}
       {phase !== "live" && (
         <>
           <div className="pointer-events-none absolute inset-0">
@@ -452,7 +452,7 @@ export function VideoChat({ userCredits, onClose, onCreditsUpdate }: Props) {
 
             {/* Right cluster */}
             <div className="flex flex-col gap-3">
-              <Link href="/v2/ghost" className="flex flex-col items-center gap-1">
+              <Link href="/ghost" className="flex flex-col items-center gap-1">
                 <span className="h-10 w-10 rounded-full bg-chamber-900/70 backdrop-blur text-chamber-100 flex items-center justify-center">
                   <Moon className="h-4 w-4" />
                 </span>
@@ -468,7 +468,7 @@ export function VideoChat({ userCredits, onClose, onCreditsUpdate }: Props) {
           </div>
         ) : phase === "ending" ? (
           // Don't flash the start screen while /api/conversation/end + the
-          // navigate to /v2/entries/active complete.
+          // navigate to /entries/active complete.
           <div className="flex flex-col items-center gap-3">
             <Loader2 className="h-5 w-5 animate-spin text-chamber-200" />
             <p className="text-sm text-chamber-300 lowercase tracking-wide">

@@ -23,7 +23,7 @@ test.beforeEach(async ({ page }) => {
 
 test("text chat: sending a message renders the streamed reply", async ({ page }) => {
   await signIn(page);
-  await page.goto("/v2/chat/text?fresh=1");
+  await page.goto("/chat/text?fresh=1");
 
   // Wait for the text input to be ready (post-fresh-reset)
   const input = page.getByPlaceholder("tap to type...");
@@ -43,7 +43,7 @@ test("text chat: sending a message renders the streamed reply", async ({ page })
 
 test("text chat: explore card seeds a fresh conversation", async ({ page }) => {
   await signIn(page);
-  await page.goto("/v2/explore");
+  await page.goto("/explore");
 
   // Click the first stubbed card
   await page.getByRole("heading", { name: /stub one/i }).click();
@@ -53,14 +53,14 @@ test("text chat: explore card seeds a fresh conversation", async ({ page }) => {
     page.getByText(/help me with something stubbed for tests/i)
   ).toBeVisible({ timeout: 15_000 });
   // And we should have routed to the chat with title in URL
-  expect(page.url()).toMatch(/\/v2\/chat\/text/);
+  expect(page.url()).toMatch(/\/chat\/text/);
 });
 
 test("voice screen: shows voice picker + start button without connecting", async ({
   page,
 }) => {
   await signIn(page);
-  await page.goto("/v2/chat/voice");
+  await page.goto("/chat/voice");
 
   // The voice picker is collapsed by default — shows a "voice · ify" pill.
   // Tapping it should reveal the "choose a voice" hint inside the wheel.
@@ -86,7 +86,7 @@ test("video screen: shows start button without mounting Anam SDK", async ({
   page,
 }) => {
   await signIn(page);
-  await page.goto("/v2/chat/video");
+  await page.goto("/chat/video");
 
   await expect(
     page.getByRole("button", { name: /start video session/i })

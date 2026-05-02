@@ -33,14 +33,14 @@ test("home shows three actions and tab bar", async ({ page }) => {
 
 test("explore tab shows stubbed prompt cards", async ({ page }) => {
   await signIn(page);
-  await page.goto("/v2/explore");
+  await page.goto("/explore");
   await expect(page.getByText("stubbed test prompts.")).toBeVisible();
   await expect(page.getByRole("heading", { name: /stub one/i })).toBeVisible();
 });
 
 test("entries tab loads with empty state", async ({ page }) => {
   await signIn(page);
-  await page.goto("/v2/entries");
+  await page.goto("/entries");
   // Either the empty welcome or the entries header should be visible.
   await expect(
     page.getByRole("heading", { name: /^entries$/i, level: 1 }).first()
@@ -49,7 +49,7 @@ test("entries tab loads with empty state", async ({ page }) => {
 
 test("profile shows the user's name and email", async ({ page }) => {
   await signIn(page);
-  await page.goto("/v2/profile");
+  await page.goto("/profile");
   // The lowercased firstName is the H1; the email is the only e2e-user
   // string on the page so we can match it directly.
   await expect(page.getByText("e2e-user@sage.test")).toBeVisible();
@@ -60,9 +60,9 @@ test("profile shows the user's name and email", async ({ page }) => {
 
 test("can sign out from profile", async ({ page }) => {
   await signIn(page);
-  await page.goto("/v2/profile");
+  await page.goto("/profile");
   // The TopNav's sign-out lives inside a conditionally-rendered dropdown
   // (menuOpen=false by default). Profile's sign-out is the only one in DOM.
   await page.getByRole("button", { name: /sign out/i }).click();
-  await expect(page).toHaveURL(/\/v2\/auth\/signin/);
+  await expect(page).toHaveURL(/\/auth\/signin/);
 });

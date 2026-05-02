@@ -17,7 +17,7 @@ test("ghost mode toggle persists to localStorage and reflects on profile", async
   page,
 }) => {
   await signIn(page);
-  await page.goto("/v2/ghost");
+  await page.goto("/ghost");
 
   await page.getByText(/currently saving entries/i).waitFor();
   // The toggle is the only h-16 w-32 rounded-full button on the page.
@@ -31,7 +31,7 @@ test("ghost mode toggle persists to localStorage and reflects on profile", async
   expect(stored).toBe("1");
 
   // Profile shows the right-side label "on" next to the ghost-mode row.
-  await page.goto("/v2/profile");
+  await page.goto("/profile");
   const ghostRow = page.getByRole("link", { name: /ghost mode/i });
   await expect(ghostRow).toBeVisible();
   // Right label "on" is rendered inside the same anchor.
@@ -49,7 +49,7 @@ test("feedback form submits and shows the sent state", async ({ page }) => {
   });
 
   await signIn(page);
-  await page.goto("/v2/profile/feedback");
+  await page.goto("/profile/feedback");
   await page
     .getByPlaceholder("report a bug, share an idea...")
     .fill("E2E test feedback message");
@@ -63,7 +63,7 @@ test("feedback form submits and shows the sent state", async ({ page }) => {
 
 test("credits page shows balance and the three packages", async ({ page }) => {
   await signIn(page);
-  await page.goto("/v2/credits");
+  await page.goto("/credits");
   await expect(page.getByText(/current balance/i)).toBeVisible();
   await expect(page.getByText(/starter/i).first()).toBeVisible();
   await expect(page.getByText(/plus/i).first()).toBeVisible();

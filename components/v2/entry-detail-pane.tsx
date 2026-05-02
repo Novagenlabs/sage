@@ -1,8 +1,8 @@
 "use client";
 
 // Shared entry-detail renderer used by:
-//   - /v2/entries/[id] (full-screen on mobile)
-//   - /v2/entries (right pane on desktop)
+//   - /entries/[id] (full-screen on mobile)
+//   - /entries (right pane on desktop)
 //
 // Fetches the conversation by id and shows summary + insights only.
 // Transcripts are not stored, hence no transcript view.
@@ -73,7 +73,7 @@ export function EntryDetailPane({ id, onDeleted, variant = "pane" }: Props) {
     fetch(`/api/conversations/${id}`)
       .then(async (r) => {
         if (r.status === 401) {
-          router.replace(`/v2/auth/signin?next=/v2/entries/${id}`);
+          router.replace(`/auth/signin?next=/entries/${id}`);
           return null;
         }
         if (!r.ok) throw new Error("could not load entry");
@@ -89,7 +89,7 @@ export function EntryDetailPane({ id, onDeleted, variant = "pane" }: Props) {
     const r = await fetch(`/api/conversations/${id}`, { method: "DELETE" });
     if (r.ok) {
       if (onDeleted) onDeleted();
-      else router.replace("/v2/entries");
+      else router.replace("/entries");
     } else {
       setDeleting(false);
     }

@@ -1,232 +1,239 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
-import { signIn } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
 import Link from "next/link";
-import { Loader2, Coins, Eye, EyeOff, Gift } from "lucide-react";
-import { LogoOrb } from "@/components/voice-orb-3d";
+import { signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { Loader2, Eye, EyeOff, ChevronLeft } from "lucide-react";
+import { motion } from "framer-motion";
+import { SageMark } from "@/components/v2/sage-mark";
+import { VoiceOrb } from "@/components/voice-orb-3d";
 
-export default function SignUpPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen-safe bg-chamber-900 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 text-chamber-400 animate-spin" />
-      </div>
-    }>
-      <SignUpContent />
-    </Suspense>
-  );
-}
-
-function SignUpContent() {
+export default function SignupPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [referralCode, setReferralCode] = useState<string | null>(null);
+  const [showPw, setShowPw] = useState(false);
+  const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    const refParam = searchParams.get("ref");
-    const storedRef = typeof window !== "undefined" ? localStorage.getItem("sage_referral_code") : null;
-    const code = refParam || storedRef;
-    if (code) {
-      setReferralCode(code);
-    }
-  }, [searchParams]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setIsLoading(true);
-
+    setErr("");
+    if (password.length < 6) {
+      setErr("password must be at least 6 characters");
+      return;
+    }
+    setLoading(true);
     try {
+      const referralCode =
+        typeof window !== "undefined"
+          ? localStorage.getItem("sage_referral_code")
+          : null;
+
+      // Honour any name typed during the unauth onboarding flow.
+      const pendingName =
+        typeof window !== "undefined"
+          ? localStorage.getItem("sage-pending-name")
+          : null;
+      const finalName = name?.trim() || pendingName?.trim() || null;
+
       const res = await fetch("/api/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, referralCode }),
+        body: JSON.stringify({
+          email,
+          password,
+          name: finalName,
+          referralCode,
+        }),
       });
-
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Failed to create account");
+        setErr(data.error || "could not create account");
+        setLoading(false);
         return;
       }
 
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-      });
-
-      if (result?.error) {
-        setError("Account created but failed to sign in. Please try signing in manually.");
-      } else {
-        if (typeof window !== "undefined") {
-          localStorage.removeItem("sage_referral_code");
-        }
-        router.push("/chat");
-        router.refresh();
+      // auto sign-in after register
+      await signIn("credentials", { email, password, redirect: false });
+      // Clear the stash now that the name lives on User.name.
+      try {
+        localStorage.removeItem("sage-pending-name");
+      } catch {
+        /* ignore */
       }
+      router.push("/onboarding/in");
+      router.refresh();
     } catch {
-      setError("Something went wrong. Please try again.");
-    } finally {
-      setIsLoading(false);
+      setErr("something went wrong. try again.");
+      setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen-safe bg-chamber-900 flex items-center justify-center px-4 py-8 sm:py-12">
-      {/* Grain overlay */}
-      <div className="grain-overlay" />
-
-      {/* Background effects */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div
-          className="absolute -top-1/4 -left-1/4 w-[500px] sm:w-[700px] h-[500px] sm:h-[700px] rounded-full animate-ambient"
-          style={{
-            background: "radial-gradient(circle, rgba(224, 124, 56, 0.06) 0%, transparent 60%)",
-          }}
-        />
-        <div
-          className="absolute -bottom-1/4 -right-1/4 w-[400px] sm:w-[600px] h-[400px] sm:h-[600px] rounded-full animate-ambient-slow"
-          style={{
-            background: "radial-gradient(circle, rgba(196, 149, 106, 0.04) 0%, transparent 60%)",
-            animationDelay: "-10s",
-          }}
-        />
-      </div>
-
-      <div className="w-full max-w-md relative z-10">
-        {/* Header */}
-        <div className="text-center mb-6 sm:mb-8">
-          <div className="mb-4 sm:mb-6 flex justify-center">
-            <LogoOrb size={64} className="sm:hidden" />
-            <LogoOrb size={80} className="hidden sm:block" animated />
-          </div>
-          <h1 className="font-display text-2xl sm:text-3xl font-medium text-chamber-50 mb-2 text-balance">
-            Create your account
-          </h1>
-          <p className="text-sm sm:text-base text-chamber-400 text-pretty">
-            Start your journey of self-discovery
+    <div className="lg:grid lg:grid-cols-2 lg:min-h-[100dvh]">
+      {/* Desktop brand panel */}
+      <aside className="hidden lg:flex relative overflow-hidden flex-col items-center justify-center px-12 bg-chamber-900">
+        <div className="absolute inset-0 pointer-events-none">
+          <div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[700px] rounded-full"
+            style={{
+              background:
+                "radial-gradient(circle, rgba(224,124,56,0.4) 0%, rgba(196,149,106,0.15) 40%, transparent 75%)",
+              filter: "blur(40px)",
+            }}
+          />
+        </div>
+        <div className="relative z-10 flex flex-col items-center text-center max-w-md">
+          <VoiceOrb state="idle" size={280} />
+          <h2 className="font-display text-5xl tracking-tight lowercase mt-8 mb-3">
+            a place to actually think.
+          </h2>
+          <p className="text-base text-chamber-300 lowercase leading-relaxed">
+            sessions stay yours. transcripts aren&apos;t stored — only the
+            patterns. talk, type, or see sage face-to-face.
           </p>
         </div>
+      </aside>
 
-        {/* Credits banner */}
-        {referralCode ? (
-          <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex items-center gap-2 sm:gap-3">
-            <Gift className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 flex-shrink-0" />
-            <p className="text-xs sm:text-sm text-emerald-200">
-              You were invited! Get <span className="font-semibold text-emerald-400">120 bonus credits</span> (2 min voice) on top of your free credits
-            </p>
+      <div className="v2-screen bg-chamber-900 lg:min-h-[100dvh] lg:max-w-md lg:mx-auto lg:px-8 lg:justify-center">
+        <Link
+          href="/auth/signin"
+          className="h-9 w-9 rounded-full bg-chamber-800 flex items-center justify-center mb-8 lg:hidden"
+          aria-label="back"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Link>
+
+        <motion.div
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="flex flex-col items-center mb-8 lg:items-start"
+        >
+          <div className="lg:hidden">
+            <SageMark size={72} animated />
           </div>
-        ) : (
-          <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-ember-500/10 border border-ember-500/20 rounded-xl flex items-center gap-2 sm:gap-3">
-            <Coins className="w-4 h-4 sm:w-5 sm:h-5 text-ember-400 flex-shrink-0" />
-            <p className="text-xs sm:text-sm text-gold-200">
-              Get <span className="font-semibold text-ember-400">200 free credits</span> when you sign up
-            </p>
+          <h1 className="font-display text-3xl tracking-tight lowercase mt-6 lg:text-4xl lg:mt-0">
+            create your sage
+          </h1>
+          <p className="text-sm text-chamber-400 mt-2 lowercase">
+            a place to actually think.
+          </p>
+        </motion.div>
+
+      <form onSubmit={submit} className="space-y-4">
+        {err && (
+          <div className="rounded-xl bg-red-500/10 border border-red-500/30 p-3 text-sm text-red-300 lowercase text-center">
+            {err}
           </div>
         )}
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
-          {error && (
-            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs sm:text-sm text-center">
-              {error}
-            </div>
-          )}
+        <Field
+          label="name"
+          value={name}
+          onChange={setName}
+          placeholder="what should sage call you?"
+          autoComplete="name"
+        />
+        <Field
+          label="email"
+          type="email"
+          value={email}
+          onChange={setEmail}
+          placeholder="you@example.com"
+          required
+          autoComplete="email"
+        />
 
-          <div>
-            <label htmlFor="name" className="block text-xs sm:text-sm font-medium text-chamber-300 mb-1.5 sm:mb-2">
-              Name <span className="text-chamber-500">(optional)</span>
-            </label>
+        <div>
+          <label className="block text-xs uppercase tracking-widest text-chamber-500 mb-2">
+            password
+          </label>
+          <div className="relative">
             <input
-              id="name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              autoComplete="name"
-              className="w-full px-3 sm:px-4 py-3 glass-strong rounded-xl text-chamber-100 placeholder-chamber-500 focus:outline-none focus:ring-2 focus:ring-ember-500/50 focus:border-transparent transition-all text-base"
-              placeholder="Your name"
-              style={{ fontSize: '16px' }}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="email" className="block text-xs sm:text-sm font-medium text-chamber-300 mb-1.5 sm:mb-2">
-              Email
-            </label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              type={showPw ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
               required
-              autoComplete="email"
-              className="w-full px-3 sm:px-4 py-3 glass-strong rounded-xl text-chamber-100 placeholder-chamber-500 focus:outline-none focus:ring-2 focus:ring-ember-500/50 focus:border-transparent transition-all text-base"
-              placeholder="you@example.com"
-              style={{ fontSize: '16px' }}
+              autoComplete="new-password"
+              placeholder="6+ characters"
+              className="w-full bg-chamber-800/60 border border-chamber-700 rounded-2xl px-4 py-3.5 pr-12 text-base text-chamber-50 placeholder:text-chamber-500 focus:outline-none focus:border-ember-500/60 focus:bg-chamber-800"
             />
+            <button
+              type="button"
+              onClick={() => setShowPw((s) => !s)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-chamber-400"
+              tabIndex={-1}
+            >
+              {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
           </div>
+        </div>
 
-          <div>
-            <label htmlFor="password" className="block text-xs sm:text-sm font-medium text-chamber-300 mb-1.5 sm:mb-2">
-              Password
-            </label>
-            <div className="relative">
-              <input
-                id="password"
-                type={showPassword ? "text" : "password"}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-                autoComplete="new-password"
-                className="w-full px-3 sm:px-4 py-3 pr-11 glass-strong rounded-xl text-chamber-100 placeholder-chamber-500 focus:outline-none focus:ring-2 focus:ring-ember-500/50 focus:border-transparent transition-all text-base"
-                placeholder="At least 6 characters"
-                style={{ fontSize: '16px' }}
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-chamber-400 hover:text-chamber-200 transition-colors"
-                tabIndex={-1}
-              >
-                {showPassword ? <EyeOff className="w-4 h-4 sm:w-5 sm:h-5" /> : <Eye className="w-4 h-4 sm:w-5 sm:h-5" />}
-              </button>
-            </div>
-          </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className="v2-btn v2-btn-primary w-full mt-2"
+        >
+          {loading ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              creating...
+            </>
+          ) : (
+            "create account"
+          )}
+        </button>
+      </form>
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full py-3 bg-ember-500 hover:bg-ember-400 active:bg-ember-600 text-white font-medium rounded-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 touch-manipulation shadow-lg shadow-ember-500/20"
-          >
-            {isLoading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span className="text-sm sm:text-base">Creating account...</span>
-              </>
-            ) : (
-              <span className="text-sm sm:text-base">Create account</span>
-            )}
-          </button>
-        </form>
+        <div className="flex-1 lg:hidden" />
 
-        {/* Footer link */}
-        <p className="mt-4 sm:mt-6 text-center text-chamber-500 text-xs sm:text-sm">
-          Already have an account?{" "}
-          <Link href="/auth/signin" className="text-ember-400 hover:text-ember-300 hover:underline transition-colors">
-            Sign in
+        <p className="text-center text-sm text-chamber-400 lowercase mt-8 lg:text-left">
+          already have one?{" "}
+          <Link href="/auth/signin" className="text-ember-400 hover:underline">
+            sign in
           </Link>
         </p>
       </div>
+    </div>
+  );
+}
+
+function Field({
+  label,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+  required,
+  autoComplete,
+}: {
+  label: string;
+  value: string;
+  onChange: (s: string) => void;
+  placeholder?: string;
+  type?: string;
+  required?: boolean;
+  autoComplete?: string;
+}) {
+  return (
+    <div>
+      <label className="block text-xs uppercase tracking-widest text-chamber-500 mb-2">
+        {label}
+      </label>
+      <input
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        required={required}
+        autoComplete={autoComplete}
+        className="w-full bg-chamber-800/60 border border-chamber-700 rounded-2xl px-4 py-3.5 text-base text-chamber-50 placeholder:text-chamber-500 focus:outline-none focus:border-ember-500/60 focus:bg-chamber-800"
+      />
     </div>
   );
 }

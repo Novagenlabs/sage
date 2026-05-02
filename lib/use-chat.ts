@@ -100,7 +100,7 @@ export function useSocraticChat() {
   const [state, setState] = useState<ExtendedDialogueState>(INITIAL_STATE);
   const [isHydrated, setIsHydrated] = useState(false);
   // Ghost mode is shared across screens via localStorage so the v2 ghost
-  // toggle (/v2/ghost) reflects + controls the same flag the chat uses.
+  // toggle (/ghost) reflects + controls the same flag the chat uses.
   const [ghostMode, setGhostMode] = useState(false);
   useEffect(() => {
     try {

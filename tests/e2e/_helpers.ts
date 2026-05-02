@@ -27,14 +27,14 @@ export async function ensureTestUser(req: APIRequestContext) {
 }
 
 /**
- * Sign in via the v2 form. Lands on /v2/home on success.
+ * Sign in via the v2 form. Lands on /home on success.
  */
 export async function signIn(page: Page) {
-  await page.goto("/v2/auth/signin");
+  await page.goto("/auth/signin");
   await page.getByPlaceholder("you@example.com").fill(E2E_EMAIL);
   await page.getByPlaceholder("••••••••").fill(E2E_PASSWORD);
   await page.getByRole("button", { name: /sign in/i }).click();
-  await page.waitForURL(/\/v2\/home/, { timeout: 15_000 });
+  await page.waitForURL(/\/home/, { timeout: 15_000 });
 }
 
 /**

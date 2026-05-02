@@ -6,10 +6,10 @@ import { Home, Compass, ScrollText, Layers } from "lucide-react";
 import { clsx } from "clsx";
 
 const TABS = [
-  { href: "/v2/home", label: "today", icon: Home },
-  { href: "/v2/explore", label: "explore", icon: Compass },
-  { href: "/v2/entries", label: "entries", icon: ScrollText },
-  { href: "/v2/patterns", label: "patterns", icon: Layers },
+  { href: "/home", label: "today", icon: Home },
+  { href: "/explore", label: "explore", icon: Compass },
+  { href: "/entries", label: "entries", icon: ScrollText },
+  { href: "/patterns", label: "patterns", icon: Layers },
 ];
 
 export function TabBar() {

@@ -6,7 +6,7 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // GET /api/insights — return the user's accumulated UserInsight rows.
-// Used by /v2/patterns to render themes/patterns/preferences/behaviours
+// Used by /patterns to render themes/patterns/preferences/behaviours
 // that Sage has noticed across sessions.
 export async function GET() {
   const session = await auth();
