@@ -73,6 +73,33 @@ const config: Config = {
           900: "#08080c", // Deep black bg
           950: "#050507",
         },
+        // Sage v2 accents — playful pops for mobile-first surfaces
+        zest: {
+          50: "#fbffe5",
+          100: "#f5fdc1",
+          200: "#ecfb89",
+          300: "#dff45a",
+          400: "#cfe83a", // Primary zest
+          500: "#b3cf25",
+          600: "#8aa31a",
+          700: "#697b18",
+          800: "#54611a",
+          900: "#46521c",
+        },
+        bloom: {
+          400: "#f5b8d6", // Soft pink
+          500: "#e98ab9",
+          600: "#c768a0",
+        },
+        plum: {
+          400: "#b48af2",
+          500: "#9a6ce8",
+          600: "#7e51c8",
+        },
+        peach: {
+          400: "#f7b08a",
+          500: "#ee8c5e",
+        },
       },
       fontFamily: {
         display: ["var(--font-display)", "Cormorant Garamond", "Georgia", "serif"],

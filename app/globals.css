@@ -348,3 +348,208 @@ button.btn-sm, .btn-sm {
 .glass-strong {
   @apply bg-chamber-900/80 backdrop-blur-2xl border border-gold-400/15;
 }
+
+/* ====== Sage v2 mobile-first design system ====== */
+
+/* Phone-frame shell — used as the default v2 wrapper on mobile.
+   On desktop the shell expands to fill the canvas; individual screens
+   then choose how to lay out (.v2-page-* helpers below). */
+.v2-shell {
+  @apply relative mx-auto w-full min-h-[100dvh] max-w-[440px] bg-chamber-900 text-chamber-50 overflow-hidden;
+}
+@media (min-width: 1024px) {
+  .v2-shell {
+    @apply max-w-none overflow-visible;
+  }
+}
+
+.v2-screen {
+  @apply relative flex flex-col min-h-[100dvh] px-6 pt-[calc(env(safe-area-inset-top)+1.5rem)] pb-[calc(env(safe-area-inset-bottom)+1.5rem)];
+}
+/* Default desktop layout for periphery screens: centred 440-px column,
+   standalone within the v2-desktop-backdrop. Wrapped in @layer components so
+   Tailwind utilities (lg:max-w-3xl etc.) on core screens still win.  */
+@layer components {
+  @media (min-width: 1024px) {
+    .v2-screen {
+      max-width: 440px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+  }
+}
+
+/* Desktop "centred phone" — for periphery screens (onboarding, mood, ghost,
+   passcode, feedback, paywall, etc.) that keep their phone-shape on web. */
+.v2-page-centered {
+  @apply lg:mx-auto lg:max-w-[440px] lg:my-8 lg:rounded-3xl lg:shadow-[0_20px_60px_-20px_rgba(0,0,0,0.6)] lg:border lg:border-chamber-800;
+}
+
+/* Desktop "page" — full-canvas with safe gutters, used for core screens
+   (home, entries, chat, profile) that get a real desktop reflow. */
+.v2-page-full {
+  @apply lg:max-w-7xl lg:mx-auto lg:px-8;
+}
+
+/* Backdrop seen on desktop behind centred phone-shape screens. */
+.v2-desktop-backdrop {
+  background:
+    radial-gradient(60% 50% at 50% 0%, rgba(224, 124, 56, 0.10) 0%, transparent 60%),
+    radial-gradient(60% 50% at 100% 100%, rgba(196, 149, 106, 0.08) 0%, transparent 65%),
+    #08080c;
+}
+
+/* Big Pillowtalk-style headline — lowercase, tight tracking */
+.v2-h1 {
+  @apply font-display text-[2.25rem] leading-[1.05] tracking-[-0.03em] text-chamber-50 lowercase;
+}
+
+.v2-h2 {
+  @apply font-display text-[1.75rem] leading-[1.1] tracking-[-0.02em] text-chamber-50 lowercase;
+}
+
+.v2-sub {
+  @apply text-[0.95rem] leading-snug text-chamber-300 lowercase;
+}
+
+/* Pill buttons — full-width primary, rounded outline secondary */
+.v2-btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-full px-6 py-4 text-[0.95rem] font-medium tracking-tight transition-all active:scale-[0.98] disabled:opacity-50 disabled:pointer-events-none;
+}
+
+.v2-btn-primary {
+  @apply bg-ember-500 text-white hover:bg-ember-600 shadow-[0_8px_24px_-8px_rgba(224,124,56,0.5)];
+}
+
+.v2-btn-light {
+  @apply bg-chamber-50 text-chamber-900 hover:bg-chamber-100;
+}
+
+.v2-btn-ghost {
+  @apply bg-chamber-800/60 text-chamber-100 hover:bg-chamber-800 border border-chamber-700/50;
+}
+
+.v2-btn-outline {
+  @apply border border-chamber-700 text-chamber-100 hover:bg-chamber-800/60;
+}
+
+/* Chip — selectable pill */
+.v2-chip {
+  @apply inline-flex items-center gap-1.5 rounded-full bg-chamber-800/70 px-4 py-2 text-sm text-chamber-200 transition-all hover:bg-chamber-700/70 active:scale-[0.97];
+}
+
+.v2-chip-active {
+  @apply bg-ember-500 text-white hover:bg-ember-600;
+}
+
+/* Top progress bar (onboarding) */
+.v2-progress {
+  @apply h-1.5 w-full rounded-full bg-chamber-800 overflow-hidden;
+}
+
+.v2-progress-fill {
+  @apply h-full rounded-full bg-ember-500 transition-all duration-500;
+}
+
+/* Floating action button */
+.v2-fab {
+  @apply inline-flex h-12 w-12 items-center justify-center rounded-full bg-chamber-50 text-chamber-900 shadow-lg active:scale-95 transition-transform;
+}
+
+/* Action orb (inside chat: type / talk / ghost) */
+.v2-action {
+  @apply flex flex-col items-center gap-1.5 select-none;
+}
+
+.v2-action-orb {
+  @apply inline-flex h-12 w-12 items-center justify-center rounded-full bg-chamber-800/80 text-chamber-100 backdrop-blur-md transition-all active:scale-90;
+}
+
+.v2-action-orb-primary {
+  @apply h-14 w-14 bg-chamber-50 text-chamber-900;
+}
+
+.v2-action-label {
+  @apply text-xs text-chamber-400 lowercase;
+}
+
+/* Bottom tab bar — mobile only. Desktop uses .v2-topnav instead. */
+.v2-tabs {
+  @apply fixed bottom-0 left-1/2 -translate-x-1/2 z-40 w-full max-w-[440px] flex items-stretch justify-around bg-chamber-900/95 backdrop-blur-xl border-t border-chamber-800 pt-2 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] lg:hidden;
+}
+
+/* Desktop top navigation */
+.v2-topnav {
+  @apply hidden lg:flex sticky top-0 z-40 items-center justify-between px-8 py-4 bg-chamber-900/80 backdrop-blur-xl border-b border-chamber-800;
+}
+
+.v2-topnav-link {
+  @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm text-chamber-300 hover:text-chamber-50 hover:bg-chamber-800/60 transition-colors lowercase;
+}
+
+.v2-topnav-link-active {
+  @apply text-chamber-50 bg-chamber-800/80;
+}
+
+.v2-tab {
+  @apply flex flex-1 flex-col items-center gap-0.5 py-1 text-chamber-500 transition-colors;
+}
+
+.v2-tab-active {
+  @apply text-ember-400;
+}
+
+/* Glassy translucent card with blurred backdrop image (today screen) */
+.v2-mood-bg {
+  background:
+    radial-gradient(120% 80% at 30% 20%, rgba(224, 124, 56, 0.18) 0%, transparent 60%),
+    radial-gradient(100% 80% at 80% 90%, rgba(196, 149, 106, 0.22) 0%, transparent 55%),
+    linear-gradient(180deg, #15110d 0%, #08080c 80%);
+}
+
+.v2-mood-bg-evening {
+  background:
+    radial-gradient(120% 80% at 70% 10%, rgba(180, 138, 242, 0.28) 0%, transparent 60%),
+    radial-gradient(100% 80% at 20% 90%, rgba(224, 124, 56, 0.18) 0%, transparent 55%),
+    linear-gradient(180deg, #14111a 0%, #08080c 80%);
+}
+
+/* Mood-glow effect for orb halo */
+.v2-orb-halo {
+  filter: blur(40px);
+  opacity: 0.7;
+}
+
+/* Streak flame chip */
+.v2-streak {
+  @apply inline-flex items-center gap-1 rounded-full bg-chamber-800/80 px-3 py-1 text-xs font-medium text-ember-400;
+}
+
+/* Card stack on insights */
+.v2-card {
+  @apply rounded-3xl border border-chamber-800 bg-chamber-800/30 p-5 backdrop-blur-md;
+}
+
+/* Subtle iOS-style sheet */
+.v2-sheet {
+  @apply fixed left-1/2 -translate-x-1/2 bottom-0 w-full max-w-[440px] rounded-t-3xl bg-chamber-900 border-t border-chamber-800 px-6 pt-3 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] z-50;
+}
+
+.v2-sheet-handle {
+  @apply mx-auto mb-3 h-1.5 w-12 rounded-full bg-chamber-700;
+}
+
+/* Marquee gradient — used for plus/upgrade banners */
+.v2-grad-trial {
+  background: linear-gradient(135deg, #e07c38 0%, #c4956a 60%, #f7b08a 100%);
+}
+
+/* Hide the scrollbar on a scroll container while keeping scrolling enabled.
+   Used by the v2 voice scroll-wheel picker. */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

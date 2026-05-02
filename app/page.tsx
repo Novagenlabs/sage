@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import {
   ArrowRight,
@@ -68,6 +69,7 @@ const EXAMPLE_TOPICS = [
 
 export default function LandingPage() {
   const { data: session, status } = useSession();
+  const router = useRouter();
   const [mounted, setMounted] = useState(false);
   const [showMoreFeatures, setShowMoreFeatures] = useState(false);
   const topicsRef = useRef<HTMLDivElement>(null);
@@ -85,6 +87,15 @@ export default function LandingPage() {
       }
     }
   }, []);
+
+  // v2 launch — signed-in users go directly to the new app shell.
+  // We keep the v1 marketing landing visible to signed-out users for now;
+  // once v2 is fully validated we can flip this to always redirect.
+  useEffect(() => {
+    if (status === "authenticated") {
+      router.replace("/v2/home");
+    }
+  }, [status, router]);
 
   return (
     <div className="w-full min-h-screen overflow-y-auto bg-chamber-900">
