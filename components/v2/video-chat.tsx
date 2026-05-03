@@ -26,6 +26,8 @@ import {
 } from "lucide-react";
 import type { AnamClient, Message } from "@anam-ai/js-sdk";
 import { VoiceOrb } from "@/components/voice-orb-3d";
+import { RecommendationCard } from "@/components/v2/recommendation-card";
+import { useRecommendationStream } from "@/lib/use-recommendation-stream";
 import {
   VIDEO_CREDITS_PER_SECOND,
   AUTO_DISCONNECT_TIMEOUT_SECS,
@@ -101,6 +103,10 @@ export function VideoChat({ userCredits, onClose, onCreditsUpdate }: Props) {
   // toggle can't change persistence behaviour for the in-flight session.
   const sessionGhostRef = useRef(false);
 
+  // Generative-UI recommendation card streamed from /api/recommendations/stream
+  // after the session ends. Mirrors the post-session flow on /chat/voice.
+  const recommendationStream = useRecommendationStream();
+
   // Mint a token + (when not in ghost mode) a Conversation row.
   const fetchSession = useCallback(async (ghost: boolean) => {
     const res = await fetch("/api/anam/session", {
@@ -175,8 +181,15 @@ export function VideoChat({ userCredits, onClose, onCreditsUpdate }: Props) {
       }
     }
     onCreditsUpdate?.();
-    onClose(conversationId);
-  }, [onClose, onCreditsUpdate]);
+    // Kick off the recommendation stream and let the UI either render the
+    // card or navigate via the post-stream effect below. Skipped in ghost
+    // mode (no conversationId).
+    if (conversationId) {
+      recommendationStream.start({ conversationId });
+    } else {
+      onClose(conversationId);
+    }
+  }, [onClose, onCreditsUpdate, recommendationStream]);
 
   // Ref for the latest finish handler so listeners can call the live closure
   // without being recreated each render.
@@ -184,6 +197,20 @@ export function VideoChat({ userCredits, onClose, onCreditsUpdate }: Props) {
   useEffect(() => {
     finishRef.current = finishSession;
   }, [finishSession]);
+
+  // After the recommendation stream resolves with no card (or errors), close
+  // the session immediately. If a card arrived, the card itself triggers
+  // onClose via its onDismiss prop after the user gives feedback.
+  useEffect(() => {
+    if (
+      phase === "ending" &&
+      (recommendationStream.phase === "done" ||
+        recommendationStream.phase === "error") &&
+      !recommendationStream.recommendation
+    ) {
+      onClose(conversationIdRef.current);
+    }
+  }, [phase, recommendationStream.phase, recommendationStream.recommendation, onClose]);
 
   // Wire up Anam events on a freshly-created client.
   const wireClient = useCallback(async (client: AnamClient) => {
@@ -496,13 +523,24 @@ export function VideoChat({ userCredits, onClose, onCreditsUpdate }: Props) {
           </div>
         ) : phase === "ending" ? (
           // Don't flash the start screen while /api/conversation/end + the
-          // navigate to /entries/active complete.
-          <div className="flex flex-col items-center gap-3">
-            <Loader2 className="h-5 w-5 animate-spin text-chamber-200" />
-            <p className="text-sm text-chamber-300 lowercase tracking-wide">
-              saving your session...
-            </p>
-          </div>
+          // navigate to /entries/active complete. If the matcher returns a
+          // recommendation, render its card here before navigating.
+          recommendationStream.recommendation ? (
+            <div className="flex justify-center">
+              <RecommendationCard
+                recommendation={recommendationStream.recommendation}
+                onDismiss={() => onClose(conversationIdRef.current)}
+                variant="post-session"
+              />
+            </div>
+          ) : (
+            <div className="flex flex-col items-center gap-3">
+              <Loader2 className="h-5 w-5 animate-spin text-chamber-200" />
+              <p className="text-sm text-chamber-300 lowercase tracking-wide">
+                saving your session...
+              </p>
+            </div>
+          )
         ) : (
           <div className="flex flex-col items-center gap-4">
             <Link

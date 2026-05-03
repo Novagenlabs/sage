@@ -10,12 +10,28 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Loader2, Trash2, Share2 } from "lucide-react";
+import { RecommendationCard } from "@/components/v2/recommendation-card";
+import type { RecommendationPayload } from "@/lib/recommendations/types";
 
 type Insight = {
   id: string;
   content: string;
   type: string;
   createdAt: string;
+};
+
+type RawRecommendation = {
+  id: string;
+  reason: string;
+  feedback: string | null;
+  resource: {
+    id: string;
+    type: string;
+    title: string;
+    author: string | null;
+    url: string;
+    blurb: string;
+  };
 };
 
 type Convo = {
@@ -30,7 +46,30 @@ type Convo = {
   moods?: string[] | null;
   createdAt: string;
   insights: Insight[];
+  // Most recent recommendation tied to this session (or empty array).
+  recommendations?: RawRecommendation[];
 };
+
+function toRecommendationPayload(
+  raw: RawRecommendation
+): RecommendationPayload {
+  return {
+    recommendationId: raw.id,
+    resource: {
+      id: raw.resource.id,
+      type: raw.resource.type as RecommendationPayload["resource"]["type"],
+      title: raw.resource.title,
+      author: raw.resource.author,
+      url: raw.resource.url,
+      blurb: raw.resource.blurb,
+    },
+    reason: raw.reason,
+    feedback:
+      raw.feedback === "helpful" || raw.feedback === "not_for_me"
+        ? raw.feedback
+        : null,
+  };
+}
 
 const COLOR_HEX: Record<string, string> = {
   ember: "#e07c38",
@@ -174,6 +213,14 @@ export function EntryDetailPane({ id, onDeleted, variant = "pane" }: Props) {
                   {convo.summary}
                 </p>
               </div>
+            )}
+            {convo.recommendations && convo.recommendations.length > 0 && (
+              <RecommendationCard
+                recommendation={toRecommendationPayload(
+                  convo.recommendations[0]
+                )}
+                variant="entry"
+              />
             )}
             {convo.insights.map((ins) => (
               <div key={ins.id} className="v2-card">

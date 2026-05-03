@@ -27,7 +27,9 @@ import {
 } from "lucide-react";
 import { VoiceOrb, type OrbState } from "@/components/voice-orb-3d";
 import { V2VoicePicker } from "@/components/v2/voice-picker";
+import { RecommendationCard } from "@/components/v2/recommendation-card";
 import { DEFAULT_VOICE_KEY } from "@/lib/voices";
+import { useRecommendationStream } from "@/lib/use-recommendation-stream";
 
 const VOICE_KEY_STORAGE = "sage-v2-voice-key";
 
@@ -122,7 +124,22 @@ export default function VoiceChatPage() {
     }
   }, [selectedVoice, ghostMode]);
 
+  const recommendationStream = useRecommendationStream();
+  // Avoid double-firing finish() when LiveKit's onDisconnected races with the
+  // user clicking the finish button.
+  const finishedRef = useRef(false);
+
+  const navigateAfterFinish = useCallback(() => {
+    router.push(
+      conversationId
+        ? `/entries/active?id=${conversationId}`
+        : "/entries"
+    );
+  }, [conversationId, router]);
+
   const finish = useCallback(async () => {
+    if (finishedRef.current) return;
+    finishedRef.current = true;
     setPhase("ending");
     if (conversationId) {
       try {
@@ -138,15 +155,34 @@ export default function VoiceChatPage() {
       } catch {
         // best-effort end
       }
+      // Kick off the recommendation stream. If it returns a card, the UI
+      // shows it and waits for the user to dismiss before navigating. If
+      // it returns null (no good match) we navigate immediately.
+      recommendationStream.start({ conversationId });
+    } else {
+      navigateAfterFinish();
     }
-    // Route to the post-session annotation flow if we have an entry to tag,
-    // otherwise just land on the entries list.
-    router.push(
-      conversationId
-        ? `/entries/active?id=${conversationId}`
-        : "/entries"
-    );
-  }, [conversationId, router]);
+  }, [conversationId, recommendationStream, navigateAfterFinish]);
+
+  // When the stream resolves with no card, navigate. When it produces a card,
+  // the card itself triggers navigateAfterFinish via onDismiss.
+  useEffect(() => {
+    if (
+      phase === "ending" &&
+      conversationId &&
+      (recommendationStream.phase === "done" ||
+        recommendationStream.phase === "error") &&
+      !recommendationStream.recommendation
+    ) {
+      navigateAfterFinish();
+    }
+  }, [
+    phase,
+    conversationId,
+    recommendationStream.phase,
+    recommendationStream.recommendation,
+    navigateAfterFinish,
+  ]);
 
   const recordTurn = useCallback((turn: Turn) => {
     transcriptRef.current.push(turn);
@@ -211,17 +247,28 @@ export default function VoiceChatPage() {
       ) : phase === "ending" ? (
         // Wrapping up — keep the orb visible so we don't flash the start
         // screen while /api/conversation/end + the navigate to
-        // /entries/active complete.
+        // /entries/active complete. If the matcher returns a recommendation,
+        // we render the card here before navigating.
         <div className="relative z-10 flex-1 flex flex-col items-center justify-center gap-6 px-6 pb-10">
-          <span className="lg:hidden">
-            <VoiceOrb state="thinking" size={240} />
-          </span>
-          <span className="hidden lg:inline-block">
-            <VoiceOrb state="thinking" size={440} />
-          </span>
-          <p className="text-sm text-chamber-300 lowercase tracking-wide">
-            saving your session...
-          </p>
+          {recommendationStream.recommendation ? (
+            <RecommendationCard
+              recommendation={recommendationStream.recommendation}
+              onDismiss={navigateAfterFinish}
+              variant="post-session"
+            />
+          ) : (
+            <>
+              <span className="lg:hidden">
+                <VoiceOrb state="thinking" size={240} />
+              </span>
+              <span className="hidden lg:inline-block">
+                <VoiceOrb state="thinking" size={440} />
+              </span>
+              <p className="text-sm text-chamber-300 lowercase tracking-wide">
+                saving your session...
+              </p>
+            </>
+          )}
         </div>
       ) : (
         // IdleSession's root already uses `flex-1 flex flex-col` so it can

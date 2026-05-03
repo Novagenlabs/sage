@@ -6,7 +6,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { X, ArrowUp, Mic, Plus, AudioLines, Loader2, RotateCcw } from "lucide-react";
 import { useSocraticChat } from "@/lib/use-chat";
-import { motion } from "framer-motion";
+import { useRecommendationStream } from "@/lib/use-recommendation-stream";
+import { RecommendationCard } from "@/components/v2/recommendation-card";
+import { motion, AnimatePresence } from "framer-motion";
 
 function Inner() {
   const params = useSearchParams();
@@ -25,7 +27,18 @@ function Inner() {
     isHydrated,
     problemStatement,
     profileSummary,
+    conversationId,
   } = useSocraticChat();
+
+  // Generative-UI recommendation stream + ending overlay state. When the
+  // user taps "finish & reflect" we POST the transcript via reset() (which
+  // calls /api/conversation/end), then kick the matcher and either show a
+  // card or navigate straight to /entries/active.
+  const recommendationStream = useRecommendationStream();
+  const [endingPhase, setEndingPhase] = useState<
+    "idle" | "saving" | "matching" | "card" | "done"
+  >("idle");
+  const finishedConvIdRef = useRef<string | null>(null);
 
   const [tab, setTab] = useState<"transcript" | "analysis">("transcript");
   const [draft, setDraft] = useState("");
@@ -131,6 +144,46 @@ function Inner() {
     }
   }, [isLoading, status, freshDone]);
 
+  // "finish & reflect" — closes the conversation, runs the summariser, then
+  // streams the recommendation card. Mirrors voice/video's post-session flow.
+  const finishAndReflect = async () => {
+    if (messages.length === 0 || endingPhase !== "idle") return;
+    // Capture the id before reset() clears it, so the stream + the navigate
+    // both have it.
+    const id = conversationId;
+    finishedConvIdRef.current = id;
+    setEndingPhase("saving");
+    await reset();
+    if (!id) {
+      // Ghost mode or no row was created — skip the matcher entirely.
+      router.push("/entries");
+      return;
+    }
+    setEndingPhase("matching");
+    recommendationStream.start({ conversationId: id });
+  };
+
+  // When the stream resolves, decide whether to show the card or navigate.
+  useEffect(() => {
+    if (endingPhase !== "matching") return;
+    if (recommendationStream.recommendation) {
+      setEndingPhase("card");
+      return;
+    }
+    if (
+      recommendationStream.phase === "done" ||
+      recommendationStream.phase === "error"
+    ) {
+      const id = finishedConvIdRef.current;
+      router.push(id ? `/entries/active?id=${id}` : "/entries");
+    }
+  }, [
+    endingPhase,
+    recommendationStream.phase,
+    recommendationStream.recommendation,
+    router,
+  ]);
+
   if (status !== "authenticated" || !isHydrated || !freshDone || isResetting) {
     return (
       <div className="v2-screen bg-chamber-900 items-center justify-center">
@@ -145,16 +198,59 @@ function Inner() {
     (messages.find((m) => m.role === "user")?.content.slice(0, 40) ?? "new conversation");
 
   return (
-    <div className="v2-screen bg-chamber-900 px-0 lg:max-w-3xl lg:mx-auto lg:px-4 lg:pt-8">
+    <div className="v2-screen bg-chamber-900 px-0 lg:max-w-3xl lg:mx-auto lg:px-4 lg:pt-8 relative">
+      {/* Post-session overlay — shown while we summarize, match a resource,
+          and (optionally) render the recommendation card before navigating. */}
+      <AnimatePresence>
+        {endingPhase !== "idle" && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-40 bg-chamber-900/95 backdrop-blur-sm flex items-center justify-center px-6"
+          >
+            {endingPhase === "card" && recommendationStream.recommendation ? (
+              <RecommendationCard
+                recommendation={recommendationStream.recommendation}
+                onDismiss={() => {
+                  const id = finishedConvIdRef.current;
+                  router.push(id ? `/entries/active?id=${id}` : "/entries");
+                }}
+                variant="post-session"
+              />
+            ) : (
+              <div className="flex flex-col items-center gap-3">
+                <Loader2 className="h-5 w-5 animate-spin text-chamber-300" />
+                <p className="text-sm text-chamber-300 lowercase tracking-wide">
+                  saving your session...
+                </p>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <div className="flex items-center justify-between px-4 mb-4 lg:px-2">
-        <Link
-          href="/home"
-          className="h-9 w-9 rounded-full bg-chamber-800 flex items-center justify-center"
-          aria-label="close"
-        >
-          <X className="h-4 w-4" />
-        </Link>
+        {messages.length > 0 ? (
+          <button
+            onClick={finishAndReflect}
+            disabled={endingPhase !== "idle"}
+            className="h-9 w-9 rounded-full bg-chamber-800 flex items-center justify-center text-chamber-200 disabled:opacity-50 hover:bg-chamber-700"
+            aria-label="finish and reflect"
+            title="finish & reflect"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        ) : (
+          <Link
+            href="/home"
+            className="h-9 w-9 rounded-full bg-chamber-800 flex items-center justify-center"
+            aria-label="close"
+          >
+            <X className="h-4 w-4" />
+          </Link>
+        )}
         <div className="bg-chamber-800/70 rounded-full p-0.5 flex">
           <button
             onClick={() => setTab("transcript")}
