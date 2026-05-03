@@ -49,6 +49,9 @@ export default function VoiceChatPage() {
   const [error, setError] = useState("");
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [selectedVoice, setSelectedVoice] = useState(DEFAULT_VOICE_KEY);
+  // Ghost mode is shared with /ghost (the toggle screen) and the text chat
+  // hook via localStorage. Read once at mount + listen for cross-tab changes.
+  const [ghostMode, setGhostMode] = useState(false);
   const room = useRef(genRoom());
   const participant = useRef(genParticipant());
 
@@ -56,6 +59,12 @@ export default function VoiceChatPage() {
   useEffect(() => {
     const stored = localStorage.getItem(VOICE_KEY_STORAGE);
     if (stored) setSelectedVoice(stored);
+    setGhostMode(localStorage.getItem("sage-ghost-mode") === "1");
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "sage-ghost-mode") setGhostMode(e.newValue === "1");
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
   }, []);
 
   // Persist whenever the selection changes.
@@ -92,6 +101,7 @@ export default function VoiceChatPage() {
           roomName: room.current,
           participantName: participant.current,
           voiceKey: selectedVoice,
+          ghost: ghostMode,
         }),
       });
       if (!res.ok) {
@@ -110,7 +120,7 @@ export default function VoiceChatPage() {
       setError(err instanceof Error ? err.message : "connection failed");
       setPhase("idle");
     }
-  }, [selectedVoice]);
+  }, [selectedVoice, ghostMode]);
 
   const finish = useCallback(async () => {
     setPhase("ending");
@@ -196,7 +206,7 @@ export default function VoiceChatPage() {
           className="relative z-10 flex-1 flex flex-col"
         >
           <RoomAudioRenderer />
-          <LiveSession onFinish={finish} onTurn={recordTurn} />
+          <LiveSession onFinish={finish} onTurn={recordTurn} ghost={ghostMode} />
         </LiveKitRoom>
       ) : phase === "ending" ? (
         // Wrapping up — keep the orb visible so we don't flash the start
@@ -222,6 +232,7 @@ export default function VoiceChatPage() {
           onStart={start}
           selectedVoice={selectedVoice}
           onVoiceChange={handleVoiceChange}
+          ghost={ghostMode}
         />
       )}
     </div>
@@ -234,12 +245,14 @@ function IdleSession({
   onStart,
   selectedVoice,
   onVoiceChange,
+  ghost,
 }: {
   phase: "idle" | "connecting" | "live" | "ending";
   error: string;
   onStart: () => void;
   selectedVoice: string;
   onVoiceChange: (key: string) => void;
+  ghost: boolean;
 }) {
   const isConnecting = phase === "connecting";
 
@@ -266,10 +279,25 @@ function IdleSession({
           onSelect={onVoiceChange}
           disabled={isConnecting}
         />
+        {/* Ghost-mode toggle — only visible from the start screen so an
+            accidental tap mid-call can't navigate the user away. */}
+        <Link
+          href="/ghost"
+          className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] uppercase tracking-widest transition-colors ${
+            ghost
+              ? "bg-ember-500/15 text-ember-300 ring-1 ring-ember-500/30"
+              : "text-chamber-500 hover:text-chamber-300"
+          }`}
+        >
+          <Moon className="h-3 w-3" />
+          ghost {ghost ? "· on" : "· off"}
+        </Link>
         <p className="text-center text-sm text-chamber-300 lowercase max-w-xs lg:text-base lg:max-w-md">
           {error
             ? error
-            : "tap to start. sage will listen, then ask the questions worth asking."}
+            : ghost
+              ? "ghost mode is on — nothing from this session is saved."
+              : "tap to start. sage will listen, then ask the questions worth asking."}
         </p>
         <button
           onClick={onStart}
@@ -293,9 +321,11 @@ function IdleSession({
 function LiveSession({
   onFinish,
   onTurn,
+  ghost,
 }: {
   onFinish: () => void;
   onTurn: (t: Turn) => void;
+  ghost: boolean;
 }) {
   const { state: agentState, agentTranscriptions } = useVoiceAssistant();
   const transcriptions = useTranscriptions({});
@@ -404,17 +434,19 @@ function LiveSession({
             </span>
           </div>
 
-          {/* Right: ghost + finish */}
+          {/* Right: ghost indicator (passive — toggle lives on /ghost) + finish */}
           <div className="flex flex-col gap-3">
-            <Link
-              href="/ghost"
-              className="flex flex-col items-center gap-1"
+            <div
+              className={`flex flex-col items-center gap-1 ${
+                ghost ? "" : "invisible"
+              }`}
+              aria-hidden={!ghost}
             >
-              <span className="h-10 w-10 rounded-full bg-chamber-800/80 backdrop-blur text-chamber-100 flex items-center justify-center">
+              <span className="h-10 w-10 rounded-full bg-ember-500/15 ring-1 ring-ember-500/30 backdrop-blur text-ember-300 flex items-center justify-center">
                 <Moon className="h-4 w-4" />
               </span>
-              <span className="text-[10px] text-chamber-200 lowercase">ghost</span>
-            </Link>
+              <span className="text-[10px] text-ember-300 lowercase">ghost</span>
+            </div>
             <button onClick={onFinish} className="flex flex-col items-center gap-1">
               <span className="h-10 w-10 rounded-full bg-ember-500 text-white flex items-center justify-center shadow-[0_8px_24px_-8px_rgba(224,124,56,0.6)]">
                 <Check className="h-4 w-4" strokeWidth={3} />

@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { roomName, participantName, voiceKey } = await request.json();
+  const { roomName, participantName, voiceKey, ghost } = await request.json();
 
   const apiKey = process.env.LIVEKIT_API_KEY;
   const apiSecret = process.env.LIVEKIT_API_SECRET;
@@ -131,10 +131,39 @@ export async function POST(request: NextRequest) {
 
   const token = await at.toJwt();
 
+  // Create the Conversation row up front so the voice session has somewhere
+  // to attach its summary on finish. In ghost mode we skip this entirely —
+  // nothing about the call should land in the DB.
+  let conversationId: string | null = null;
+  if (!ghost) {
+    try {
+      // Mark any other active conversations as inactive so /entries always
+      // surfaces the latest one as the active session.
+      await prisma.conversation.updateMany({
+        where: { userId: session.user.id, isActive: true },
+        data: { isActive: false },
+      });
+      const conversation = await prisma.conversation.create({
+        data: {
+          userId: session.user.id,
+          title: "voice session",
+          phase: "exploration",
+          isActive: true,
+        },
+        select: { id: true },
+      });
+      conversationId = conversation.id;
+    } catch (err) {
+      console.error("[Token] Failed to create Conversation row:", err);
+      // Non-fatal — the call can still proceed, we just won't summarise it.
+    }
+  }
+
   return new Response(
     JSON.stringify({
       token,
       url: process.env.LIVEKIT_URL,
+      conversationId,
     }),
     { status: 200, headers: { "Content-Type": "application/json" } }
   );

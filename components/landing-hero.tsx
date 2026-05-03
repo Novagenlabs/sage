@@ -98,7 +98,7 @@ export default function LandingHero() {
             </p>
 
             <Link
-              href="/chat"
+              href="/chat/voice"
               className="hero-fade-in hero-delay-400 group inline-flex items-center justify-center gap-2 rounded-full bg-ember-500 px-8 py-4 text-sm font-semibold text-white transition-all active:scale-[0.98] shadow-lg shadow-ember-500/25 w-full max-w-xs"
             >
               Start a Conversation
@@ -146,7 +146,7 @@ export default function LandingHero() {
 
                 <div className="hero-fade-in hero-delay-300 flex flex-row gap-4">
                   <Link
-                    href="/chat"
+                    href="/chat/voice"
                     className="group inline-flex items-center justify-center gap-2 rounded-full bg-ember-500 px-8 py-4 text-sm font-semibold text-white transition-all hover:scale-[1.02] hover:bg-ember-600 active:scale-[0.98] shadow-lg shadow-ember-500/25"
                   >
                     Start a Conversation
@@ -154,7 +154,7 @@ export default function LandingHero() {
                   </Link>
 
                   <Link
-                    href="/chat"
+                    href="/chat/voice"
                     className="group inline-flex items-center justify-center gap-2 rounded-full border border-gold-400/15 bg-chamber-800/30 px-8 py-4 text-sm font-semibold text-chamber-100 backdrop-blur-sm transition-colors hover:bg-chamber-800/50 hover:border-gold-400/25"
                   >
                     <Mic className="w-4 h-4 text-ember-500" />

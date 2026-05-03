@@ -86,16 +86,35 @@ export function VideoChat({ userCredits, onClose, onCreditsUpdate }: Props) {
   // This guard prevents a double reconnect. Reset on each fresh connect.
   const closeHandledRef = useRef(false);
 
-  // Mint a token + Conversation row, return both.
-  const fetchSession = useCallback(async () => {
-    const res = await fetch("/api/anam/session", { method: "POST" });
+  // Ghost mode is shared with /ghost (the toggle screen) and the chat hook
+  // via localStorage. Read once at mount + listen for cross-tab changes.
+  const [ghostMode, setGhostMode] = useState(false);
+  useEffect(() => {
+    setGhostMode(localStorage.getItem("sage-ghost-mode") === "1");
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "sage-ghost-mode") setGhostMode(e.newValue === "1");
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
+  // Capture the ghost flag at the moment the session starts so a mid-call
+  // toggle can't change persistence behaviour for the in-flight session.
+  const sessionGhostRef = useRef(false);
+
+  // Mint a token + (when not in ghost mode) a Conversation row.
+  const fetchSession = useCallback(async (ghost: boolean) => {
+    const res = await fetch("/api/anam/session", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ghost }),
+    });
     if (!res.ok) {
       const data = await res.json().catch(() => ({}));
       if (res.status === 401) throw new Error("please sign in to start a video session.");
       if (res.status === 402) throw new Error("you're out of credits.");
       throw new Error(data.error || "couldn't start a video session");
     }
-    return (await res.json()) as { sessionToken: string; conversationId: string };
+    return (await res.json()) as { sessionToken: string; conversationId: string | null };
   }, []);
 
   // POST whatever transcript we have to the summariser pipeline.
@@ -116,42 +135,43 @@ export function VideoChat({ userCredits, onClose, onCreditsUpdate }: Props) {
     const conversationId = conversationIdRef.current;
     const streamedSecs = streamedSecondsRef.current;
 
-    if (conversationId) {
-      // Bill for the streamed video time. We only debit if the user actually
-      // consumed any video — protects against zero-second connection blips.
-      if (streamedSecs > 0) {
-        const credits = videoSecondsToCredits(streamedSecs);
-        try {
-          await fetch("/api/credits/deduct", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              amount: credits,
-              type: "video",
-              conversationId,
-              durationSeconds: streamedSecs,
-            }),
-          });
-        } catch (err) {
-          console.error("[Anam] credit deduction failed:", err);
-        }
+    // Bill for the streamed video time. Always deducts — ghost mode hides
+    // the conversation but the user still consumed real video minutes. The
+    // deduct endpoint accepts an optional conversationId, so ghost sessions
+    // record an unattributed transaction.
+    if (streamedSecs > 0) {
+      const credits = videoSecondsToCredits(streamedSecs);
+      try {
+        await fetch("/api/credits/deduct", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            amount: credits,
+            type: "video",
+            conversationId: conversationId ?? undefined,
+            durationSeconds: streamedSecs,
+          }),
+        });
+      } catch (err) {
+        console.error("[Anam] credit deduction failed:", err);
       }
+    }
 
-      // Send the transcript to the summariser pipeline.
-      if (transcriptRef.current.length > 0) {
-        try {
-          await fetch("/api/conversation/end", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              conversationId,
-              type: "video",
-              transcript: transcriptRef.current,
-            }),
-          });
-        } catch {
-          /* best-effort end */
-        }
+    // Send the transcript to the summariser pipeline. Skipped entirely in
+    // ghost mode — there's no Conversation row to attach it to.
+    if (conversationId && transcriptRef.current.length > 0) {
+      try {
+        await fetch("/api/conversation/end", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            conversationId,
+            type: "video",
+            transcript: transcriptRef.current,
+          }),
+        });
+      } catch {
+        /* best-effort end */
       }
     }
     onCreditsUpdate?.();
@@ -258,7 +278,9 @@ export function VideoChat({ userCredits, onClose, onCreditsUpdate }: Props) {
   const reconnect = useCallback(async () => {
     setStatusLabel("reconnecting…");
     try {
-      const { sessionToken } = await fetchSession();
+      // Reuse the ghost flag from the original session so a mid-call toggle
+      // can't switch a private session into a persisted one mid-flight.
+      const { sessionToken } = await fetchSession(sessionGhostRef.current);
       const { createClient } = await import("@anam-ai/js-sdk");
       const next = createClient(sessionToken);
       await wireClient(next);
@@ -279,9 +301,10 @@ export function VideoChat({ userCredits, onClose, onCreditsUpdate }: Props) {
     seenMessageIds.current = new Set();
     userEndedRef.current = false;
     closeHandledRef.current = false;
+    sessionGhostRef.current = ghostMode;
 
     try {
-      const { sessionToken, conversationId } = await fetchSession();
+      const { sessionToken, conversationId } = await fetchSession(ghostMode);
       conversationIdRef.current = conversationId;
 
       const { createClient } = await import("@anam-ai/js-sdk");
@@ -313,7 +336,7 @@ export function VideoChat({ userCredits, onClose, onCreditsUpdate }: Props) {
       setError(err instanceof Error ? err.message : "couldn't start session");
       setPhase("idle");
     }
-  }, [fetchSession, wireClient]);
+  }, [fetchSession, wireClient, ghostMode]);
 
   // Cleanup on unmount: stop streaming, clear timers.
   useEffect(() => {
@@ -450,14 +473,19 @@ export function VideoChat({ userCredits, onClose, onCreditsUpdate }: Props) {
               </span>
             </div>
 
-            {/* Right cluster */}
+            {/* Right cluster — ghost indicator (passive) + finish */}
             <div className="flex flex-col gap-3">
-              <Link href="/ghost" className="flex flex-col items-center gap-1">
-                <span className="h-10 w-10 rounded-full bg-chamber-900/70 backdrop-blur text-chamber-100 flex items-center justify-center">
+              <div
+                className={`flex flex-col items-center gap-1 ${
+                  sessionGhostRef.current ? "" : "invisible"
+                }`}
+                aria-hidden={!sessionGhostRef.current}
+              >
+                <span className="h-10 w-10 rounded-full bg-ember-500/15 ring-1 ring-ember-500/30 backdrop-blur text-ember-300 flex items-center justify-center">
                   <Moon className="h-4 w-4" />
                 </span>
-                <span className="text-[10px] text-chamber-100 lowercase">ghost</span>
-              </Link>
+                <span className="text-[10px] text-ember-300 lowercase">ghost</span>
+              </div>
               <button onClick={finishSession} className="flex flex-col items-center gap-1">
                 <span className="h-10 w-10 rounded-full bg-ember-500 text-white flex items-center justify-center shadow-[0_8px_24px_-8px_rgba(224,124,56,0.6)]">
                   <Check className="h-4 w-4" strokeWidth={3} />
@@ -477,10 +505,23 @@ export function VideoChat({ userCredits, onClose, onCreditsUpdate }: Props) {
           </div>
         ) : (
           <div className="flex flex-col items-center gap-4">
+            <Link
+              href="/ghost"
+              className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] uppercase tracking-widest transition-colors ${
+                ghostMode
+                  ? "bg-ember-500/15 text-ember-300 ring-1 ring-ember-500/30"
+                  : "text-chamber-400 hover:text-chamber-200"
+              }`}
+            >
+              <Moon className="h-3 w-3" />
+              ghost {ghostMode ? "· on" : "· off"}
+            </Link>
             <p className="text-center text-sm text-chamber-300 lowercase max-w-xs">
               {error
                 ? error
-                : "tap to see sage. same conversation, with a face. uses ~3× the credits of voice."}
+                : ghostMode
+                  ? "ghost mode is on — nothing from this session is saved."
+                  : "tap to see sage. same conversation, with a face. uses ~3× the credits of voice."}
             </p>
             <button
               onClick={start}

@@ -125,7 +125,7 @@ export default function LandingPage() {
                 </Link>
               )}
               <Link
-                href="/chat"
+                href="/chat/voice"
                 className="btn-sm inline-flex items-center gap-2 rounded-full bg-ember-500 px-5 py-2 text-sm font-semibold text-white transition-all hover:bg-ember-600 active:scale-[0.98]"
               >
                 {isSignedIn ? "Go to Sage" : "Open Sage"}
@@ -174,7 +174,7 @@ export default function LandingPage() {
             {EXAMPLE_TOPICS.map((topic, i) => (
               <Link
                 key={i}
-                href="/chat"
+                href="/chat/voice"
                 className="group flex-shrink-0 w-[75vw] sm:w-[45vw] snap-start p-4 glass hover:bg-chamber-800/60 rounded-xl transition-all duration-300 flex items-center gap-3 hover:border-gold-400/20"
               >
                 <div className="w-1.5 h-1.5 rounded-full bg-ember-500/60 group-hover:bg-ember-500 group-hover:shadow-[0_0_8px_rgba(224,124,56,0.5)] transition-all duration-300 flex-shrink-0" />
@@ -190,7 +190,7 @@ export default function LandingPage() {
             {EXAMPLE_TOPICS.map((topic, i) => (
               <Link
                 key={i}
-                href="/chat"
+                href="/chat/voice"
                 className="group p-5 glass hover:bg-chamber-800/60 rounded-xl transition-all duration-300 flex items-center gap-3 hover:border-gold-400/20"
               >
                 <div className="w-1.5 h-1.5 rounded-full bg-ember-500/60 group-hover:bg-ember-500 group-hover:shadow-[0_0_8px_rgba(224,124,56,0.5)] transition-all duration-300 flex-shrink-0" />
@@ -319,7 +319,7 @@ export default function LandingPage() {
           </p>
           <div className="flex justify-center lg:hidden">
             <Link
-              href="/chat"
+              href="/chat/voice"
               className="group inline-flex items-center justify-center gap-2 rounded-full bg-ember-500 px-8 py-4 text-sm font-semibold text-white transition-all active:scale-[0.98] shadow-lg shadow-ember-500/25 w-full max-w-xs"
             >
               Talk to Sage
@@ -328,7 +328,7 @@ export default function LandingPage() {
           </div>
           <div className="hidden lg:flex justify-center">
             <Link
-              href="/chat"
+              href="/chat/voice"
               className="group inline-flex items-center justify-center gap-2 rounded-full bg-ember-500 px-10 py-4 text-base font-semibold text-white transition-all hover:scale-[1.02] hover:bg-ember-600 active:scale-[0.98] shadow-lg shadow-ember-500/25"
             >
               Talk to Sage

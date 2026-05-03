@@ -40,24 +40,24 @@ afterEach(() => {
 describe("POST /api/anam/session", () => {
   it("rejects unauthenticated", async () => {
     mockAuth.mockResolvedValue(null);
-    const res = await POST();
+    const res = await POST(makeReq("http://localhost/api/anam/session", { method: "POST" }));
     expect(res.status).toBe(401);
   });
 
   it("rejects when out of credits", async () => {
     mockHasEnoughCredits.mockResolvedValue(false);
-    const res = await POST();
+    const res = await POST(makeReq("http://localhost/api/anam/session", { method: "POST" }));
     expect(res.status).toBe(402);
   });
 
   it("500s when ANAM_API_KEY is unset", async () => {
     delete process.env.ANAM_API_KEY;
-    const res = await POST();
+    const res = await POST(makeReq("http://localhost/api/anam/session", { method: "POST" }));
     expect(res.status).toBe(500);
   });
 
   it("creates a Conversation row + returns sessionToken", async () => {
-    const res = await POST();
+    const res = await POST(makeReq("http://localhost/api/anam/session", { method: "POST" }));
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.sessionToken).toBe("anam_token_xyz");
@@ -84,7 +84,7 @@ describe("POST /api/anam/session", () => {
       "fetch",
       vi.fn(async () => new Response("rate limited", { status: 429 }))
     );
-    const res = await POST();
+    const res = await POST(makeReq("http://localhost/api/anam/session", { method: "POST" }));
     expect(res.status).toBe(502);
   });
 
@@ -93,7 +93,7 @@ describe("POST /api/anam/session", () => {
       "fetch",
       vi.fn(async () => new Response(JSON.stringify({}), { status: 200 }))
     );
-    const res = await POST();
+    const res = await POST(makeReq("http://localhost/api/anam/session", { method: "POST" }));
     expect(res.status).toBe(502);
   });
 });

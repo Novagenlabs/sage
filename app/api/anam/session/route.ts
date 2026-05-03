@@ -14,13 +14,17 @@ const DEFAULT_AVATAR_ID = "edf6fdcb-acab-44b8-b974-ded72665ee26";
 const DEFAULT_VOICE_ID = "de23e340-1416-4dd8-977d-065a7ca11697";
 const MIN_CREDITS = 5; // floor to start a session at all
 
-export async function POST() {
+export async function POST(request: Request) {
   const session = await auth();
   if (!session?.user?.id) {
     return Response.json({ error: "Please sign in to start a video session." }, { status: 401 });
   }
 
   const userId = session.user.id;
+  // Body is optional — older clients sent no body at all. Treat parse
+  // failures as "no flags."
+  const body = (await request.json().catch(() => ({}))) as { ghost?: boolean };
+  const ghost = body.ghost === true;
 
   if (!(await hasEnoughCredits(userId, MIN_CREDITS))) {
     return Response.json(
@@ -62,19 +66,26 @@ export async function POST() {
   const systemPrompt = buildSystemPrompt("opening", undefined, context);
 
   // Create the Conversation row up front so the session has somewhere
-  // to land its summary when it ends. Mark it active.
-  await prisma.conversation.updateMany({
-    where: { userId, isActive: true },
-    data: { isActive: false },
-  });
-  const conversation = await prisma.conversation.create({
-    data: {
-      userId,
-      title: "Video session",
-      phase: "opening",
-      isActive: true,
-    },
-  });
+  // to land its summary when it ends. Mark it active. In ghost mode we
+  // skip this entirely — the call still runs, but nothing about it
+  // touches the DB.
+  let conversationId: string | null = null;
+  if (!ghost) {
+    await prisma.conversation.updateMany({
+      where: { userId, isActive: true },
+      data: { isActive: false },
+    });
+    const conversation = await prisma.conversation.create({
+      data: {
+        userId,
+        title: "Video session",
+        phase: "opening",
+        isActive: true,
+      },
+      select: { id: true },
+    });
+    conversationId = conversation.id;
+  }
 
   const avatarId = process.env.ANAM_AVATAR_ID || DEFAULT_AVATAR_ID;
   const voiceId = process.env.ANAM_VOICE_ID || DEFAULT_VOICE_ID;
@@ -127,6 +138,6 @@ export async function POST() {
 
   return Response.json({
     sessionToken: data.sessionToken,
-    conversationId: conversation.id,
+    conversationId,
   });
 }
