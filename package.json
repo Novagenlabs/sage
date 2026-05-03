@@ -11,7 +11,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:all": "npm run test && npm run test:e2e",
-    "seed:resources": "tsx prisma/seed-resources.ts"
+    "seed:resources": "tsx prisma/seed-resources.ts",
+    "narrate:resources": "tsx scripts/generate-resource-audio.ts"
   },
   "dependencies": {
     "@anam-ai/js-sdk": "^4.12.0",

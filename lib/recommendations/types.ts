@@ -57,6 +57,8 @@ export interface RecommendationPayload {
     author: string | null;
     url: string;
     blurb: string;
+    /** Path under /public to a Sage-narrated MP3 intro (~30-50s). Optional. */
+    audioUrl?: string | null;
   };
   reason: string;
   /** Already-recorded feedback if the user opens the entry-detail later. */
