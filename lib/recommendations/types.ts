@@ -43,6 +43,10 @@ export interface MatchInput {
    *  whether they gave feedback. Excluded from new matches so the user
    *  doesn't keep getting the same recommendation across sessions. */
   alreadyRecommendedResourceIds?: string[];
+  /** Optional short phrase Sage emitted via the RECOMMEND marker — e.g.
+   *  "decision paralysis," "isolation of insight." Used as extra context
+   *  for the rerank LLM when present (mid-session interruption flow). */
+  patternHint?: string;
   /** Full active catalog. v1 caps at ~30-50 entries so it fits in one prompt. */
   catalog: CatalogResource[];
 }

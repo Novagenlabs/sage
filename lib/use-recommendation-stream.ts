@@ -20,6 +20,12 @@ export interface StartArgs {
   conversationId: string;
   latestSummary?: string;
   latestInsights?: Array<{ type: string; content: string }>;
+  /** Set when this fires mid-conversation. Server enforces one card per
+   *  session; without this flag the server runs the normal end-of-session
+   *  flow. */
+  midSession?: boolean;
+  /** Sage's mid-session pattern hint, e.g. "decision paralysis." */
+  patternHint?: string;
   /** Caller-provided abort signal — chat pages cancel mid-flight on unmount. */
   signal?: AbortSignal;
 }
@@ -55,6 +61,8 @@ export function useRecommendationStream() {
           conversationId: args.conversationId,
           latestSummary: args.latestSummary,
           latestInsights: args.latestInsights,
+          midSession: args.midSession,
+          patternHint: args.patternHint,
         }),
         signal: args.signal,
       });

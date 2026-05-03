@@ -244,6 +244,47 @@ describe("matchResource", () => {
     expect(result).toBeNull();
   });
 
+  it("threads patternHint through the rerank prompt body", async () => {
+    const fetchImpl = vi.fn(async () =>
+      new Response(
+        JSON.stringify({ choices: [{ message: { content: "null" } }] }),
+        { status: 200 }
+      )
+    );
+    process.env.OPENAI_API_KEY = "sk-test";
+    const embedFetch = vi.fn(async () =>
+      new Response(
+        JSON.stringify({ data: [{ embedding: [1, 0, 0, 0] }] }),
+        { status: 200 }
+      )
+    );
+    const EMBED_CATALOG = CATALOG.map((r, i) => ({
+      ...r,
+      embedding: [[1, 0, 0, 0], [0, 1, 0, 0], [0.9, 0.4, 0, 0]][i],
+    }));
+    await matchResource(
+      {
+        ...baseInput,
+        catalog: EMBED_CATALOG,
+        profileSummary: "weighing two job offers",
+        patternHint: "decision paralysis",
+      },
+      {
+        embedFetch: embedFetch as unknown as typeof fetch,
+        fetchImpl: fetchImpl as unknown as typeof fetch,
+      }
+    );
+    delete process.env.OPENAI_API_KEY;
+    // The rerank request should include the hint so the LLM can use it.
+    const rerankCall = fetchImpl.mock.calls.find((c) =>
+      String(c[0]).includes("openrouter.ai")
+    );
+    expect(rerankCall).toBeDefined();
+    const init = rerankCall![1] as { body: string };
+    expect(init.body).toContain("decision paralysis");
+    expect(init.body).toContain("the pattern Sage noticed");
+  });
+
   it("includes dismissed + loved ids in the LLM prompt body", async () => {
     const fetchImpl = vi.fn(async () =>
       new Response(JSON.stringify({ choices: [{ message: { content: "null" } }] }), {

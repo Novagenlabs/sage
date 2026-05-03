@@ -59,8 +59,11 @@ export interface RecommendationCardProps {
   recommendation: RecommendationPayload;
   /** Called after feedback is recorded so the parent can advance the flow. */
   onDismiss?: () => void;
-  /** Compact mode = entry-detail render (no big "Sage suggests" header). */
-  variant?: "post-session" | "entry";
+  /** Card chrome:
+   *  - "post-session": full card after a finished session, with feedback row
+   *  - "entry":        same content, embedded inside the entry-detail page
+   *  - "mid-session":  slim card that floats above the chat input mid-flow */
+  variant?: "post-session" | "entry" | "mid-session";
 }
 
 export function RecommendationCard({
@@ -106,6 +109,89 @@ export function RecommendationCard({
   };
 
   return (
+    variant === "mid-session" ? (
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: 12 }}
+        transition={{ type: "spring", stiffness: 320, damping: 32 }}
+        className="rounded-2xl border border-ember-500/30 bg-chamber-900/85 backdrop-blur-md shadow-[0_-12px_32px_-12px_rgba(0,0,0,0.6)] px-4 py-3 mx-3 mb-2"
+      >
+        <div className="flex items-center justify-between mb-1.5">
+          <p className="text-[10px] uppercase tracking-[0.22em] text-ember-400 inline-flex items-center gap-1.5">
+            <TypeIcon type={resource.type} />
+            sage notices
+          </p>
+          {onDismiss && (
+            <button
+              onClick={onDismiss}
+              aria-label="keep talking"
+              className="text-[10px] text-chamber-500 hover:text-chamber-300 lowercase"
+            >
+              keep talking
+            </button>
+          )}
+        </div>
+        <h3 className="text-base font-display text-chamber-50 leading-snug">
+          {resource.title}
+          {resource.author && (
+            <span className="text-chamber-500 text-sm">
+              {" · "}
+              {resource.author}
+            </span>
+          )}
+        </h3>
+        <p className="text-xs text-chamber-300 italic leading-relaxed mt-1.5">
+          {reason}
+        </p>
+        {feedback ? (
+          <p className="text-[11px] text-chamber-500 lowercase mt-2">
+            {feedback === "helpful"
+              ? "noted — thanks for the signal."
+              : "got it — won't suggest similar."}
+          </p>
+        ) : (
+          <div className="flex items-center gap-2 mt-2.5">
+            <button
+              onClick={() => {
+                trackClick();
+                setPlayerOpen(true);
+              }}
+              className="inline-flex items-center gap-1 rounded-full bg-ember-500 text-white px-3 py-1.5 text-[11px] lowercase hover:bg-ember-400"
+            >
+              <Play className="h-3 w-3 ml-0.5" />
+              play
+            </button>
+            <button
+              onClick={() => submitFeedback("helpful")}
+              disabled={submitting}
+              className="inline-flex items-center gap-1 rounded-full bg-chamber-800/80 ring-1 ring-chamber-700 text-chamber-200 px-3 py-1.5 text-[11px] lowercase hover:bg-chamber-800 disabled:opacity-50"
+            >
+              <ThumbsUp className="h-3 w-3" />
+              helpful
+            </button>
+            <button
+              onClick={() => submitFeedback("not_for_me")}
+              disabled={submitting}
+              className="inline-flex items-center gap-1 text-[11px] text-chamber-500 hover:text-chamber-300 lowercase ml-auto"
+            >
+              <ThumbsDown className="h-3 w-3" />
+              not now
+            </button>
+          </div>
+        )}
+
+        <AnimatePresence>
+          {playerOpen && (
+            <PlayerSheet
+              resource={resource}
+              onClose={() => setPlayerOpen(false)}
+              onClickOpen={trackClick}
+            />
+          )}
+        </AnimatePresence>
+      </motion.div>
+    ) : (
     <motion.div
       initial={{ opacity: 0, y: 8, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -218,6 +304,7 @@ export function RecommendationCard({
         )}
       </AnimatePresence>
     </motion.div>
+    )
   );
 }
 

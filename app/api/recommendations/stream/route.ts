@@ -45,6 +45,14 @@ export async function POST(req: Request) {
     conversationId?: string;
     latestSummary?: string;
     latestInsights?: Array<{ type: string; content: string }>;
+    /** Set when this fires mid-conversation. Adds an extra guard: at most
+     *  one recommendation per (userId, conversationId) so we never spam
+     *  the same session with multiple cards. */
+    midSession?: boolean;
+    /** Sage's pattern hint emitted via the RECOMMEND marker — short
+     *  phrase like "decision paralysis." Used as extra context for the
+     *  rerank LLM. */
+    patternHint?: string;
   };
   const conversationId = body.conversationId;
   if (!conversationId) {
@@ -61,6 +69,34 @@ export async function POST(req: Request) {
   });
   if (!conversation) {
     return Response.json({ error: "Conversation not found" }, { status: 404 });
+  }
+
+  // Mid-session spam guard: if we've already shown a recommendation for
+  // this conversation, return done immediately. The marker is supposed to
+  // emit at most once per session but we don't trust it 100% — and even
+  // legitimate retries (network blip) shouldn't double-card.
+  if (body.midSession) {
+    const existing = await prisma.recommendation.findFirst({
+      where: { conversationId, userId },
+      select: { id: true },
+    });
+    if (existing) {
+      // Stream a single done event so the client closes cleanly.
+      const enc = new TextEncoder();
+      const stream = new ReadableStream<Uint8Array>({
+        start(c) {
+          c.enqueue(enc.encode(`data: ${JSON.stringify({ type: "done" })}\n\n`));
+          c.close();
+        },
+      });
+      return new Response(stream, {
+        headers: {
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache, no-transform",
+          Connection: "keep-alive",
+        },
+      });
+    }
   }
 
   const encoder = new TextEncoder();
@@ -148,6 +184,7 @@ export async function POST(req: Request) {
           dismissedResourceIds,
           lovedResourceIds,
           alreadyRecommendedResourceIds,
+          patternHint: body.patternHint,
           catalog,
         });
 

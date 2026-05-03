@@ -165,6 +165,109 @@ test("recommendation card: 'play in app' opens the in-app player sheet with a Yo
   await expect(dialog).toBeHidden({ timeout: 3_000 });
 });
 
+test("text chat: mid-session recommend marker surfaces a card above the input", async ({
+  page,
+}) => {
+  // Stub the chat stream so the assistant message ends with a RECOMMEND
+  // marker. The card should slide in above the input.
+  await page.route("**/api/chat", async (route) => {
+    const sse =
+      `data: ${JSON.stringify({
+        choices: [{ delta: { content: "I notice you've been spinning on this. " } }],
+      })}\n\n` +
+      `data: ${JSON.stringify({
+        choices: [
+          {
+            delta: {
+              content:
+                "<!--PHASE:{\"phase\":\"examining\",\"next\":null,\"ready\":false}-->\n<!--RECOMMEND:decision paralysis-->",
+            },
+          },
+        ],
+      })}\n\n` +
+      `data: [DONE]\n\n`;
+    await route.fulfill({
+      status: 200,
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+      },
+      body: sse,
+    });
+  });
+
+  // Stub the recommendation stream to return a deterministic card.
+  await page.route("**/api/recommendations/stream", async (route) => {
+    const body = route.request().postData() ?? "";
+    expect(body).toContain('"midSession":true');
+    expect(body).toContain("decision paralysis");
+    const sse =
+      `data: ${JSON.stringify({ type: "thinking" })}\n\n` +
+      `data: ${JSON.stringify({
+        type: "data_card",
+        data: {
+          kind: "resource_recommendation",
+          recommendation: {
+            recommendationId: "rec_mid",
+            resource: {
+              id: "res_mid",
+              type: "video",
+              title: "The Paradox of Choice",
+              author: "Barry Schwartz",
+              url: "https://example.com",
+              blurb: "On too many options.",
+              audioUrl: null,
+              bodyText: null,
+              bodyKind: null,
+              bodySource: null,
+            },
+            reason: "decision paralysis kept surfacing here.",
+            feedback: null,
+          },
+        },
+      })}\n\n` +
+      `data: ${JSON.stringify({ type: "done" })}\n\n`;
+    await route.fulfill({
+      status: 200,
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+      },
+      body: sse,
+    });
+  });
+
+  await signIn(page);
+  await page.goto("/chat/text?fresh=1");
+  const input = page.getByPlaceholder("tap to type...");
+  await expect(input).toBeVisible({ timeout: 15_000 });
+  await input.fill("I keep going back and forth on this job offer");
+  await page.keyboard.press("Enter");
+
+  // Visible message should NOT contain the marker (it's stripped).
+  const assistantMsg = page.getByText(/I notice you've been spinning/i).first();
+  await expect(assistantMsg).toBeVisible({ timeout: 10_000 });
+  await expect(assistantMsg).not.toContainText(/RECOMMEND/);
+  await expect(assistantMsg).not.toContainText(/PHASE/);
+
+  // Mid-session card slides in above the input.
+  await expect(page.getByText(/sage notices/i)).toBeVisible({
+    timeout: 5_000,
+  });
+  await expect(page.getByText(/the paradox of choice/i)).toBeVisible();
+  await expect(
+    page.getByText(/decision paralysis kept surfacing here/i)
+  ).toBeVisible();
+
+  // "keep talking" dismisses without ending the session.
+  await page.getByRole("button", { name: /keep talking/i }).click();
+  await expect(page.getByText(/sage notices/i)).toBeHidden({
+    timeout: 3_000,
+  });
+  // Input is still focused / usable.
+  await expect(input).toBeVisible();
+});
+
 test("text chat: when the matcher returns no card, navigates to /entries/active", async ({
   page,
 }) => {

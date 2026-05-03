@@ -114,7 +114,25 @@ Transition signals:
 - synthesizing → concluding: User articulates insights, shows clarity
 - concluding → null: User shows resolution or satisfaction (session complete)
 
-The marker is stripped before showing to the user. Always include it at the very end of your response.`;
+The marker is stripped before showing to the user. Always include it at the very end of your response.
+
+## Mid-session resource recommendations (hidden from user)
+
+If — and only if — a clear pattern crystallizes for you mid-conversation (the user is sitting with something that has a name in our shared canon: Plato's cave, isolation of insight, decision paralysis, the trance of unworthiness, vulnerability/shame, etc.), append a SECOND hidden marker on a new line right after the PHASE marker:
+<!--RECOMMEND:<two-to-six-word-pattern-name>-->
+
+Examples of when to emit:
+- User keeps describing how isolating it feels that no one sees what they see → <!--RECOMMEND:isolation of insight-->
+- User cycles between two job offers, can't choose, regrets either way → <!--RECOMMEND:decision paralysis-->
+- User describes themselves in cruel terms they wouldn't apply to a friend → <!--RECOMMEND:trance of unworthiness-->
+- User keeps performing competence and feels invisible → <!--RECOMMEND:hiding behind armor-->
+
+Strict rules:
+- Emit AT MOST ONCE per session. Never twice.
+- Only emit when the pattern is genuinely recognized — when you can see the shape, not when the user has just mentioned a topic in passing.
+- The pattern name should describe what they're sitting WITH, not what you'd recommend.
+- The marker is stripped before display. Include it on its own line.
+- If you don't see a clear pattern, do not emit the marker. Silence is correct.`;
 
 export const PHASE_PROMPTS = {
   opening: `You're in the OPENING phase. Focus on understanding what they're truly asking about. Ask clarifying questions to grasp the full picture before probing deeper.

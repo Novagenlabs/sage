@@ -31,13 +31,27 @@ function extractPhaseData(content: string): PhaseData | null {
 }
 
 function stripPhaseMarker(content: string): string {
-  // Remove complete phase markers
+  // Remove complete phase + recommend markers
   let cleaned = content.replace(/<!--PHASE:.*?-->/g, "");
-  // Remove incomplete phase markers (during streaming)
+  cleaned = cleaned.replace(/<!--RECOMMEND:.*?-->/g, "");
+  // Remove incomplete markers (during streaming)
   cleaned = cleaned.replace(/<!--P(HASE)?:?[^>]*$/, "");
+  cleaned = cleaned.replace(/<!--R(ECOMMEND)?:?[^>]*$/, "");
   // Remove any trailing partial HTML comment start
   cleaned = cleaned.replace(/<!-?-?$/, "");
   return cleaned.trim();
+}
+
+/**
+ * Extract Sage's mid-session recommendation pattern hint, if she emitted
+ * one. Returns the short pattern name (e.g. "decision paralysis") or null.
+ * Sage's prompt instructs her to emit at most once per session.
+ */
+function extractRecommendationHint(content: string): string | null {
+  const match = content.match(/<!--RECOMMEND:(.*?)-->/);
+  if (!match) return null;
+  const hint = match[1].trim();
+  return hint.length > 0 && hint.length < 120 ? hint : null;
 }
 
 interface ExtendedDialogueState extends DialogueState {
@@ -99,6 +113,12 @@ function saveToStorage(state: ExtendedDialogueState): void {
 export function useSocraticChat() {
   const [state, setState] = useState<ExtendedDialogueState>(INITIAL_STATE);
   const [isHydrated, setIsHydrated] = useState(false);
+  // Mid-session recommendation: when Sage emits a RECOMMEND marker we
+  // capture the pattern hint here. The chat page reads it, fires the
+  // recommendation stream once, then calls clearRecommendationHint.
+  const [recommendationHint, setRecommendationHint] = useState<string | null>(
+    null
+  );
   // Ghost mode is shared across screens via localStorage so the v2 ghost
   // toggle (/ghost) reflects + controls the same flag the chat uses.
   const [ghostMode, setGhostMode] = useState(false);
@@ -244,6 +264,7 @@ export function useSocraticChat() {
       context: prev.context, // Keep context
       profileSummary: prev.profileSummary, // Keep profile summary
     }));
+    setRecommendationHint(null);
 
     // Clear storage
     if (typeof window !== "undefined") {
@@ -399,7 +420,15 @@ export function useSocraticChat() {
           newPhase = phaseData.next as DialoguePhase;
         }
 
-        // Ensure final content is clean (without phase marker)
+        // Mid-session recommendation marker — Sage emits at most once per
+        // session when a pattern crystallises. The chat page reads this and
+        // fires the recommendation stream against the catalog.
+        const hint = extractRecommendationHint(fullContent);
+        if (hint) {
+          setRecommendationHint(hint);
+        }
+
+        // Ensure final content is clean (without phase or recommend markers)
         const cleanContent = stripPhaseMarker(fullContent);
 
         // No per-message DB write — transcript is sent only at session end.
@@ -456,6 +485,10 @@ export function useSocraticChat() {
     });
   }, []);
 
+  const clearRecommendationHint = useCallback(() => {
+    setRecommendationHint(null);
+  }, []);
+
   return {
     ...state,
     isHydrated,
@@ -467,5 +500,7 @@ export function useSocraticChat() {
     addInsight,
     ghostMode,
     toggleGhostMode,
+    recommendationHint,
+    clearRecommendationHint,
   };
 }

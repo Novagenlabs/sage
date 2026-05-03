@@ -28,6 +28,8 @@ function Inner() {
     problemStatement,
     profileSummary,
     conversationId,
+    recommendationHint,
+    clearRecommendationHint,
   } = useSocraticChat();
 
   // Generative-UI recommendation stream + ending overlay state. When the
@@ -41,6 +43,14 @@ function Inner() {
   // Captured at finish() time so post-stream/post-card navigation has the
   // id even after reset() clears state.
   const finishedConvIdRef = useRef<string | null>(null);
+
+  // Mid-session recommendation: a separate stream instance so it doesn't
+  // collide with the post-session one. Fires when Sage emits the
+  // RECOMMEND marker.
+  const midSessionStream = useRecommendationStream();
+  // Track which hints we've already fired against — guards against re-runs
+  // if the marker somehow re-appears in re-renders.
+  const firedHintsRef = useRef<Set<string>>(new Set());
 
   const [tab, setTab] = useState<"transcript" | "analysis">("transcript");
   const [draft, setDraft] = useState("");
@@ -185,6 +195,29 @@ function Inner() {
     recommendationStream.phase,
     recommendationStream.recommendation,
     router,
+  ]);
+
+  // Mid-session: when Sage emits a RECOMMEND marker, fire the matcher.
+  // Server enforces one-per-session via the midSession flag, but we also
+  // dedupe client-side per hint string so a single hint fires the stream
+  // exactly once.
+  useEffect(() => {
+    if (!recommendationHint || !conversationId) return;
+    const key = `${conversationId}::${recommendationHint}`;
+    if (firedHintsRef.current.has(key)) return;
+    firedHintsRef.current.add(key);
+    midSessionStream.start({
+      conversationId,
+      midSession: true,
+      patternHint: recommendationHint,
+    });
+    // Clear the hook's hint so subsequent re-renders don't loop.
+    clearRecommendationHint();
+  }, [
+    recommendationHint,
+    conversationId,
+    midSessionStream,
+    clearRecommendationHint,
   ]);
 
   if (status !== "authenticated" || !isHydrated || !freshDone || isResetting) {
@@ -384,6 +417,20 @@ function Inner() {
           </div>
         )}
       </div>
+
+      {/* Mid-session recommendation card — slides in above the input
+          when Sage notices a pattern crystallise. Non-blocking: user can
+          dismiss via "keep talking" or just keep typing. */}
+      <AnimatePresence>
+        {midSessionStream.recommendation && (
+          <RecommendationCard
+            key={midSessionStream.recommendation.recommendationId}
+            recommendation={midSessionStream.recommendation}
+            onDismiss={midSessionStream.reset}
+            variant="mid-session"
+          />
+        )}
+      </AnimatePresence>
 
       {/* Input */}
       <div className="px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] lg:px-2 lg:pb-6">

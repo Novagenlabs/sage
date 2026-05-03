@@ -184,6 +184,11 @@ const RERANK_CANDIDATES = 5;
  */
 function userHaystack(input: MatchInput): string {
   const parts: string[] = [];
+  // Sage's mid-session pattern hint goes first when present — it's the
+  // strongest single signal we have about what's actually going on.
+  if (input.patternHint) {
+    parts.push(`Sage just noticed: ${input.patternHint}.`);
+  }
   if (input.profileSummary) parts.push(input.profileSummary);
   if (input.latestSummary) parts.push(input.latestSummary);
   if (input.latestInsights && input.latestInsights.length > 0) {
@@ -273,9 +278,13 @@ async function embedAndRank(
     opts.siteUrl ?? process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const model = opts.rerankModel ?? "openai/gpt-4o-mini";
 
+  const hintLine = input.patternHint
+    ? `\n\n[the pattern Sage noticed]\n${input.patternHint}`
+    : "";
+
   const rerankPrompt = `You are Sage, a Socratic mentor. From the ${top.length} candidates below — already filtered as the most semantically similar to the user's recent conversations — pick the ONE most likely to resonate with what they're sitting with right now. Strongly prefer recommending; only return null if none of these even loosely fit.
 
-Output JSON: { "resourceId": "...", "reason": "<one sentence in Sage's voice, tied to what you noticed>" } | null
+Output JSON: { "resourceId": "...", "reason": "<one sentence in Sage's voice, tied to what you noticed>" } | null${hintLine}
 
 [user signal]
 ${haystack}
