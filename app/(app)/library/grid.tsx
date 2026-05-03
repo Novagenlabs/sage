@@ -117,11 +117,14 @@ export function LibraryGrid({ resources }: { resources: LibraryResource[] }) {
             nothing here matching that. try a different filter.
           </p>
         ) : (
-          <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-12 lg:gap-x-8 lg:gap-y-16">
+          <div className="mt-10 grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8 sm:gap-x-6 sm:gap-y-10 lg:gap-x-8 lg:gap-y-16">
             {filtered.map((r, i) => (
               <ResourceCard
                 key={r.id}
                 resource={r}
+                /* Featured-large card only on lg+ — at small widths the
+                   2-col grid is already a tight magazine rhythm and
+                   bumping one card up just creates a hole. */
                 featured={i === 0 && filter === "all"}
                 onClick={() => setActive(r)}
               />
@@ -213,8 +216,8 @@ function ResourceCard({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-40px" }}
       transition={{ duration: 0.5, ease: "easeOut" }}
-      className={`group text-left flex flex-col gap-4 ${
-        featured ? "lg:col-span-2 lg:row-span-1" : ""
+      className={`group text-left flex flex-col gap-3 ${
+        featured ? "lg:col-span-2" : ""
       }`}
     >
       <div className="relative">
@@ -226,26 +229,32 @@ function ResourceCard({
           className="transition-transform duration-500 group-hover:-translate-y-1"
         />
         {/* Hover play badge */}
-        <span className="pointer-events-none absolute bottom-3 right-3 h-10 w-10 rounded-full bg-chamber-900/85 backdrop-blur ring-1 ring-chamber-700 flex items-center justify-center text-chamber-50 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-1 group-hover:translate-y-0">
-          <Play className="h-4 w-4 ml-0.5" />
+        <span className="pointer-events-none absolute bottom-2 right-2 h-9 w-9 rounded-full bg-chamber-900/85 backdrop-blur ring-1 ring-chamber-700 flex items-center justify-center text-chamber-50 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-1 group-hover:translate-y-0 lg:bottom-3 lg:right-3 lg:h-10 lg:w-10">
+          <Play className="h-3.5 w-3.5 ml-0.5 lg:h-4 lg:w-4" />
         </span>
       </div>
 
       <div>
-        <p className="text-[10px] uppercase tracking-[0.22em] text-ember-400 mb-1">
+        <p className="text-[9px] uppercase tracking-[0.22em] text-ember-400 mb-1 lg:text-[10px]">
           {r.type}
-          {r.author ? <span className="text-chamber-500"> · {r.author}</span> : null}
+          {r.author ? (
+            <span className="text-chamber-500"> · {r.author}</span>
+          ) : null}
         </p>
         <h3
           className={`font-display tracking-tight text-chamber-50 leading-snug ${
-            featured ? "text-3xl sm:text-4xl" : "text-xl"
+            featured
+              ? "text-base sm:text-lg lg:text-3xl"
+              : "text-base lg:text-xl"
           }`}
         >
           {r.title}
         </h3>
         <p
-          className={`mt-2 text-sm text-chamber-300 leading-relaxed ${
-            featured ? "max-w-xl" : "line-clamp-3"
+          className={`mt-1.5 text-xs leading-relaxed text-chamber-300 lg:text-sm ${
+            featured
+              ? "lg:max-w-xl line-clamp-2 lg:line-clamp-none"
+              : "line-clamp-2 lg:line-clamp-3"
           }`}
         >
           {r.blurb}
