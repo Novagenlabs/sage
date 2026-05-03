@@ -14,6 +14,7 @@ import {
   CreditCard,
   Gift,
   HelpCircle,
+  BookOpen,
 } from "lucide-react";
 import { clsx } from "clsx";
 import { useEffect, useRef, useState } from "react";
@@ -24,6 +25,7 @@ const TABS = [
   { href: "/explore", label: "explore", icon: Compass },
   { href: "/entries", label: "entries", icon: ScrollText },
   { href: "/patterns", label: "patterns", icon: Layers },
+  { href: "/library", label: "library", icon: BookOpen },
 ];
 
 // Routes where the desktop top nav would get in the way.

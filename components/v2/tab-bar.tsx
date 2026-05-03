@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Compass, ScrollText, Layers } from "lucide-react";
+import { Home, Compass, ScrollText, Layers, BookOpen } from "lucide-react";
 import { clsx } from "clsx";
 
 const TABS = [
   { href: "/home", label: "today", icon: Home },
   { href: "/explore", label: "explore", icon: Compass },
+  { href: "/library", label: "library", icon: BookOpen },
   { href: "/entries", label: "entries", icon: ScrollText },
   { href: "/patterns", label: "patterns", icon: Layers },
 ];
