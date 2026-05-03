@@ -1,14 +1,18 @@
 "use client";
 
-// Procedural cover art for a Resource. Renders an SVG with two layered
-// radial gradients tinted by the resource's first theme, a faint grain
-// texture, and the title's first letter as a low-opacity serif initial in
-// the bottom-right. Deterministic — given (id, themes, title) the cover
-// always looks the same, so users build memory of "the gold one" or
-// "the plum one with the C in the corner."
+// Cover art for a Resource. Two layers:
 //
-// We don't use any AI image generation here — these are pure SVG.
+//   1. A real image at /resource-covers/<id>.{webp|jpg|png}, when one exists.
+//      You drop the file in /public/resource-covers/ and it just appears —
+//      no DB change, no admin step. If the file is missing the <img> 404s
+//      and we hide it, falling through to layer 2.
+//
+//   2. A procedural SVG fallback: two layered radial gradients tinted by
+//      the resource's first theme, a faint grain texture, and the title's
+//      first letter as a low-opacity serif initial. Deterministic given
+//      (id, themes, title) so the same resource always looks the same.
 
+import { useState } from "react";
 import type { ResourceType } from "@/lib/recommendations/types";
 
 // Six palettes mapped to themes that recur in the catalog. The pairs are
@@ -104,6 +108,8 @@ interface Props {
   /** Square width in CSS px. Defaults to fill the container. */
   size?: number | string;
   className?: string;
+  /** Override extension if you want — defaults to webp/jpg/png cascade. */
+  imageExt?: "webp" | "jpg" | "png";
 }
 
 export function ResourceCover({
@@ -113,7 +119,20 @@ export function ResourceCover({
   themes,
   size = "100%",
   className = "",
+  imageExt = "webp",
 }: Props) {
+  // Try the real image first; if it 404s, hide it and let the procedural
+  // SVG show through. We try webp → jpg → png in order; the user just
+  // drops a file with one of those extensions and it works.
+  const [extIdx, setExtIdx] = useState(0);
+  const EXT_ORDER: Array<"webp" | "jpg" | "png"> = imageExt === "webp"
+    ? ["webp", "jpg", "png"]
+    : [imageExt, "webp", "jpg", "png"].filter(
+        (e, i, a) => a.indexOf(e) === i
+      ) as Array<"webp" | "jpg" | "png">;
+  const [imageHidden, setImageHidden] = useState(false);
+  const currentExt = EXT_ORDER[extIdx];
+  const imgSrc = `/resource-covers/${id}.${currentExt}`;
   const palette = PALETTES[pickPaletteIndex(id, themes)];
   const initial = (title.match(/[a-zA-Z]/)?.[0] ?? "•").toUpperCase();
   // Stable variants so each cover differs slightly even within a palette.
@@ -196,6 +215,25 @@ export function ResourceCover({
             "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.6'/%3E%3C/svg%3E\")",
         }}
       />
+
+      {/* Real image overlay — shown when /resource-covers/<id>.{ext} exists.
+          Sits on top of the procedural SVG so dropping a file just works. */}
+      {!imageHidden && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={imgSrc}
+          alt=""
+          aria-hidden
+          className="absolute inset-0 h-full w-full object-cover"
+          loading="lazy"
+          onError={() => {
+            // Try next extension in the cascade; if exhausted, hide and
+            // let the procedural fallback show through.
+            if (extIdx < EXT_ORDER.length - 1) setExtIdx(extIdx + 1);
+            else setImageHidden(true);
+          }}
+        />
+      )}
     </div>
   );
 }
