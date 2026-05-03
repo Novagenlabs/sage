@@ -48,6 +48,7 @@ export async function GET(request: Request, { params }: RouteParams) {
                 author: true,
                 url: true,
                 blurb: true,
+                audioUrl: true,
               },
             },
           },

@@ -31,6 +31,7 @@ type RawRecommendation = {
     author: string | null;
     url: string;
     blurb: string;
+    audioUrl: string | null;
   };
 };
 
@@ -62,6 +63,7 @@ function toRecommendationPayload(
       author: raw.resource.author,
       url: raw.resource.url,
       blurb: raw.resource.blurb,
+      audioUrl: raw.resource.audioUrl,
     },
     reason: raw.reason,
     feedback:
