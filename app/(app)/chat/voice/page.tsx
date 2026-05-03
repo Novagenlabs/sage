@@ -26,7 +26,7 @@ import {
   AudioLines,
 } from "lucide-react";
 import { VoiceOrb, type OrbState } from "@/components/voice-orb-3d";
-import { V2VoicePicker } from "@/components/v2/voice-picker";
+import { VoicePickerSheet } from "@/components/v2/voice-picker-sheet";
 import { RecommendationCard } from "@/components/v2/recommendation-card";
 import { DEFAULT_VOICE_KEY } from "@/lib/voices";
 import { useRecommendationStream } from "@/lib/use-recommendation-stream";
@@ -321,7 +321,7 @@ function IdleSession({
 
       {/* Bottom stack — tight, grouped, anchored at the bottom safe area */}
       <div className="flex-shrink-0 px-6 pb-10 lg:pb-14 flex flex-col items-center gap-3 lg:gap-4">
-        <V2VoicePicker
+        <VoicePickerSheet
           selectedKey={selectedVoice}
           onSelect={onVoiceChange}
           disabled={isConnecting}

@@ -62,20 +62,24 @@ test("voice screen: shows voice picker + start button without connecting", async
   await signIn(page);
   await page.goto("/chat/voice");
 
-  // The voice picker is collapsed by default — shows a "voice · ify" pill.
-  // Tapping it should reveal the "choose a voice" hint inside the wheel.
+  // Tapping the "voice · ify" pill opens a bottom sheet — same picker UI as
+  // /onboarding/voice, with audio previews. We just verify the sheet opens
+  // and exposes the wheel + the "done" affordance, then close it.
   const pill = page.getByRole("button", { name: /voice/i }).first();
   await expect(pill).toBeVisible();
   await pill.click();
-  await expect(page.getByText(/choose a voice/i)).toBeVisible();
+  const dialog = page.getByRole("dialog", { name: /choose a voice/i });
+  await expect(dialog).toBeVisible();
+  // Close via Escape — avoids racing the framer-motion enter animation that
+  // briefly leaves the "done" button moving and makes Playwright's stability
+  // check time out.
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden({ timeout: 3_000 });
 
-  // Start button visible
+  // Start button visible + tappable now that the sheet is closed.
   await expect(
     page.getByRole("button", { name: /start session/i })
   ).toBeVisible();
-
-  // Tapping start with stubbed token should surface an error inline,
-  // not crash the page. Our stub returns 500 with body { error: "stubbed for tests" }.
   await page.getByRole("button", { name: /start session/i }).click();
   await expect(
     page.getByText(/stubbed for tests|couldn't connect|connection failed/i)
