@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Plus, Search, Loader2 } from "lucide-react";
+import { Search, Loader2, AudioLines } from "lucide-react";
 import { TabBar } from "@/components/v2/tab-bar";
 import { SageMark } from "@/components/v2/sage-mark";
 import { EntryDetailPane } from "@/components/v2/entry-detail-pane";
@@ -120,25 +120,27 @@ function EntriesInner() {
             <SageMark size={56} animated />
           </div>
           <h2 className="font-display text-3xl tracking-tight lowercase mb-3">
-            welcome.
+            no entries yet
           </h2>
           <p className="text-chamber-300 leading-snug lowercase">
-            ready to start your self-discovery journey? record your first
-            entry to start getting insights.
+            entries here are sage's pattern-level reading of each
+            conversation you have. talk with sage and the entry shows up
+            once she's noticed something worth keeping.
           </p>
           <Link
-            href="/chat/text?fresh=1"
+            href="/home"
             className="hidden lg:inline-flex mt-6 v2-btn v2-btn-primary"
           >
-            <Plus className="h-4 w-4" />
-            start your first entry
+            <AudioLines className="h-4 w-4" />
+            start a session
           </Link>
         </div>
         <Link
-          href="/chat/text?fresh=1"
+          href="/home"
+          aria-label="start a session"
           className="absolute bottom-32 right-6 v2-fab lg:hidden"
         >
-          <Plus className="h-5 w-5" />
+          <AudioLines className="h-5 w-5" />
         </Link>
         <TabBar />
       </div>
@@ -189,10 +191,11 @@ function EntriesInner() {
         </div>
 
         <Link
-          href="/chat/text?fresh=1"
+          href="/home"
+          aria-label="start a session"
           className="fixed bottom-24 right-6 v2-fab z-40"
         >
-          <Plus className="h-5 w-5" />
+          <AudioLines className="h-5 w-5" />
         </Link>
 
         <TabBar />
@@ -208,11 +211,11 @@ function EntriesInner() {
                 entries
               </h1>
               <Link
-                href="/chat/text?fresh=1"
+                href="/home"
                 className="v2-btn v2-btn-primary !py-2 !px-4 text-sm"
               >
-                <Plus className="h-3.5 w-3.5" />
-                new
+                <AudioLines className="h-3.5 w-3.5" />
+                new session
               </Link>
             </div>
 

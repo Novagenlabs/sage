@@ -38,7 +38,6 @@ function Inner() {
   const [endingPhase, setEndingPhase] = useState<
     "idle" | "saving" | "matching" | "card" | "done"
   >("idle");
-  const finishedConvIdRef = useRef<string | null>(null);
 
   const [tab, setTab] = useState<"transcript" | "analysis">("transcript");
   const [draft, setDraft] = useState("");
@@ -148,15 +147,13 @@ function Inner() {
   // streams the recommendation card. Mirrors voice/video's post-session flow.
   const finishAndReflect = async () => {
     if (messages.length === 0 || endingPhase !== "idle") return;
-    // Capture the id before reset() clears it, so the stream + the navigate
-    // both have it.
+    // Capture the id before reset() clears it, so the stream still has it.
     const id = conversationId;
-    finishedConvIdRef.current = id;
     setEndingPhase("saving");
     await reset();
     if (!id) {
       // Ghost mode or no row was created — skip the matcher entirely.
-      router.push("/entries");
+      router.push("/home");
       return;
     }
     setEndingPhase("matching");
@@ -164,6 +161,9 @@ function Inner() {
   };
 
   // When the stream resolves, decide whether to show the card or navigate.
+  // After a session, route home — the entry exists and the summariser is
+  // running async; sending the user back where they started is the natural
+  // rhythm. They can browse entries from the tab bar when they want to.
   useEffect(() => {
     if (endingPhase !== "matching") return;
     if (recommendationStream.recommendation) {
@@ -174,8 +174,7 @@ function Inner() {
       recommendationStream.phase === "done" ||
       recommendationStream.phase === "error"
     ) {
-      const id = finishedConvIdRef.current;
-      router.push(id ? `/entries/active?id=${id}` : "/entries");
+      router.push("/home");
     }
   }, [
     endingPhase,
@@ -212,10 +211,7 @@ function Inner() {
             {endingPhase === "card" && recommendationStream.recommendation ? (
               <RecommendationCard
                 recommendation={recommendationStream.recommendation}
-                onDismiss={() => {
-                  const id = finishedConvIdRef.current;
-                  router.push(id ? `/entries/active?id=${id}` : "/entries");
-                }}
+                onDismiss={() => router.push("/home")}
                 variant="post-session"
               />
             ) : (

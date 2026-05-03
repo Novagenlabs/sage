@@ -130,12 +130,12 @@ export default function VoiceChatPage() {
   const finishedRef = useRef(false);
 
   const navigateAfterFinish = useCallback(() => {
-    router.push(
-      conversationId
-        ? `/entries/active?id=${conversationId}`
-        : "/entries"
-    );
-  }, [conversationId, router]);
+    // After a session, route home. The session has been saved (the
+    // Conversation row exists, the summariser is running async) — the
+    // user is best served returning to where they started, not being
+    // dumped into the entries list.
+    router.push("/home");
+  }, [router]);
 
   const finish = useCallback(async () => {
     if (finishedRef.current) return;

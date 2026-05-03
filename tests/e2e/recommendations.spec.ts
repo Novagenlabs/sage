@@ -165,11 +165,11 @@ test("recommendation card: 'play in app' opens the in-app player sheet with a Yo
   await expect(dialog).toBeHidden({ timeout: 3_000 });
 });
 
-test("text chat: when the matcher returns no card, navigates straight to entries", async ({
+test("text chat: when the matcher returns no card, navigates straight home", async ({
   page,
 }) => {
-  // Matcher returns done with no data_card — the flow should skip the card
-  // and go to /entries (no conversationId in this stubbed flow → not /entries/active).
+  // Matcher returns done with no data_card — the flow should skip the
+  // card and go straight back to /home (no entries-list dump).
   const sseNoMatch =
     `data: ${JSON.stringify({ type: "thinking" })}\n\n` +
     `data: ${JSON.stringify({ type: "done" })}\n\n`;
@@ -197,6 +197,6 @@ test("text chat: when the matcher returns no card, navigates straight to entries
 
   await page.getByRole("button", { name: /finish and reflect/i }).click();
 
-  // No card → user lands on /entries (or /entries/active if conversationId present).
-  await page.waitForURL(/\/entries(\/active)?(\?|$)/, { timeout: 15_000 });
+  // No card → user lands on /home.
+  await page.waitForURL(/\/home(\?|$)/, { timeout: 15_000 });
 });

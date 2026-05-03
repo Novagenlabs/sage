@@ -56,13 +56,7 @@ export default function VideoChatPage() {
     <>
       <VideoChat
         userCredits={credits}
-        onClose={(conversationId) =>
-          router.push(
-            conversationId
-              ? `/entries/active?id=${conversationId}`
-              : "/entries"
-          )
-        }
+        onClose={() => router.push("/home")}
         onCreditsUpdate={() => update()}
       />
 
