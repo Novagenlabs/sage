@@ -38,6 +38,21 @@ export const mockPrisma = {
   feedback: {
     create: vi.fn(),
   },
+  resource: {
+    findMany: vi.fn(),
+    findUnique: vi.fn(),
+    findFirst: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
+  recommendation: {
+    findMany: vi.fn(),
+    findFirst: vi.fn(),
+    findUnique: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+  },
   payment: {
     findUnique: vi.fn(),
     update: vi.fn(),
