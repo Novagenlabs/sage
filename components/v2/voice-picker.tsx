@@ -11,8 +11,12 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Play, Pause } from "lucide-react";
 import { AVAILABLE_VOICES } from "@/lib/voices";
+
+// Pre-generated samples live at /public/voice-previews/<key>.mp3.
+// See scripts/generate-voice-previews.ts.
+const previewSrc = (key: string) => `/voice-previews/${key}.mp3`;
 
 const ITEM_H = 44; // px — every wheel row is the same height
 const VISIBLE_ROWS = 5; // 2 above, 1 centre, 2 below
@@ -42,11 +46,60 @@ export function V2VoicePicker({
   const wheelRef = useRef<HTMLDivElement>(null);
   const scrollSettleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Audio preview — single shared <audio> instance. Stops + reloads whenever
+  // the selected voice changes so we never play the wrong sample.
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [playing, setPlaying] = useState(false);
+
   const idx = Math.max(
     0,
     AVAILABLE_VOICES.findIndex((v) => v.key === selectedKey)
   );
   const selectedVoice = AVAILABLE_VOICES[idx];
+
+  // Reset playback whenever the user changes voice.
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
+    setPlaying(false);
+  }, [selectedKey]);
+
+  // Stop on unmount so the preview doesn't keep playing after navigation.
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.src = "";
+      }
+    };
+  }, []);
+
+  const togglePreview = () => {
+    if (!selectedVoice) return;
+    if (!audioRef.current) {
+      audioRef.current = new Audio(previewSrc(selectedVoice.key));
+      audioRef.current.addEventListener("ended", () => setPlaying(false));
+      audioRef.current.addEventListener("error", () => setPlaying(false));
+    } else {
+      // Make sure the src matches the current voice (in case hot-reload
+      // landed us with a stale instance).
+      const expected = previewSrc(selectedVoice.key);
+      if (!audioRef.current.src.endsWith(expected)) {
+        audioRef.current.src = expected;
+      }
+    }
+    if (playing) {
+      audioRef.current.pause();
+      setPlaying(false);
+    } else {
+      audioRef.current
+        .play()
+        .then(() => setPlaying(true))
+        .catch(() => setPlaying(false));
+    }
+  };
 
   // When the wheel opens, jump-scroll so the selected voice is centred.
   useEffect(() => {
@@ -182,9 +235,22 @@ export function V2VoicePicker({
               </div>
             </div>
 
-            <p className="text-[11px] text-chamber-500 mt-3 lowercase max-w-xs text-center mx-auto">
-              {selectedVoice?.description}
-            </p>
+            <div className="mt-3 flex items-center justify-center gap-3">
+              <button
+                onClick={togglePreview}
+                aria-label={playing ? "stop preview" : "preview voice"}
+                className="h-9 w-9 rounded-full bg-ember-500/15 ring-1 ring-ember-500/30 text-ember-300 hover:bg-ember-500/25 flex items-center justify-center transition-colors"
+              >
+                {playing ? (
+                  <Pause className="h-3.5 w-3.5" />
+                ) : (
+                  <Play className="h-3.5 w-3.5 ml-0.5" />
+                )}
+              </button>
+              <p className="text-[11px] text-chamber-500 lowercase max-w-xs">
+                {selectedVoice?.description}
+              </p>
+            </div>
 
             {!defaultOpen && (
               <button
