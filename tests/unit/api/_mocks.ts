@@ -53,6 +53,12 @@ export const mockPrisma = {
     create: vi.fn(),
     update: vi.fn(),
   },
+  passwordResetToken: {
+    findMany: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    updateMany: vi.fn(),
+  },
   payment: {
     findUnique: vi.fn(),
     update: vi.fn(),
@@ -64,7 +70,14 @@ export const mockPrisma = {
   usageRecord: {
     create: vi.fn(),
   },
-  $transaction: vi.fn(),
+  $transaction: vi.fn(async (ops: unknown) => {
+    // Resolve every promise in the array; tests can stub individual ops
+    // (user.update, passwordResetToken.update, etc.) and the transaction
+    // is just a sequence runner here.
+    if (Array.isArray(ops)) return Promise.all(ops);
+    if (typeof ops === "function") return (ops as (tx: unknown) => unknown)(undefined);
+    return ops;
+  }),
 };
 
 export const mockInngestSend = vi.fn();

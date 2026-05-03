@@ -39,6 +39,7 @@ model User {
   referrals     Referral[]
   feedback      Feedback[]
   recommendations Recommendation[]
+  passwordResetTokens PasswordResetToken[]
 }
 
 model Account {
@@ -189,6 +190,23 @@ model Referral {
 
   @@index([referrerId])
   @@index([status])
+}
+
+// Password reset token. We store only the bcrypt hash of the random token
+// the user receives — if the table is leaked, the tokens in it are useless.
+// Tokens expire after 1 hour and are marked used (single-use) on success.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
 }
 
 // Hand-curated catalog of resources Sage can recommend (books, articles,
