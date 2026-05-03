@@ -32,6 +32,9 @@ type RawRecommendation = {
     url: string;
     blurb: string;
     audioUrl: string | null;
+    bodyText: string | null;
+    bodyKind: string | null;
+    bodySource: string | null;
   };
 };
 
@@ -64,6 +67,13 @@ function toRecommendationPayload(
       url: raw.resource.url,
       blurb: raw.resource.blurb,
       audioUrl: raw.resource.audioUrl,
+      bodyText: raw.resource.bodyText,
+      bodyKind:
+        raw.resource.bodyKind === "passage" ||
+        raw.resource.bodyKind === "commentary"
+          ? raw.resource.bodyKind
+          : null,
+      bodySource: raw.resource.bodySource,
     },
     reason: raw.reason,
     feedback:

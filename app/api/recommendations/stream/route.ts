@@ -110,6 +110,9 @@ export async function POST(req: Request) {
                 themes: true,
                 why: true,
                 audioUrl: true,
+                bodyText: true,
+                bodyKind: true,
+                bodySource: true,
               },
             }),
           ]);
@@ -173,6 +176,12 @@ export async function POST(req: Request) {
             url: resource.url,
             blurb: resource.blurb,
             audioUrl: resource.audioUrl,
+            bodyText: resource.bodyText,
+            bodyKind:
+              resource.bodyKind === "passage" || resource.bodyKind === "commentary"
+                ? resource.bodyKind
+                : null,
+            bodySource: resource.bodySource,
           },
           reason: result.reason,
           feedback: null,

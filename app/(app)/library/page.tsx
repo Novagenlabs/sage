@@ -23,6 +23,9 @@ export default async function LibraryPage() {
       blurb: true,
       themes: true,
       audioUrl: true,
+      bodyText: true,
+      bodyKind: true,
+      bodySource: true,
     },
   });
 
@@ -35,6 +38,12 @@ export default async function LibraryPage() {
     blurb: r.blurb,
     themes: r.themes,
     audioUrl: r.audioUrl,
+    bodyText: r.bodyText,
+    bodyKind:
+      r.bodyKind === "passage" || r.bodyKind === "commentary"
+        ? r.bodyKind
+        : null,
+    bodySource: r.bodySource,
   }));
 
   return <LibraryGrid resources={resources} />;

@@ -1,20 +1,31 @@
 "use client";
 
-// Renders a Resource inline — YouTube embed, Spotify embed, or Sage's
-// narrated audio with an "open externally" fallback. Used as the body
-// of the player sheet that opens when the user taps "play" on a
-// recommendation card.
+// Renders a Resource inline. Used as the body of the player sheet
+// (recommendation card or library detail) when the user taps "play" or
+// opens a card.
 //
-// Decision tree:
-//   1. Source URL is a YouTube watch link  → YouTube iframe.
-//   2. Source URL is a Spotify episode/track → Spotify iframe.
-//   3. Source URL is a direct .mp3/.m4a/.ogg → HTML5 audio.
-//   4. Otherwise: if Sage has a narration MP3 (audioUrl), play it.
-//      Always show "open externally" as a fallback so the user can
-//      always reach the original source.
+// Render order, top to bottom:
+//   1. Embeddable media if URL maps to one — YouTube iframe, Spotify
+//      iframe, direct audio. Plays in a panel at the top.
+//   2. Sage's narration audio (audioUrl) — short ~30-50s intro, played
+//      via a custom scrubber.
+//   3. Sage's transformative reading (bodyText) — long-form commentary
+//      typeset for actual reading. Cited via bodySource.
+//   4. The blurb (one-liner) and an "open the original" link.
+//
+// Multiple of these can be present at once (e.g. a TED talk has the
+// embed AND a narration AND a written reading). The user can pick.
 
 import { useEffect, useRef, useState } from "react";
-import { ExternalLink, Pause, Play, Volume2 } from "lucide-react";
+import {
+  ExternalLink,
+  Pause,
+  Play,
+  Volume2,
+  BookOpen,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import { detectEmbed } from "@/lib/recommendations/embed";
 import type { RecommendationPayload } from "@/lib/recommendations/types";
 
@@ -47,12 +58,18 @@ export function ResourcePlayer({ resource, onClickOpen, hideHeading }: Props) {
     </div>
   );
 
-  // Embedded players: YouTube + Spotify drop their own controls. We just
-  // present them inside the sheet chrome.
-  if (embed.kind === "youtube" && embed.embedSrc) {
-    return (
-      <div className="space-y-4">
-        {heading}
+  // Compose the player from layered surfaces. Each is optional and only
+  // renders when its corresponding data is present.
+  const hasEmbed =
+    (embed.kind === "youtube" || embed.kind === "spotify" || embed.kind === "audio") &&
+    !!embed.embedSrc;
+
+  return (
+    <div className="space-y-4">
+      {heading}
+
+      {/* 1. Embedded media (YouTube / Spotify / direct audio) */}
+      {hasEmbed && embed.kind === "youtube" && (
         <div className="aspect-video w-full overflow-hidden rounded-2xl bg-chamber-900 border border-chamber-800">
           <iframe
             src={embed.embedSrc}
@@ -63,16 +80,8 @@ export function ResourcePlayer({ resource, onClickOpen, hideHeading }: Props) {
             loading="lazy"
           />
         </div>
-        <p className="text-sm text-chamber-300 leading-relaxed">{resource.blurb}</p>
-        <ExternalOpen href={resource.url} onClick={trackOpen} />
-      </div>
-    );
-  }
-
-  if (embed.kind === "spotify" && embed.embedSrc) {
-    return (
-      <div className="space-y-4">
-        {heading}
+      )}
+      {hasEmbed && embed.kind === "spotify" && (
         <iframe
           src={embed.embedSrc}
           title={resource.title}
@@ -81,43 +90,99 @@ export function ResourcePlayer({ resource, onClickOpen, hideHeading }: Props) {
           allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture"
           loading="lazy"
         />
-        <p className="text-sm text-chamber-300 leading-relaxed">{resource.blurb}</p>
-        <ExternalOpen href={resource.url} onClick={trackOpen} />
-      </div>
-    );
-  }
-
-  if (embed.kind === "audio" && embed.embedSrc) {
-    return (
-      <div className="space-y-4">
-        {heading}
+      )}
+      {hasEmbed && embed.kind === "audio" && (
         <audio
           controls
           src={embed.embedSrc}
           className="w-full"
           preload="metadata"
         />
-        <p className="text-sm text-chamber-300 leading-relaxed">{resource.blurb}</p>
-        <ExternalOpen href={resource.url} onClick={trackOpen} />
-      </div>
-    );
-  }
+      )}
 
-  // External source we can't embed — render Sage's narration if we have one.
-  return (
-    <div className="space-y-4">
-      {heading}
-      {resource.audioUrl ? (
-        <SageNarration src={resource.audioUrl} />
-      ) : (
-        <p className="text-sm text-chamber-400 italic leading-relaxed">
-          we don&apos;t have an in-app version of this one yet — open it
-          externally to read or listen.
+      {/* 2. Sage's short narrated intro (~30-50s) */}
+      {resource.audioUrl && <SageNarration src={resource.audioUrl} />}
+
+      {/* 3. Sage's long-form reading — typeset for actual reading. */}
+      {resource.bodyText && (
+        <SageReading
+          body={resource.bodyText}
+          source={resource.bodySource ?? null}
+        />
+      )}
+
+      {/* 4. The blurb is only a useful summary if we have NO body text;
+          when bodyText is present it covers everything the blurb would. */}
+      {!resource.bodyText && (
+        <p className="text-sm text-chamber-300 leading-relaxed">
+          {resource.blurb}
         </p>
       )}
-      <p className="text-sm text-chamber-300 leading-relaxed">{resource.blurb}</p>
+
       <ExternalOpen href={resource.url} onClick={trackOpen} />
     </div>
+  );
+}
+
+/**
+ * Sage's transformative reading. Typeset like a literary journal entry
+ * rather than a textarea of stuff: Cormorant body, drop cap on the first
+ * paragraph, generous line height, citation footer. Collapsible so the
+ * sheet stays scannable when the user just wants to play media.
+ */
+function SageReading({
+  body,
+  source,
+}: {
+  body: string;
+  source: string | null;
+}) {
+  // Default open on desktop, collapsed on small screens to keep the sheet
+  // scannable. The user can toggle either way.
+  const [open, setOpen] = useState<boolean | null>(null);
+
+  // First-render init: open if the device is roughly desktop-width.
+  useEffect(() => {
+    if (open !== null) return;
+    setOpen(typeof window !== "undefined" && window.innerWidth >= 1024);
+  }, [open]);
+
+  // Paragraphs separated by blank lines.
+  const paragraphs = body
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+
+  return (
+    <section className="rounded-2xl bg-chamber-900/60 border border-chamber-800 overflow-hidden">
+      <header className="flex items-center justify-between px-4 py-2.5 border-b border-chamber-800">
+        <p className="text-[10px] uppercase tracking-[0.22em] text-ember-400 inline-flex items-center gap-1.5">
+          <BookOpen className="h-3 w-3" />
+          sage's reading
+        </p>
+        <button
+          onClick={() => setOpen((o) => !o)}
+          aria-label={open ? "collapse" : "expand"}
+          className="text-chamber-500 hover:text-chamber-200 transition-colors"
+        >
+          {open ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+        </button>
+      </header>
+      {open && (
+        <div className="px-4 sm:px-5 py-5 sm:py-6">
+          <div className="space-y-4 text-[15px] leading-[1.7] text-chamber-100 font-display [&>p:first-child::first-letter]:font-display [&>p:first-child::first-letter]:text-5xl [&>p:first-child::first-letter]:leading-none [&>p:first-child::first-letter]:float-left [&>p:first-child::first-letter]:mr-2 [&>p:first-child::first-letter]:mt-1 [&>p:first-child::first-letter]:text-ember-400">
+            {paragraphs.map((p, i) => (
+              <p key={i}>{p}</p>
+            ))}
+          </div>
+          {source && (
+            <p className="mt-6 pt-4 border-t border-chamber-800 text-[11px] text-chamber-500 italic">
+              {source}
+            </p>
+          )}
+        </div>
+      )}
+    </section>
   );
 }
 

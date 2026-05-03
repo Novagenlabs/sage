@@ -59,6 +59,16 @@ export interface RecommendationPayload {
     blurb: string;
     /** Path under /public to a Sage-narrated MP3 intro (~30-50s). Optional. */
     audioUrl?: string | null;
+    /** Sage's transformative reading of the work — original commentary,
+     *  cited via bodySource and linked via url. Renders inline in the
+     *  player so the user always has something to read in-app even if the
+     *  external URL goes stale. Optional. */
+    bodyText?: string | null;
+    /** "passage" = excerpt of an original; "commentary" = Sage's reading;
+     *  null = no inline body. */
+    bodyKind?: "passage" | "commentary" | null;
+    /** Citation, e.g. "Marcus Aurelius, Meditations, trans. Long, 1862". */
+    bodySource?: string | null;
   };
   reason: string;
   /** Already-recorded feedback if the user opens the entry-detail later. */

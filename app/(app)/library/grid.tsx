@@ -26,6 +26,9 @@ export interface LibraryResource {
   blurb: string;
   themes: string[];
   audioUrl: string | null;
+  bodyText: string | null;
+  bodyKind: "passage" | "commentary" | null;
+  bodySource: string | null;
 }
 
 const FILTERS: Array<{ key: "all" | ResourceType; label: string }> = [
@@ -299,6 +302,9 @@ function DetailSheet({
     url: resource.url,
     blurb: resource.blurb,
     audioUrl: resource.audioUrl,
+    bodyText: resource.bodyText,
+    bodyKind: resource.bodyKind,
+    bodySource: resource.bodySource,
   };
 
   return (

@@ -227,6 +227,14 @@ model Resource {
   // generated via ElevenLabs from (title + author + blurb + why). Optional —
   // when null, the player falls back to external link or YouTube embed.
   audioUrl    String?
+  // Inline reading content. Populated only for resources where we own the
+  // text (public-domain works, our own writing). When non-null, the player
+  // renders this directly so we don't depend on external sites staying up.
+  bodyText    String?  @db.Text
+  // "passage" = curated excerpt; "full" = entire work; null = no inline body.
+  bodyKind    String?
+  // Citation, e.g. "Plato, Republic VII, trans. Jowett, 1871 (public domain)".
+  bodySource  String?
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
