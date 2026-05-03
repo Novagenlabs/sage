@@ -1,5 +1,7 @@
 # Sage library — image generation prompts
 
+> **Internal — keep under `/docs`.** Anything inside `/public` is served as a static asset, so this file does **not** belong there.
+
 Each cover is **square 1:1** (we render it cropped to aspect-square, so a 1024×1024 export looks great on retina). Save as **WebP** if you can (smallest), or JPG/PNG. Drop into `public/resource-covers/<id>.webp`.
 
 The component automatically prefers a real image over the procedural fallback. Order tried: `webp` → `jpg` → `png`. If a file is missing the page still renders — it just shows the procedural cover.
