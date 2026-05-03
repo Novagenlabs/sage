@@ -38,6 +38,7 @@ model User {
   payments      Payment[]
   referrals     Referral[]
   feedback      Feedback[]
+  recommendations Recommendation[]
 }
 
 model Account {
@@ -92,6 +93,7 @@ model Conversation {
   messages     Message[]
   insights     ConversationInsight[]
   usageRecords UsageRecord[]
+  recommendations Recommendation[]
 }
 
 model Message {
@@ -187,6 +189,52 @@ model Referral {
 
   @@index([referrerId])
   @@index([status])
+}
+
+// Hand-curated catalog of resources Sage can recommend (books, articles,
+// lectures, podcasts, videos, audiobooks). Themes are free-form pattern tags
+// that the matcher prompt reads alongside the user's profileSummary to
+// decide if a resource fits a session. New entries are added via the admin
+// UI at /admin/resources, no redeploy needed.
+model Resource {
+  id          String   @id @default(cuid())
+  type        String   // "book" | "article" | "lecture" | "podcast" | "video" | "audiobook"
+  title       String
+  author      String?
+  url         String   // canonical link the user opens
+  blurb       String   @db.Text          // 1-2 sentences for the recommendation card
+  themes      String[] @default([])      // free-form pattern tags
+  why         String   @db.Text          // 1-3 sentences: when/why a Sage user benefits
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  recommendations Recommendation[]
+
+  @@index([isActive])
+}
+
+// One recommendation Sage made to a user. Tied to the conversation that
+// triggered it (nullable for cross-session recs in the future). Captures
+// feedback so future matches can exclude dismissed resources and lean
+// toward themes the user has marked helpful.
+model Recommendation {
+  id             String    @id @default(cuid())
+  userId         String
+  conversationId String?
+  resourceId     String
+  reason         String    @db.Text   // Sage's one-sentence "why I'm suggesting this"
+  feedback       String?              // "helpful" | "not_for_me" | null
+  feedbackAt     DateTime?
+  clickedAt      DateTime?            // user opened the resource URL
+  createdAt      DateTime  @default(now())
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversation Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  resource     Resource      @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([conversationId])
 }
 
 // v2 product feedback — submitted from /v2/profile/feedback.
