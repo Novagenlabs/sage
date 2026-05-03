@@ -27,13 +27,18 @@ export interface NarratableResource {
   bodySource?: string | null;
 }
 
-// eleven_multilingual_v2 is the highest-quality stable model on ElevenLabs.
-// Slower than turbo but the voicing is noticeably richer — the right trade
-// for pre-rendered narrations that ship to /public.
+// eleven_v3 is ElevenLabs' most expressive model — alpha but publicly
+// available via the API. Better cadence + emotional range than
+// multilingual_v2, supports audio tags ([thoughtfully], [whispers],
+// [slowly], [chuckles] etc.) embedded inline in the script. 5,000-char
+// limit per request (our bodyTexts run 1,500-2,200, well under).
 //
-// To experiment with the v3 alpha, set NARRATION_MODEL_ID in env.
-const DEFAULT_MODEL_ID =
-  process.env.NARRATION_MODEL_ID ?? "eleven_multilingual_v2";
+// To revert to the older stable model, set NARRATION_MODEL_ID in env.
+const DEFAULT_MODEL_ID = process.env.NARRATION_MODEL_ID ?? "eleven_v3";
+
+// Per-request character cap for v3. We split on paragraph boundaries if
+// a future bodyText ever blows past this (none currently do).
+const V3_MAX_CHARS = 5000;
 
 // Default narrator: Emily — soft, nurturing, fits the literary-journal tone
 // of Sage's commentary better than the IFy chat voice. Override per-call
@@ -92,6 +97,15 @@ export async function generateResourceNarration(
   const modelId = opts?.modelId ?? DEFAULT_MODEL_ID;
   const text = buildNarrationScript(resource);
 
+  // v3 caps requests at 5,000 characters. Our curated commentaries fit
+  // comfortably; this guard catches future entries that would silently
+  // truncate or 400 server-side.
+  if (modelId === "eleven_v3" && text.length > V3_MAX_CHARS) {
+    throw new Error(
+      `Script for ${resource.id} is ${text.length} chars; v3 caps at ${V3_MAX_CHARS}. Trim bodyText or split into chunks.`
+    );
+  }
+
   const res = await fetch(
     `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`,
     {
@@ -104,14 +118,16 @@ export async function generateResourceNarration(
       body: JSON.stringify({
         text,
         model_id: modelId,
+        // Voice settings tuned per ElevenLabs v3 prompting guide:
+        //   stability ~0.5 = "Natural" — balanced range without drift.
+        //   style ~0.4    = interpretive warmth across long paragraphs.
+        //   similarity_boost retained from the picked voice's profile.
+        // For multilingual_v2 these values still produce excellent reads.
         voice_settings: {
           ...matchedVoice.settings,
-          // Long-form reading benefits from slightly less stability (more
-          // natural variation across paragraphs) and a touch more style
-          // (interpretive warmth across longer sentences). Floors keep us
-          // safely inside the supported range.
-          stability: Math.max(0.5, matchedVoice.settings.stability - 0.2),
-          style: Math.max(matchedVoice.settings.style, 0.2),
+          stability: 0.5,
+          style: 0.4,
+          use_speaker_boost: true,
         },
       }),
     }
