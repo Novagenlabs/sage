@@ -130,12 +130,15 @@ export default function VoiceChatPage() {
   const finishedRef = useRef(false);
 
   const navigateAfterFinish = useCallback(() => {
-    // After a session, route home. The session has been saved (the
-    // Conversation row exists, the summariser is running async) — the
-    // user is best served returning to where they started, not being
-    // dumped into the entries list.
-    router.push("/home");
-  }, [router]);
+    // After a real session, send the user to the paint-your-entry
+    // surface (the post-session ritual: pick a colour, optionally tag
+    // moods, then on to the entry detail). When there's no
+    // conversationId — either the session never actually started or it
+    // ran in ghost mode — there's nothing to paint, so go home.
+    router.push(
+      conversationId ? `/entries/active?id=${conversationId}` : "/home"
+    );
+  }, [conversationId, router]);
 
   const finish = useCallback(async () => {
     if (finishedRef.current) return;

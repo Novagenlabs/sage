@@ -56,7 +56,13 @@ export default function VideoChatPage() {
     <>
       <VideoChat
         userCredits={credits}
-        onClose={() => router.push("/home")}
+        onClose={(conversationId) =>
+          // Real session ended → paint-your-entry. No session ran (X tapped
+          // from idle, or ghost mode with no Conversation row) → home.
+          router.push(
+            conversationId ? `/entries/active?id=${conversationId}` : "/home"
+          )
+        }
         onCreditsUpdate={() => update()}
       />
 

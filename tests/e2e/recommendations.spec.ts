@@ -165,11 +165,13 @@ test("recommendation card: 'play in app' opens the in-app player sheet with a Yo
   await expect(dialog).toBeHidden({ timeout: 3_000 });
 });
 
-test("text chat: when the matcher returns no card, navigates straight home", async ({
+test("text chat: when the matcher returns no card, navigates to /entries/active", async ({
   page,
 }) => {
-  // Matcher returns done with no data_card — the flow should skip the
-  // card and go straight back to /home (no entries-list dump).
+  // Matcher returns done with no data_card. A real Conversation row
+  // exists (the stubConversationApis helper returns id "conv_test"
+  // from POST /api/conversations), so the post-session ritual is to
+  // land on /entries/active?id=… for the colour/mood paint step.
   const sseNoMatch =
     `data: ${JSON.stringify({ type: "thinking" })}\n\n` +
     `data: ${JSON.stringify({ type: "done" })}\n\n`;
@@ -197,6 +199,6 @@ test("text chat: when the matcher returns no card, navigates straight home", asy
 
   await page.getByRole("button", { name: /finish and reflect/i }).click();
 
-  // No card → user lands on /home.
-  await page.waitForURL(/\/home(\?|$)/, { timeout: 15_000 });
+  // Real session → paint surface.
+  await page.waitForURL(/\/entries\/active(\?|$)/, { timeout: 15_000 });
 });

@@ -38,6 +38,9 @@ function Inner() {
   const [endingPhase, setEndingPhase] = useState<
     "idle" | "saving" | "matching" | "card" | "done"
   >("idle");
+  // Captured at finish() time so post-stream/post-card navigation has the
+  // id even after reset() clears state.
+  const finishedConvIdRef = useRef<string | null>(null);
 
   const [tab, setTab] = useState<"transcript" | "analysis">("transcript");
   const [draft, setDraft] = useState("");
@@ -149,10 +152,11 @@ function Inner() {
     if (messages.length === 0 || endingPhase !== "idle") return;
     // Capture the id before reset() clears it, so the stream still has it.
     const id = conversationId;
+    finishedConvIdRef.current = id;
     setEndingPhase("saving");
     await reset();
     if (!id) {
-      // Ghost mode or no row was created — skip the matcher entirely.
+      // Ghost mode or no row was created — nothing to paint, go home.
       router.push("/home");
       return;
     }
@@ -161,9 +165,8 @@ function Inner() {
   };
 
   // When the stream resolves, decide whether to show the card or navigate.
-  // After a session, route home — the entry exists and the summariser is
-  // running async; sending the user back where they started is the natural
-  // rhythm. They can browse entries from the tab bar when they want to.
+  // After a real session we route to the paint-your-entry surface so the
+  // post-session ritual (colour, moods) still happens.
   useEffect(() => {
     if (endingPhase !== "matching") return;
     if (recommendationStream.recommendation) {
@@ -174,7 +177,8 @@ function Inner() {
       recommendationStream.phase === "done" ||
       recommendationStream.phase === "error"
     ) {
-      router.push("/home");
+      const id = finishedConvIdRef.current;
+      router.push(id ? `/entries/active?id=${id}` : "/home");
     }
   }, [
     endingPhase,
@@ -211,7 +215,10 @@ function Inner() {
             {endingPhase === "card" && recommendationStream.recommendation ? (
               <RecommendationCard
                 recommendation={recommendationStream.recommendation}
-                onDismiss={() => router.push("/home")}
+                onDismiss={() => {
+                  const id = finishedConvIdRef.current;
+                  router.push(id ? `/entries/active?id=${id}` : "/home");
+                }}
                 variant="post-session"
               />
             ) : (
