@@ -362,20 +362,22 @@ export default function AdminResourcesPage() {
                   ))}
                 </div>
               )}
-              {/* Actual destination URL — clickable, opens in new tab. */}
+              {/* Actual destination URL — clickable, opens in new tab.
+                  Use a flex row with min-w-0 so the truncate inside doesn't
+                  fight `break-all` and overflow on narrow screens. */}
               <a
                 href={r.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 text-[11px] text-ember-300 hover:text-ember-200 lowercase break-all"
+                className="flex items-center gap-1 text-[11px] text-ember-300 hover:text-ember-200 lowercase max-w-full min-w-0"
               >
                 <ExternalLink className="h-3 w-3 flex-shrink-0" />
-                <span className="truncate max-w-xs">{r.url}</span>
+                <span className="truncate min-w-0 flex-1">{r.url}</span>
               </a>
               {/* Sage-narration audio status — preview if it exists. */}
               {r.audioUrl ? (
-                <div className="flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1 rounded-full bg-ember-500/15 ring-1 ring-ember-500/30 text-ember-300 px-2 py-0.5 text-[10px] uppercase tracking-widest">
+                <div className="flex flex-col gap-2 max-w-full min-w-0 sm:flex-row sm:items-center">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-ember-500/15 ring-1 ring-ember-500/30 text-ember-300 px-2 py-0.5 text-[10px] uppercase tracking-widest self-start flex-shrink-0">
                     <Volume2 className="h-3 w-3" />
                     narrated
                   </span>
@@ -383,8 +385,7 @@ export default function AdminResourcesPage() {
                     controls
                     src={r.audioUrl}
                     preload="none"
-                    className="h-8"
-                    style={{ maxWidth: 240 }}
+                    className="h-8 w-full max-w-full"
                   />
                 </div>
               ) : (
