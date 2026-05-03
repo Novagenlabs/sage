@@ -317,6 +317,11 @@ function DetailSheet({
         className="fixed inset-0 z-40 bg-chamber-900/90 backdrop-blur-md"
         aria-hidden
       />
+      {/* Centering wrapper — needed because framer-motion's inline transform
+          on the animated child would otherwise clobber Tailwind's
+          -translate-x/-y classes, leaving the sheet anchored to the
+          top-left of the viewport's center on desktop. */}
+      <div className="fixed inset-0 z-50 pointer-events-none lg:flex lg:items-center lg:justify-center">
       <motion.div
         role="dialog"
         aria-modal="true"
@@ -325,7 +330,7 @@ function DetailSheet({
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: "100%", opacity: 0 }}
         transition={{ type: "spring", stiffness: 300, damping: 34 }}
-        className="fixed inset-x-0 bottom-0 z-50 h-[96dvh] overflow-y-auto bg-chamber-900 border-t border-chamber-800 rounded-t-3xl px-6 pb-[calc(env(safe-area-inset-bottom)+2rem)] pt-4 lg:inset-auto lg:left-1/2 lg:top-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2 lg:w-[min(880px,92vw)] lg:h-auto lg:max-h-[90vh] lg:rounded-3xl lg:border lg:px-12 lg:pt-7 lg:pb-12"
+        className="pointer-events-auto absolute inset-x-0 bottom-0 h-[96dvh] overflow-y-auto bg-chamber-900 border-t border-chamber-800 rounded-t-3xl px-6 pb-[calc(env(safe-area-inset-bottom)+2rem)] pt-4 lg:relative lg:inset-auto lg:w-[min(880px,92vw)] lg:h-auto lg:max-h-[90vh] lg:rounded-3xl lg:border lg:px-12 lg:pt-7 lg:pb-12"
       >
         <div className="flex items-center justify-between mb-6">
           <span className="text-xs text-chamber-500 uppercase tracking-widest">
@@ -379,6 +384,7 @@ function DetailSheet({
 
         <ResourcePlayer resource={playerResource} hideHeading />
       </motion.div>
+      </div>
     </>
   );
 }

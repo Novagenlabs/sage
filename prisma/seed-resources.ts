@@ -95,7 +95,7 @@ That's the surprise of *Meditations* the first time you read it. It isn't grand.
 
 The central instruction repeats so many times you stop being able to ignore it: *some things are in your control, most things are not, and confusion about which is which is the source of nearly all your suffering.* Other people's opinions of you, the weather, your reputation after death, what your colleague said about you — not in your control. The quality of your attention, the integrity of your reaction, your willingness to do the next decent thing — those are.
 
-Sage points to Marcus when someone is at war with the wrong thing. When their problem is "my partner did X" but the actual leak is "I keep replaying that they did X." When the situation is genuinely outside their grip but they're still treating their grip as the variable.
+Sage points to Marcus when you're at war with the wrong thing. When the problem is "my partner did X" but the actual leak is "I keep replaying that they did X." When the situation is genuinely outside your grip but you're still treating your grip as the variable.
 
 The Long translation is in the public domain. You can read it in a single tab. Most people read four or five pages and stop, not because it's hard, but because every paragraph is a small accusation. Read slowly. Read one entry at a time. The book is best as a daily five-minute practice — a man you can't argue with telling you, again, what you already know.`,
   },
@@ -121,7 +121,7 @@ The Long translation is in the public domain. You can read it in a single tab. M
 
 Water cuts stone. Bamboo bends in the storm and stands up after. The empty space inside a bowl is what makes it useful. The wheel turns because of the hole at its centre. Almost every metaphor in the book is about how *not-doing* — yielding, leaving room, letting things ripen — is the more powerful move. Not because doing nothing is virtuous, but because most of what we call "doing" is really *forcing*, and forcing has a long record of producing the opposite of what we wanted.
 
-There's a particular flavor of stuckness Sage sees often where the person is gripping. Gripping a relationship that is asking for distance. Gripping a goal that is asking to be set down. Gripping their own personality, refusing the version of themselves that wants to come next. The gripping feels like effort, like discipline. The *Tao* would call it the most expensive kind of laziness — a refusal to trust that things move on their own when you stop pushing them.
+There's a particular flavor of stuckness Sage sees often where you might be gripping. Gripping a relationship that is asking for distance. Gripping a goal that is asking to be set down. Gripping your own personality, refusing the version of you that wants to come next. The gripping feels like effort, like discipline. The *Tao* would call it the most expensive kind of laziness — a refusal to trust that things move on their own when you stop pushing them.
 
 The trick of the book is that it doesn't argue. It just keeps coming at the same idea sideways: *the sage acts without acting; he is firm by yielding.* Either the line lands or it doesn't. If it doesn't, you read the next verse and try again.
 
@@ -131,21 +131,21 @@ It's short. Most translations clock in under thirty pages. The Legge translation
     type: "book",
     title: "Letters to a Young Poet",
     author: "Rainer Maria Rilke",
-    url: "https://en.wikisource.org/wiki/Letters_to_a_Young_Poet",
+    url: "https://archive.org/details/letterstoyoungpo0000rilk",
     blurb:
       "Ten letters of patient counsel to a young writer: live the questions, do not seek answers prematurely, the difficulty itself is the work.",
     themes: ["patience", "becoming", "doubt-as-mentor", "living-the-questions"],
     why: "When someone is impatient with their own becoming — wanting an answer or a destination.",
     bodyKind: "commentary",
     bodySource:
-      "Source: Rainer Maria Rilke, Letters to a Young Poet, written 1903–1908. M. D. Herter Norton's English translation. Public domain transcription on Wikisource.",
+      "Source: Rainer Maria Rilke, Letters to a Young Poet, written 1903–1908. M. D. Herter Norton's English translation. Read the full book in the Internet Archive's library reader.",
     bodyText: `Rilke was twenty-seven when a stranger — a nineteen-year-old cadet at a military academy — sent him some poems and asked, in earnest, whether he should keep going. Rilke wrote back. Then again. Ten letters across five years. The cadet, Franz Kappus, eventually published them.
 
 The letters are about writing on the surface. Underneath they are about something almost no one teaches: the difference between *being given an answer* and *being able to live with a question.*
 
 Kappus keeps wanting to know — am I a real poet, should I quit, is this anything? Rilke refuses every time. He says: stop hunting the verdict. Stop measuring yourself against an imagined critic. Go inward and ask whether, if writing were forbidden, you would die. If yes, build your life around that yes. If no, that's also a real answer.
 
-The instruction Sage notices most often is from the fourth letter — *be patient toward all that is unsolved in your heart and try to love the questions themselves.* People come into a session wanting Sage to hand them the verdict. *Should I leave him. Should I quit. Am I a good person.* Rilke would say: the question is the place you live. You don't graduate from the question. The question matures with you, and when it has matured enough, it stops sounding like a question and starts sounding like a life.
+The instruction Sage notices most often is from the fourth letter — *be patient toward all that is unsolved in your heart and try to love the questions themselves.* You might come into a session wanting Sage to hand you the verdict. *Should I leave him. Should I quit. Am I a good person.* Rilke would say: the question is the place you live. You don't graduate from the question. The question matures with you, and when it has matured enough, it stops sounding like a question and starts sounding like a life.
 
 Read the fourth and the eighth letters first. They're each two or three pages. Slow paragraphs in a green-covered book. Whoever you are, whatever you're avoiding by waiting for an answer, Rilke saw you in 1903 and was kind to you anyway.`,
   },
@@ -165,7 +165,7 @@ Read the fourth and the eighth letters first. They're each two or three pages. S
 
 The book turns on a moment most spiritual stories skip. Siddhartha realizes he has been *running away from running away* — first from comfort, then back into comfort — and that what he was looking for has been quietly available the whole time, in any place he was actually paying attention. He becomes a ferryman on a small river. His teacher, in the end, is the water.
 
-Sage points to Siddhartha when someone has been seeking for so long that the seeking itself has become the problem. They keep adding practices, books, retreats, frameworks. They keep waiting for the thing that will finally fix them. Hesse's argument — written in 1922, before any of the modern self-help vocabulary existed — is that the fix doesn't come from above. It comes from staying long enough in one place that the place starts to teach you.
+Sage points to Siddhartha when you've been seeking for so long that the seeking itself has become the problem. You keep adding practices, books, retreats, frameworks. You keep waiting for the thing that will finally fix you. Hesse's argument — written in 1922, before any of the modern self-help vocabulary existed — is that the fix doesn't come from above. It comes from staying long enough in one place that the place starts to teach you.
 
 The novel is short, ninety pages, about one young man, told in a voice that's almost a fable. The English translation is public domain on Project Gutenberg. Read it across two evenings. Read the last twenty pages slowly — they're about the river, and about realizing that the people you used to disagree with were never wrong, exactly. They were just on a different bank.`,
   },
@@ -194,7 +194,7 @@ The question she started with was simple: what predicts whether a person feels t
 
 What the data kept saying, instead, was that the people who felt most connected had something else in common: they were *willing to be seen.* Not theatrically, not performatively. They were willing to be the first to say I love you, willing to risk being misread, willing to do the thing without knowing if it would work. The data forced her to use a word she didn't want to use as a researcher: vulnerability.
 
-Sage points to this talk when someone has built a life out of *not being a problem.* They have made themselves easy. They have practiced never quite needing anything. They are exhausted, and they suspect — accurately — that their carefulness has become the wall between them and the people they love.
+Sage points to this talk when you've built a life out of *not being a problem.* You've made yourself easy. You've practiced never quite needing anything. You're exhausted, and you suspect — accurately — that your carefulness has become the wall between you and the people you love.
 
 Brown's reframing is that vulnerability isn't weakness. It's the precondition of every experience worth having. Joy, love, belonging, courage — all of them require being seen with your guard down. The armor we built to keep out the bad feelings has been keeping out the good ones too, on the same channel.
 
@@ -225,7 +225,7 @@ The reason this matters in a session: people use these words interchangeably, bu
 
 Brown's intervention is almost embarrassingly simple: shame can't survive being spoken. Said out loud to one person who doesn't recoil, it loses ninety percent of its power. Kept in the dark, it grows. The whole talk is essentially an argument for finding *one* person you can say the worst thing to — not a partner, not a follower count, just one trustworthy human.
 
-Sage points here when someone is in a long internal whisper of you-are-broken. The whisper is louder than it should be because nothing has ever interrupted it. The talk gives you the vocabulary to interrupt it, and the permission to actually try.
+Sage points here when you're in a long internal whisper of you-are-broken. The whisper is louder than it should be because nothing has ever interrupted it. The talk gives you the vocabulary to interrupt it, and the permission to actually try.
 
 It's about fifteen minutes. Watch it on a quiet morning, not before a meeting. It hits harder than people expect.`,
   },
@@ -252,7 +252,7 @@ Three things go wrong, all at once. First, paralysis — when the choice has thi
 
 The lever Schwartz offers is small but real: *be a satisficer, not a maximizer.* A satisficer figures out what's good enough, and once they find it, they stop. A maximizer tries to find the best, which means they have to evaluate every option against every other, and they suspect even after the choice that there was a better one. Maximizers are objectively more successful by external measures and reliably less happy.
 
-Sage points to this when the person describes themselves as "indecisive" or "overthinking." They are usually neither. They are running a maximizer's algorithm in a world that has too many options for that algorithm to terminate. The fix isn't to think harder. It's to lower the bar from *the best* to *good enough,* and then to actually let the deciding be done when it's done.
+Sage points to this when you describe yourself as "indecisive" or "overthinking." You're usually neither. You're running a maximizer's algorithm in a world that has too many options for that algorithm to terminate. The fix isn't to think harder. It's to lower the bar from *the best* to *good enough,* and then to actually let the deciding be done when it's done.
 
 The talk is twenty minutes, sharp and funny. Watch it before any choice you've been re-litigating for more than a week.`,
   },
@@ -279,7 +279,7 @@ Her core observation, drawn from interviews across many countries, is that desir
 
 The trick of the talk is the question Perel asks her clients. Not *when do you feel close to your partner?* That's familiar territory. The question that breaks something open is *when do I find myself most drawn to my partner?* The answers cluster: when they're across the room confidently doing something they're good at. When they're laughing with someone else. When they're separate, in their own life, briefly outside the gravitational pull of *us.*
 
-Sage points to Perel when the pattern in a long-term relationship is the slow erosion of *individuality* in the name of closeness. The partners have merged. They share everything. They have no friends or projects or interior life that doesn't involve the other. They have made themselves perfectly known, and they are quietly bored.
+Sage points to Perel when the pattern in your long-term relationship is the slow erosion of *individuality* in the name of closeness. You've merged. You share everything. There are no friends or projects or interior life that doesn't involve the other. You've made yourselves perfectly known to each other, and you're quietly bored.
 
 The talk is nineteen minutes. Watch it with the person you live with. Then talk about what each of you used to do alone, and stopped.`,
   },
@@ -306,7 +306,7 @@ She is funny on purpose. Underneath the humor, the talk is about the part of cre
 
 The single most useful thing in the talk is the line about *first drafts being shitty drafts and that's okay.* It's been quoted so often it's become a meme, but Lamott's actual claim is steeper than the meme suggests: the only way to get to a good piece of work is by being willing to make a bad one first, all the way through, without secretly trying to make it good. Most blocked writers aren't blocked. They are trying to write the third draft on the first pass, and they are quietly punishing themselves for being unable to.
 
-Sage points here for anyone whose perfectionism shows up disguised as procrastination. The talk is fifteen minutes. Watch it once. Then go open the file.`,
+Sage points here when your perfectionism shows up disguised as procrastination. The talk is fifteen minutes. Watch it once. Then go open the file.`,
   },
 
   // ───────── speeches & essays ─────────
@@ -382,7 +382,7 @@ The Letter from Birmingham Jail is his reply. It's written on the margins of a n
 
 What makes the letter still relevant is that it's about something larger than civil rights legislation in 1963. It's about the moral structure of moderation. The clergymen weren't villains. They were decent people who genuinely preferred the cause of justice to be advanced *politely* — without protests, without arrests, without disturbing their Sunday. King's argument is that a moderation which always asks the people most hurt to absorb a little more delay is itself a form of injustice. Comfortable people setting the pace for uncomfortable ones.
 
-Sage points to this letter when someone is in a smaller version of the same dynamic. They are being told *wait* by people who are not the ones doing the waiting. They are being asked to keep their voice down by people whose lives don't change either way. The letter gives them language to refuse. Not language to be cruel — King is never cruel — but language that names the real cost of staying patient.
+Sage points to this letter when you're in a smaller version of the same dynamic. You're being told *wait* by people who are not the ones doing the waiting. You're being asked to keep your voice down by people whose lives don't change either way. The letter gives you language to refuse. Not language to be cruel — King is never cruel — but language that names the real cost of staying patient.
 
 It's a long read. Sit with it. The full text is hosted by UPenn's African Studies Center, which has been the canonical online archive for decades.`,
   },
@@ -406,7 +406,7 @@ The talk is short — twenty minutes spoken aloud, eight pages on paper. Its cen
 
 Lorde isn't naive. She is explicit that speaking has costs. People react. Relationships shift. Some don't survive. Her argument isn't that speaking is easy. It's that *the silence is also costing you,* and the cost is just hidden because it accumulates so slowly.
 
-Sage points to this talk when the pattern is staying small to keep someone else comfortable, and the person has stopped noticing the bargain. The PDF on Lehigh's site is the cleanest version online. Read it once for the speech itself, then sit for a few minutes and ask the question Lorde asked: what would I most regret not saying?`,
+Sage points to this talk when the pattern is staying small to keep someone else comfortable, and you've stopped noticing the bargain. The PDF on Lehigh's site is the cleanest version online. Read it once for the speech itself, then sit for a few minutes and ask the question Lorde asked: what would I most regret not saying?`,
   },
 
   // ───────── modern essays (link-only, Sage commentary primary) ─────────
@@ -428,7 +428,7 @@ The drawings get uncomfortable fast. By his late thirties, Urban realizes he has
 
 The essay is short and visual. Most people read it in fifteen minutes and stare at the wall for thirty more. There isn't a cute conclusion. The boxes are the conclusion. Once you've seen them, you can't quite un-see them, and that's the point.
 
-Sage points to this essay when someone is treating a relationship — with a parent, an old friend, a city they keep meaning to visit — as if there were unlimited future on it. There isn't. There's some finite small number of weekends, and most of the relationship's actual quality lives inside that small number. Urban is not telling you what to do. He's just turning on a light. The decisions you make under the light are yours.
+Sage points to this essay when you're treating a relationship — with a parent, an old friend, a city you keep meaning to visit — as if there were unlimited future on it. There isn't. There's some finite small number of weekends, and most of the relationship's actual quality lives inside that small number. Urban is not telling you what to do. He's just turning on a light. The decisions you make under the light are yours.
 
 Read it on Wait But Why. Read it once a year. The math doesn't get less true.`,
   },
@@ -450,7 +450,7 @@ Her observation is that almost everyone, when asked, knows which is which. The c
 
 Luna isn't dramatic about this. She doesn't tell you to quit your job or break up with your partner. The essay's strength is that it just *names* the dynamic. It gives you the two words. Once you have them, the thing you've been quietly walking around in your own life starts to be visible. You catch yourself, mid-sentence, talking about a *should* as if it were a *must.* Or vice versa.
 
-Sage points to this essay when someone is mid-sentence, telling Sage about the path they're on, and the language is full of *I have to* and *people are counting on me.* Luna's question, gently: do you *have to,* or are you choosing this and calling it required so you don't have to feel the choice?
+Sage points to this essay when you're mid-sentence, telling Sage about the path you're on, and the language is full of *I have to* and *people are counting on me.* Luna's question, gently: do you *have to,* or are you choosing this and calling it required so you don't have to feel the choice?
 
 The essay is on Medium. It's short — fifteen minutes, with watercolor illustrations. It's the kind of thing that lands quickly or doesn't land at all; the people for whom it lands tend to remember where they were sitting.`,
   },
@@ -474,7 +474,7 @@ The first regret — the one she heard the most — was about *living the life e
 
 The other four follow a similar pattern. People wished they hadn't worked so hard. They wished they had stayed in touch with friends. They wished they had let themselves be happier — most of them, Ware notes, knew that happiness was a *choice* and didn't make it. They wished they'd had the courage to express their feelings.
 
-Sage points to Ware when someone is mid-life, miles into a path that isn't quite theirs, and is treating that as a problem they'll address *later.* The patients in Ware's care had also planned to address it later. The blog post is short. Read it now, not later. It's free at bronnieware.com.`,
+Sage points to Ware when you're mid-life, miles into a path that isn't quite yours, and you're treating that as a problem you'll address *later.* The patients in Ware's care had also planned to address it later. The blog post is short. Read it now, not later. It's free at bronnieware.com.`,
   },
   {
     type: "article",
@@ -494,7 +494,7 @@ A partial eclipse is a curiosity. You take a look through a paper filter, you sa
 
 Dillard's gift, in the essay, is that she resists making this *about* something. She doesn't reach for a metaphor. She just describes, very carefully, what it's like to lose, for two minutes, the feeling that you understand reality. Time bent. Space bent. Other people on the hill became unrecognizable to her. She writes that you cannot know it without having seen it, and seeing the photograph is worse than nothing because the photograph makes you think you know.
 
-Sage points to this essay when someone has had a moment — a near-miss, a death in the family, a psychedelic, a child being born — that opened a door they cannot un-open. They keep trying to fit it back into the small frame their life had before. Dillard's essay gives them permission not to. Some experiences are larger than the vocabulary you brought.
+Sage points to this essay when you've had a moment — a near-miss, a death in the family, a psychedelic, a child being born — that opened a door you cannot un-open. You keep trying to fit it back into the small frame your life had before. Dillard's essay gives you permission not to. Some experiences are larger than the vocabulary you brought.
 
 The Atlantic has it free. It's twenty-five minutes. Read it slowly.`,
   },
@@ -516,7 +516,7 @@ The Atlantic has it free. It's twenty-five minutes. Read it slowly.`,
 
 What makes it useful — and not voyeuristic — is that the patterns repeat. The fight that you and your partner have had eight times this year is *also* this couple's fight. Different details, same shape. Listening to someone else's version of your dynamic, while a brilliant therapist quietly re-frames it, is a kind of clarity you can almost never reach when you're inside your own version. You can hear what they're not saying. You can see the move *before* it gets made. And then, sometimes, you can recognize that move in yourself.
 
-Sage points here when a couple keeps saying *we just have communication problems* but the deeper pattern is that they're locked in roles — the pursuer and the distancer, the parent and the child, the one who feels the feelings and the one who solves the problems. Perel doesn't make a couple's problem disappear in fifty minutes. She makes it *visible,* often for the first time.
+Sage points here when you and your partner keep saying *we just have communication problems* but the deeper pattern is that you're locked in roles — the pursuer and the distancer, the parent and the child, the one who feels the feelings and the one who solves the problems. Perel doesn't make a couple's problem disappear in fifty minutes. She makes it *visible,* often for the first time.
 
 The podcast is free on most platforms. Each season has a few free episodes, and the rest are behind a paywall. Sage's rec for a starter: any episode whose summary names a dynamic you and someone in your life have lived. Listen alone first. Then, if you can, with the person.`,
   },
@@ -541,7 +541,7 @@ The podcast is free on most platforms. Each season has a few free episodes, and 
 
 The result is an archive of conversations that don't sound like content. They sound like two people thinking together. A geneticist talks about her mother's death and how it changed her relationship to data. A poet talks about the inside of a hospice room. A monk talks about anger. None of these conversations resolve in a tidy lesson. They open something.
 
-Sage points to this podcast when the user is in a season that needs *companionship* more than information. They don't need another framework. They need to hear other people, in real time, navigate questions that don't have answers — illness, faith, grief, vocation, what it actually means to be loved. The podcast's gift is that it doesn't pretend the questions have been figured out. It treats them as the kind of questions you stay with for life.
+Sage points to this podcast when you're in a season that needs *companionship* more than information. You don't need another framework. You need to hear other people, in real time, navigate questions that don't have answers — illness, faith, grief, vocation, what it actually means to be loved. The podcast's gift is that it doesn't pretend the questions have been figured out. It treats them as the kind of questions you stay with for life.
 
 The full archive is free at onbeing.org. Each episode is around an hour. There's no order to listen in. Sage's rec is to look at the guest list, find someone whose work you've never read, and start there. The not-knowing is part of the pleasure.`,
   },
@@ -561,7 +561,7 @@ The full archive is free at onbeing.org. Each episode is around an hour. There's
 
 This episode aired in 2008. Six weeks later he died unexpectedly in his sleep. Tippett re-released it. It became one of the most-played episodes On Being has ever produced, and it's easy to hear why. O'Donohue talks about friendship the way most of us talk about the weather — with the assumption that it is the central fact, not a footnote. He talks about thresholds. He talks about how we live so much of our lives in interior spaces designed to extract usefulness from us, and how *beauty* — a tree, a piece of music, a long conversation — is what restores us to the part of ourselves that isn't useful for anything.
 
-Sage points to this episode when the person is touched by a kind of loneliness no therapeutic vocabulary quite reaches. The loneliness of needing to be *known* rather than *managed.* The loneliness of being too efficient for too long. O'Donohue speaks slowly, in long, beautiful Irish-cadenced sentences, and somewhere in the second half the listener tends to soften.
+Sage points to this episode when you're touched by a kind of loneliness no therapeutic vocabulary quite reaches. The loneliness of needing to be *known* rather than *managed.* The loneliness of being too efficient for too long. O'Donohue speaks slowly, in long, beautiful Irish-cadenced sentences, and somewhere in the second half you tend to soften.
 
 The episode is free at onbeing.org. It's about an hour. Listen with a cup of tea and no other tabs open.`,
   },
@@ -583,7 +583,7 @@ His central frame is the *three marriages.* You are, simultaneously, married to 
 
 His argument, in this conversation with Tippett, is that the three cannot be bargained against each other. You can't make up for a marriage to a self that you've abandoned by pouring more into the marriage to your partner. The starved one will keep being starved, and the others will eventually feel it too.
 
-Sage points to this episode when someone is using the language of *trade-offs* — *I just have to push through this season at work,* *the relationship will recover when X.* Whyte's quiet challenge is that the seasons don't end the way we tell ourselves they will, and the part of you that gets put down keeps being the part that gets put down.
+Sage points to this episode when you're using the language of *trade-offs* — *I just have to push through this season at work,* *the relationship will recover when X.* Whyte's quiet challenge is that the seasons don't end the way we tell ourselves they will, and the part of you that gets put down keeps being the part that gets put down.
 
 The conversation is fifty-three minutes. Whyte reads several of his poems in it. Listen for those — they tend to undo whatever your reasoning was in a single line.`,
   },

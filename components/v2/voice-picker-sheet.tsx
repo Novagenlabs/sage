@@ -78,7 +78,13 @@ export function VoicePickerSheet({ selectedKey, onSelect, disabled }: Props) {
               aria-hidden
             />
 
-            {/* Sheet — anchored to bottom on mobile, centered modal on desktop */}
+            {/* Sheet — anchored to bottom on mobile, centered modal on desktop.
+                The flex-centered wrapper is what holds the desktop position;
+                we can't use Tailwind translate classes on the motion.div
+                itself because framer-motion's inline transform overrides
+                them, leaving the sheet pinned to the top-left of the
+                viewport's center. */}
+            <div className="fixed inset-0 z-50 pointer-events-none lg:flex lg:items-center lg:justify-center">
             <motion.div
               role="dialog"
               aria-modal="true"
@@ -87,7 +93,7 @@ export function VoicePickerSheet({ selectedKey, onSelect, disabled }: Props) {
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: "100%", opacity: 0 }}
               transition={{ type: "spring", stiffness: 320, damping: 36 }}
-              className="fixed inset-x-0 bottom-0 z-50 bg-chamber-900 border-t border-chamber-800 rounded-t-3xl px-6 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-4 lg:inset-auto lg:left-1/2 lg:top-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2 lg:w-[440px] lg:rounded-3xl lg:border lg:px-10 lg:pb-10"
+              className="pointer-events-auto absolute inset-x-0 bottom-0 bg-chamber-900 border-t border-chamber-800 rounded-t-3xl px-6 pb-[calc(env(safe-area-inset-bottom)+1.5rem)] pt-4 lg:relative lg:inset-auto lg:w-[440px] lg:rounded-3xl lg:border lg:px-10 lg:pb-10"
             >
               {/* Drag handle (visual cue) */}
               <div
@@ -140,6 +146,7 @@ export function VoicePickerSheet({ selectedKey, onSelect, disabled }: Props) {
                 done
               </button>
             </motion.div>
+            </div>
           </>
         )}
       </AnimatePresence>

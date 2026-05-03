@@ -13,7 +13,9 @@
     "test:all": "npm run test && npm run test:e2e",
     "seed:resources": "tsx prisma/seed-resources.ts",
     "narrate:resources": "tsx scripts/generate-resource-audio.ts",
-    "embed:resources": "tsx scripts/embed-resources.ts"
+    "embed:resources": "tsx scripts/embed-resources.ts",
+    "covers:resources": "tsx scripts/scrape-resource-covers.ts",
+    "covers:webp": "tsx scripts/convert-resource-covers-to-webp.ts"
   },
   "dependencies": {
     "@anam-ai/js-sdk": "^4.12.0",

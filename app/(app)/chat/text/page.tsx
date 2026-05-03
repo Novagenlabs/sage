@@ -432,8 +432,25 @@ function Inner() {
         )}
       </AnimatePresence>
 
+      {/* Bottom finish — mirrors the header button so users don't have to
+          scroll all the way up after a long session. Only shows once
+          there's actual conversation, and stays hidden during the
+          summarise/recommend overlay. */}
+      {messages.length > 0 && endingPhase === "idle" && (
+        <div className="px-4 pt-3 lg:px-2">
+          <button
+            onClick={finishAndReflect}
+            className="inline-flex items-center gap-1.5 rounded-full bg-chamber-800/70 hover:bg-chamber-700 text-chamber-200 px-3 py-1.5 text-xs lowercase"
+            aria-label="finish and reflect"
+          >
+            <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
+            finish &amp; reflect
+          </button>
+        </div>
+      )}
+
       {/* Input */}
-      <div className="px-4 pt-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] lg:px-2 lg:pb-6">
+      <div className="px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+1rem)] lg:px-2 lg:pb-6">
         <div className="flex items-center gap-2 bg-chamber-800/70 rounded-full px-4 py-2">
           <input
             ref={inputRef}
