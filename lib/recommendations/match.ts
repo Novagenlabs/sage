@@ -51,7 +51,16 @@ function buildUserMessage(input: MatchInput): string {
 
   if (input.lovedResourceIds && input.lovedResourceIds.length > 0) {
     parts.push(
-      `# Resources the user marked helpful before (lean toward similar themes)\n${input.lovedResourceIds.join(", ")}`
+      `# Resources the user marked helpful before (lean toward similar themes — but do NOT recommend any of these specific items again)\n${input.lovedResourceIds.join(", ")}`
+    );
+  }
+
+  if (
+    input.alreadyRecommendedResourceIds &&
+    input.alreadyRecommendedResourceIds.length > 0
+  ) {
+    parts.push(
+      `# Resources already recommended to this user in past sessions (do NOT recommend any of these again)\n${input.alreadyRecommendedResourceIds.join(", ")}`
     );
   }
 
@@ -93,7 +102,12 @@ function extractJson(content: string): string | null {
  * because the LLM was conservative on a particular call.
  */
 export function themeOverlapFallback(input: MatchInput): MatchResult | null {
-  const dismissed = new Set(input.dismissedResourceIds ?? []);
+  // Same exclude rule as the LLM path — dismissed AND
+  // already-recommended-this-user.
+  const excluded = new Set([
+    ...(input.dismissedResourceIds ?? []),
+    ...(input.alreadyRecommendedResourceIds ?? []),
+  ]);
 
   const haystack = [
     input.profileSummary ?? "",
@@ -123,7 +137,7 @@ export function themeOverlapFallback(input: MatchInput): MatchResult | null {
   type Scored = { id: string; score: number; matchedThemes: string[] };
   const scored: Scored[] = [];
   for (const r of input.catalog) {
-    if (dismissed.has(r.id)) continue;
+    if (excluded.has(r.id)) continue;
     const matched = r.themes.filter((theme) =>
       tokenize(theme).some((tok) => haystack.includes(tok))
     );
@@ -178,7 +192,13 @@ export async function matchResource(
   const siteUrl =
     opts?.siteUrl ?? process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
 
-  const dismissed = new Set(input.dismissedResourceIds ?? []);
+  // Single combined exclude set — anything dismissed, anything previously
+  // recommended (even successfully). Used for guard + fallback so they
+  // can't disagree.
+  const excluded = new Set([
+    ...(input.dismissedResourceIds ?? []),
+    ...(input.alreadyRecommendedResourceIds ?? []),
+  ]);
   const catalogIds = new Set(input.catalog.map((r) => r.id));
 
   let response: Response;
@@ -256,11 +276,12 @@ export async function matchResource(
     );
     return themeOverlapFallback(input);
   }
-  if (dismissed.has(candidate.resourceId)) {
-    console.warn("[match] Model picked dismissed resourceId — overriding to fallback");
+  if (excluded.has(candidate.resourceId)) {
+    console.warn(
+      "[match] Model picked excluded resourceId (dismissed or already recommended) — overriding to fallback"
+    );
     return themeOverlapFallback({
       ...input,
-      // Exclude this id from the fallback too, so we don't re-pick it.
       dismissedResourceIds: [
         ...(input.dismissedResourceIds ?? []),
         candidate.resourceId,

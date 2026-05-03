@@ -192,6 +192,36 @@ describe("matchResource", () => {
     expect(result?.resourceId).toBe("r_isolation");
   });
 
+  it("excludes resources already recommended in past sessions", async () => {
+    // LLM picks r_decision but it was already recommended last week →
+    // matcher should override and reach for r_decision_alt via fallback.
+    const fetchImpl = stubFetchOnce(
+      JSON.stringify({
+        resourceId: "r_decision",
+        reason: "fits the decision pattern.",
+      })
+    );
+    const result = await matchResource(
+      {
+        ...baseInput,
+        profileSummary: "spirals on every decision, regret afterward",
+        alreadyRecommendedResourceIds: ["r_decision"],
+      },
+      { fetchImpl: fetchImpl as unknown as typeof fetch }
+    );
+    expect(result?.resourceId).toBe("r_decision_alt");
+  });
+
+  it("fallback excludes already-recommended resources too", () => {
+    const result = themeOverlapFallback({
+      profileSummary: "alienation, awakening, isolation",
+      catalog: CATALOG,
+      alreadyRecommendedResourceIds: ["r_isolation"],
+    });
+    // Only r_isolation overlaps; excluding it nulls out.
+    expect(result).toBeNull();
+  });
+
   it("fallback excludes dismissed resources", async () => {
     const fetchImpl = stubFetchOnce("null");
     const result = await matchResource(

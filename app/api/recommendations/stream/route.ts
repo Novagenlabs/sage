@@ -80,7 +80,11 @@ export async function POST(req: Request) {
         send({ type: "thinking" });
 
         // Pull all the inputs the matcher needs in parallel.
-        const [user, recentConvs, feedbackHistory, catalogRows] =
+        // priorRecs covers EVERY past recommendation (regardless of feedback)
+        // so we never resurface the same resource twice. feedbackHistory
+        // also pulls those, but split out below for the explicit "loved" /
+        // "not_for_me" buckets.
+        const [user, recentConvs, priorRecs, catalogRows] =
           await Promise.all([
             prisma.user.findUnique({
               where: { id: userId },
@@ -93,10 +97,10 @@ export async function POST(req: Request) {
               take: 5,
             }),
             prisma.recommendation.findMany({
-              where: { userId, feedback: { not: null } },
+              where: { userId },
               select: { resourceId: true, feedback: true },
-              orderBy: { feedbackAt: "desc" },
-              take: 50,
+              orderBy: { createdAt: "desc" },
+              take: 200,
             }),
             prisma.resource.findMany({
               where: { isActive: true },
@@ -120,12 +124,18 @@ export async function POST(req: Request) {
         const recentMoods = Array.from(
           new Set(recentConvs.flatMap((c) => c.moods))
         );
-        const dismissedResourceIds = feedbackHistory
+        const dismissedResourceIds = priorRecs
           .filter((r) => r.feedback === "not_for_me")
           .map((r) => r.resourceId);
-        const lovedResourceIds = feedbackHistory
+        const lovedResourceIds = priorRecs
           .filter((r) => r.feedback === "helpful")
           .map((r) => r.resourceId);
+        // Every past recommendation, regardless of feedback. Prevents
+        // re-surfacing the same resource on a future session even when the
+        // user skipped the feedback buttons last time.
+        const alreadyRecommendedResourceIds = Array.from(
+          new Set(priorRecs.map((r) => r.resourceId))
+        );
 
         const catalog: CatalogResource[] = catalogRows.map(toCatalogResource);
 
@@ -136,6 +146,7 @@ export async function POST(req: Request) {
           recentMoods,
           dismissedResourceIds,
           lovedResourceIds,
+          alreadyRecommendedResourceIds,
           catalog,
         });
 

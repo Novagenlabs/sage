@@ -35,6 +35,10 @@ export interface MatchInput {
   dismissedResourceIds?: string[];
   /** Resources the user has marked "helpful" — bias toward similar themes. */
   lovedResourceIds?: string[];
+  /** Resources Sage has previously recommended to this user, regardless of
+   *  whether they gave feedback. Excluded from new matches so the user
+   *  doesn't keep getting the same recommendation across sessions. */
+  alreadyRecommendedResourceIds?: string[];
   /** Full active catalog. v1 caps at ~30-50 entries so it fits in one prompt. */
   catalog: CatalogResource[];
 }
