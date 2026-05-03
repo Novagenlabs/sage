@@ -95,6 +95,76 @@ test("text chat: finish & reflect renders the recommendation card and records fe
   expect(feedbackBody?.feedback).toBe("helpful");
 });
 
+test("recommendation card: 'play in app' opens the in-app player sheet with a YouTube embed", async ({
+  page,
+}) => {
+  // Same SSE stub as above but with a YouTube URL so we can verify the
+  // ResourcePlayer renders an iframe rather than just the external link.
+  const sse =
+    `data: ${JSON.stringify({ type: "thinking" })}\n\n` +
+    `data: ${JSON.stringify({
+      type: "data_card",
+      data: {
+        kind: "resource_recommendation",
+        recommendation: {
+          recommendationId: "rec_yt",
+          resource: {
+            id: "res_yt",
+            type: "video",
+            title: "Plato's Allegory of the Cave",
+            author: "TED-Ed",
+            url: "https://www.youtube.com/watch?v=1RWOpQXTltA",
+            blurb: "A short retelling of the parable.",
+            audioUrl: null,
+          },
+          reason: "you keep circling around isolation.",
+          feedback: null,
+        },
+      },
+    })}\n\n` +
+    `data: ${JSON.stringify({ type: "done" })}\n\n`;
+
+  await page.route("**/api/recommendations/stream", async (route) => {
+    await route.fulfill({
+      status: 200,
+      headers: {
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache",
+      },
+      body: sse,
+    });
+  });
+
+  await signIn(page);
+  await page.goto("/chat/text?fresh=1");
+  const input = page.getByPlaceholder("tap to type...");
+  await expect(input).toBeVisible({ timeout: 15_000 });
+  await input.fill("hello");
+  await page.keyboard.press("Enter");
+  await expect(page.getByText("Got it.").first()).toBeVisible({
+    timeout: 15_000,
+  });
+
+  await page.getByRole("button", { name: /finish and reflect/i }).click();
+  await expect(
+    page.getByText(/plato's allegory of the cave/i)
+  ).toBeVisible({ timeout: 10_000 });
+
+  // Tap the play-in-app button → sheet opens with a YouTube iframe inside.
+  await page.getByRole("button", { name: /play in app/i }).click();
+  const dialog = page.getByRole("dialog", {
+    name: /plato's allegory of the cave/i,
+  });
+  await expect(dialog).toBeVisible();
+  await expect(
+    dialog.locator("iframe[src*='youtube.com/embed/1RWOpQXTltA']")
+  ).toBeAttached();
+
+  // Close on Escape — avoids racing the framer-motion enter animation.
+  await page.keyboard.press("Escape");
+  await expect(dialog).toBeHidden({ timeout: 3_000 });
+});
+
 test("text chat: when the matcher returns no card, navigates straight to entries", async ({
   page,
 }) => {
