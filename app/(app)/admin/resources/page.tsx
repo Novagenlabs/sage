@@ -7,7 +7,15 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Loader2, Plus, Trash2, Save, X, ExternalLink } from "lucide-react";
+import {
+  Loader2,
+  Plus,
+  Trash2,
+  Save,
+  X,
+  ExternalLink,
+  Volume2,
+} from "lucide-react";
 
 const TYPE_OPTIONS = [
   "book",
@@ -27,12 +35,16 @@ type Resource = {
   blurb: string;
   themes: string[];
   why: string;
+  audioUrl: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
 };
 
-type DraftResource = Omit<Resource, "id" | "createdAt" | "updatedAt">;
+type DraftResource = Omit<
+  Resource,
+  "id" | "createdAt" | "updatedAt" | "audioUrl"
+>;
 
 const EMPTY_DRAFT: DraftResource = {
   type: "book",
@@ -52,6 +64,7 @@ export default function AdminResourcesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | "new" | null>(null);
+  const [regeneratingId, setRegeneratingId] = useState<string | null>(null);
   const [draft, setDraft] = useState<DraftResource>(EMPTY_DRAFT);
   const [saving, setSaving] = useState(false);
 
@@ -137,6 +150,26 @@ export default function AdminResourcesPage() {
       load();
     } finally {
       setSaving(false);
+    }
+  };
+
+  const regenerateAudio = async (id: string) => {
+    if (regeneratingId) return;
+    setRegeneratingId(id);
+    try {
+      const res = await fetch(`/api/admin/resources/${id}/audio`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        const { error: msg } = (await res.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        alert(msg ?? `narration failed (${res.status})`);
+        return;
+      }
+      load();
+    } finally {
+      setRegeneratingId(null);
     }
   };
 
@@ -339,6 +372,26 @@ export default function AdminResourcesPage() {
                 <ExternalLink className="h-3 w-3 flex-shrink-0" />
                 <span className="truncate max-w-xs">{r.url}</span>
               </a>
+              {/* Sage-narration audio status — preview if it exists. */}
+              {r.audioUrl ? (
+                <div className="flex items-center gap-2">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-ember-500/15 ring-1 ring-ember-500/30 text-ember-300 px-2 py-0.5 text-[10px] uppercase tracking-widest">
+                    <Volume2 className="h-3 w-3" />
+                    narrated
+                  </span>
+                  <audio
+                    controls
+                    src={r.audioUrl}
+                    preload="none"
+                    className="h-8"
+                    style={{ maxWidth: 240 }}
+                  />
+                </div>
+              ) : (
+                <p className="text-[10px] text-chamber-500 lowercase">
+                  no narration yet
+                </p>
+              )}
             </div>
             <div className="flex sm:flex-col gap-2 flex-shrink-0 sm:gap-1.5">
               <button
@@ -346,6 +399,18 @@ export default function AdminResourcesPage() {
                 className="text-xs text-ember-300 hover:text-ember-200 lowercase"
               >
                 edit
+              </button>
+              <button
+                onClick={() => regenerateAudio(r.id)}
+                disabled={regeneratingId === r.id}
+                className="text-xs text-chamber-300 hover:text-chamber-100 inline-flex items-center gap-1 lowercase disabled:opacity-50"
+              >
+                {regeneratingId === r.id ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : (
+                  <Volume2 className="h-3 w-3" />
+                )}
+                {r.audioUrl ? "regen" : "narrate"}
               </button>
               <button
                 onClick={() => remove(r.id)}
