@@ -320,7 +320,7 @@ function DetailSheet({
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: "100%", opacity: 0 }}
         transition={{ type: "spring", stiffness: 300, damping: 34 }}
-        className="fixed inset-x-0 bottom-0 z-50 max-h-[94vh] overflow-y-auto bg-chamber-900 border-t border-chamber-800 rounded-t-3xl px-6 pb-[calc(env(safe-area-inset-bottom)+2rem)] pt-4 lg:inset-auto lg:left-1/2 lg:top-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2 lg:w-[640px] lg:max-h-[88vh] lg:rounded-3xl lg:border lg:px-10 lg:pb-10"
+        className="fixed inset-x-0 bottom-0 z-50 h-[96dvh] overflow-y-auto bg-chamber-900 border-t border-chamber-800 rounded-t-3xl px-6 pb-[calc(env(safe-area-inset-bottom)+2rem)] pt-4 lg:inset-auto lg:left-1/2 lg:top-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2 lg:w-[640px] lg:h-auto lg:max-h-[88vh] lg:rounded-3xl lg:border lg:px-10 lg:pb-10"
       >
         <div className="flex items-center justify-between mb-6">
           <span className="text-xs text-chamber-500 uppercase tracking-widest">

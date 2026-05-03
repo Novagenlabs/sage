@@ -1,16 +1,21 @@
 // Hand-curated initial Resource catalog for Sage's recommendation engine.
 //
-// Themes are intentionally PATTERN-LEVEL, not generic categories. They
-// should mirror the language Sage actually uses in conversation summaries
-// ("isolation-of-insight", "decision-paralysis"), so the matcher LLM can
-// see the connection between user signal and resource fit.
+// CURATION RULE — every item must satisfy at least one of:
+//   1. Plays in-app — YouTube embed, Spotify episode, direct audio file.
+//   2. Reads in one click on a public, paywall-free page.
 //
-// URLs default to Wikipedia for resources where a single canonical link
-// doesn't exist. Replace via the admin UI at /admin/resources once you've
-// found a definitive source.
+// This rules out "Wikipedia article about a copyrighted book the user
+// would have to go buy." We replaced those with TED talks, Project
+// Gutenberg / Wikisource, free essays, and foundation-archive URLs.
 //
-// Idempotent: upserts on (title, author) — re-running won't duplicate rows
-// but WILL refresh blurb/themes/why if you've edited them here.
+// Themes are intentionally PATTERN-LEVEL ("isolation-of-insight",
+// "decision-paralysis"), not generic categories — they're what the matcher
+// LLM uses to bridge user signal to a resource.
+//
+// Idempotent: upserts on (title, author). Re-running the seed refreshes
+// blurb/themes/why/url for retained items. After upsert, any active
+// Resource NOT in the SEED list below is marked isActive: false (preserves
+// existing recommendation rows but hides dropped items from new matches).
 //
 // Run with: npx tsx prisma/seed-resources.ts
 
@@ -29,7 +34,60 @@ interface SeedResource {
 }
 
 const SEED: SeedResource[] = [
-  // ── Awareness, awakening, isolation of insight ────────────────────────────
+  // ── Public-domain texts (full read in browser, no paywall) ────────────
+  {
+    type: "book",
+    title: "Meditations",
+    author: "Marcus Aurelius",
+    url: "https://www.gutenberg.org/ebooks/2680",
+    blurb:
+      "The private notebooks of a Roman emperor: daily reminders to do the work, accept what isn't yours to control, and remember death.",
+    themes: [
+      "control-vs-acceptance",
+      "daily-practice",
+      "mortality",
+      "duty-as-anchor",
+    ],
+    why: "When someone is exhausted from trying to control what isn't theirs to control. The Long translation is in the public domain — entire book reads in a browser tab.",
+  },
+  {
+    type: "book",
+    title: "Tao Te Ching",
+    author: "Lao Tzu",
+    url: "https://www.gutenberg.org/ebooks/216",
+    blurb:
+      "The classic of letting go, non-doing (wu-wei), and the strength of yielding.",
+    themes: [
+      "wu-wei",
+      "non-action",
+      "simplicity",
+      "letting-go",
+      "control-vs-acceptance",
+    ],
+    why: "When the pattern is over-control — gripping for an outcome that pushing harder won't produce. James Legge's full PD translation, free to read.",
+  },
+  {
+    type: "book",
+    title: "Siddhartha",
+    author: "Hermann Hesse",
+    url: "https://www.gutenberg.org/ebooks/2500",
+    blurb:
+      "A young man leaves home to find truth — first in renunciation, then in indulgence, finally beside a river that knows more than either.",
+    themes: ["seeking", "identity", "river-as-metaphor", "the-long-detour"],
+    why: "When someone has been seeking for so long they've forgotten what they were looking for. 1922 — public domain in the US, full text on Gutenberg.",
+  },
+  {
+    type: "book",
+    title: "Letters to a Young Poet",
+    author: "Rainer Maria Rilke",
+    url: "https://en.wikisource.org/wiki/Letters_to_a_Young_Poet",
+    blurb:
+      "Ten letters of patient counsel to a young writer: live the questions, do not seek answers prematurely, the difficulty itself is the work.",
+    themes: ["patience", "becoming", "doubt-as-mentor", "living-the-questions"],
+    why: "When someone is impatient with their own becoming — wanting an answer or a destination. Rilke's posture is the antidote.",
+  },
+
+  // ── TED talks (free, with transcripts) ────────────────────────────────
   {
     type: "video",
     title: "Plato's Allegory of the Cave",
@@ -44,104 +102,8 @@ const SEED: SeedResource[] = [
       "seeing-what-others-cant",
       "frustration-with-others-blindness",
     ],
-    why: "For anyone who has 'seen something' — about themselves, a relationship, a system — and feels lonely or frustrated when the people closest to them can't see it too. Names the experience.",
+    why: "For anyone who has 'seen something' — about themselves, a relationship, a system — and feels lonely or frustrated when the people closest to them can't see it too.",
   },
-  {
-    type: "lecture",
-    title: "The Real You",
-    author: "Alan Watts",
-    url: "https://en.wikipedia.org/wiki/Alan_Watts",
-    blurb:
-      "Alan Watts on the costume of personality and the question 'who is the one who is asking?'",
-    themes: ["identity", "ego", "self-as-construction", "who-am-i"],
-    why: "When someone is sitting with the feeling of not knowing who they really are — beyond roles, beyond performance — Watts is a gentle door.",
-  },
-  {
-    type: "lecture",
-    title: "On Loneliness",
-    author: "Jiddu Krishnamurti",
-    url: "https://en.wikipedia.org/wiki/Jiddu_Krishnamurti",
-    blurb:
-      "Krishnamurti distinguishes loneliness (a state of inner poverty we run from) from aloneness (intimacy with what is).",
-    themes: [
-      "loneliness",
-      "aloneness",
-      "running-from-self",
-      "solitude-vs-isolation",
-    ],
-    why: "When loneliness is the surface complaint but the deeper story is the inability to be alone with oneself.",
-  },
-
-  // ── Meaning, purpose, suffering ───────────────────────────────────────────
-  {
-    type: "book",
-    title: "Man's Search for Meaning",
-    author: "Viktor Frankl",
-    url: "https://en.wikipedia.org/wiki/Man%27s_Search_for_Meaning",
-    blurb:
-      "Frankl's account of surviving the camps and the school of psychology born from it: that meaning, not pleasure or power, is what we need most.",
-    themes: [
-      "meaning-amid-suffering",
-      "purpose",
-      "will-to-meaning",
-      "responsibility-as-freedom",
-    ],
-    why: "When someone is suffering and asking 'what is this for?' Frankl doesn't take the suffering away — he changes its grammar.",
-  },
-  {
-    type: "book",
-    title: "The Myth of Sisyphus",
-    author: "Albert Camus",
-    url: "https://en.wikipedia.org/wiki/The_Myth_of_Sisyphus",
-    blurb:
-      "Camus' answer to the absurd: not despair, not faith, but lucid revolt. We must imagine Sisyphus happy.",
-    themes: ["absurdity", "meaning-making", "defiance", "doing-it-anyway"],
-    why: "When someone's sitting with the meaninglessness of repetitive work or life and asking why bother. Camus doesn't fix the absurd; he reframes the relationship to it.",
-  },
-  {
-    type: "book",
-    title: "Letters to a Young Poet",
-    author: "Rainer Maria Rilke",
-    url: "https://en.wikipedia.org/wiki/Letters_to_a_Young_Poet",
-    blurb:
-      "Ten letters of patient counsel to a young writer: live the questions, do not seek answers prematurely, the difficulty itself is the work.",
-    themes: ["patience", "becoming", "doubt-as-mentor", "living-the-questions"],
-    why: "When someone is impatient with their own becoming — wanting an answer or a destination. Rilke's posture is the antidote.",
-  },
-
-  // ── Decision, paralysis, choice ───────────────────────────────────────────
-  {
-    type: "article",
-    title: "10/10/10",
-    author: "Suzy Welch",
-    url: "https://en.wikipedia.org/wiki/Suzy_Welch",
-    blurb:
-      "A simple decision framework: how will I feel about this in 10 minutes, 10 months, 10 years?",
-    themes: [
-      "decision-paralysis",
-      "decision-making",
-      "perspective",
-      "time-horizons",
-    ],
-    why: "When someone is stuck on a decision because they can't see past the immediate emotional weight. Three time-frames break the spell.",
-  },
-  {
-    type: "book",
-    title: "The Paradox of Choice",
-    author: "Barry Schwartz",
-    url: "https://en.wikipedia.org/wiki/The_Paradox_of_Choice",
-    blurb:
-      "More options ≠ more freedom. Schwartz on why infinite choice produces paralysis, regret, and chronic dissatisfaction.",
-    themes: [
-      "decision-paralysis",
-      "maximizing-vs-satisficing",
-      "regret",
-      "freedom-as-constraint",
-    ],
-    why: "When the problem isn't a lack of options but the burden of having too many — and the doubt that follows every choice.",
-  },
-
-  // ── Vulnerability, shame, perfectionism ───────────────────────────────────
   {
     type: "video",
     title: "The Power of Vulnerability",
@@ -158,147 +120,27 @@ const SEED: SeedResource[] = [
     why: "When the pattern is keeping people at arm's length to stay safe — and Sage notices the cost of that protection.",
   },
   {
-    type: "book",
-    title: "Bird by Bird",
-    author: "Anne Lamott",
-    url: "https://en.wikipedia.org/wiki/Bird_by_Bird",
+    type: "video",
+    title: "The Paradox of Choice",
+    author: "Barry Schwartz",
+    url: "https://www.ted.com/talks/barry_schwartz_the_paradox_of_choice",
     blurb:
-      "Lamott on the lifelong fight with perfectionism, shitty first drafts, and starting again every morning.",
+      "Schwartz's TED talk on why infinite options produce paralysis, regret, and chronic dissatisfaction — and the difference between maximisers and satisficers.",
     themes: [
-      "perfectionism",
-      "creative-block",
-      "starting-anyway",
-      "self-criticism",
+      "decision-paralysis",
+      "maximizing-vs-satisficing",
+      "regret",
+      "freedom-as-constraint",
     ],
-    why: "When perfectionism is keeping someone from beginning at all. Lamott's voice is permission.",
+    why: "When the problem isn't a lack of options but the burden of having too many — and the doubt that follows every choice.",
   },
   {
-    type: "book",
-    title: "Radical Acceptance",
-    author: "Tara Brach",
-    url: "https://en.wikipedia.org/wiki/Tara_Brach",
-    blurb:
-      "Brach on the 'trance of unworthiness' and a practice for meeting yourself with the same care you'd offer a friend.",
-    themes: [
-      "self-criticism",
-      "trance-of-unworthiness",
-      "self-compassion",
-      "acceptance",
-    ],
-    why: "When someone is being merciless with themselves and can't see it.",
-  },
-
-  // ── Groundlessness, change, uncertainty ───────────────────────────────────
-  {
-    type: "book",
-    title: "When Things Fall Apart",
-    author: "Pema Chödrön",
-    url: "https://en.wikipedia.org/wiki/Pema_Ch%C3%B6dr%C3%B6n",
-    blurb:
-      "Pema Chödrön on staying present with groundlessness — the moments when our usual strategies stop working.",
-    themes: [
-      "groundlessness",
-      "embracing-uncertainty",
-      "fear-of-change",
-      "staying-with-discomfort",
-    ],
-    why: "When someone's life has shifted and they're reaching for the old shape of things instead of meeting what's actually here.",
-  },
-  {
-    type: "book",
-    title: "Tao Te Ching",
-    author: "Lao Tzu",
-    url: "https://en.wikipedia.org/wiki/Tao_Te_Ching",
-    blurb:
-      "The classic of letting go, non-doing (wu-wei), and the strength of yielding.",
-    themes: [
-      "wu-wei",
-      "non-action",
-      "simplicity",
-      "letting-go",
-      "control-vs-acceptance",
-    ],
-    why: "When the pattern is over-control — gripping for an outcome that pushing harder won't produce.",
-  },
-
-  // ── Identity, parts of self, integration ──────────────────────────────────
-  {
-    type: "book",
-    title: "No Bad Parts",
-    author: "Richard Schwartz",
-    url: "https://en.wikipedia.org/wiki/Internal_Family_Systems_Model",
-    blurb:
-      "An introduction to Internal Family Systems: every part of you (the inner critic, the protector, the wounded child) had a reason it became that way.",
-    themes: [
-      "parts-of-self",
-      "inner-critic",
-      "self-criticism",
-      "integration",
-      "self-as-leader",
-    ],
-    why: "When someone is at war with a part of themselves and trying to defeat it. IFS reframes the whole battle.",
-  },
-  {
-    type: "article",
-    title: "The Shadow",
-    author: "Carl Jung",
-    url: "https://en.wikipedia.org/wiki/Shadow_(psychology)",
-    blurb:
-      "Jung on the disowned parts of the psyche — what we hate in others is often what we cannot accept in ourselves.",
-    themes: [
-      "shadow-self",
-      "projection",
-      "integration",
-      "what-we-hate-in-others",
-    ],
-    why: "When someone keeps reacting strongly to a quality in others. The reaction is information.",
-  },
-  {
-    type: "book",
-    title: "Siddhartha",
-    author: "Hermann Hesse",
-    url: "https://en.wikipedia.org/wiki/Siddhartha_(novel)",
-    blurb:
-      "A young man leaves home to find truth — first in renunciation, then in indulgence, finally beside a river that knows more than either.",
-    themes: ["seeking", "identity", "river-as-metaphor", "the-long-detour"],
-    why: "When someone has been seeking for so long they've forgotten what they were looking for.",
-  },
-
-  // ── Fear, control, anxiety ────────────────────────────────────────────────
-  {
-    type: "book",
-    title: "Meditations",
-    author: "Marcus Aurelius",
-    url: "https://en.wikipedia.org/wiki/Meditations",
-    blurb:
-      "The private notebooks of a Roman emperor: daily reminders to do the work, accept what isn't yours to control, and remember death.",
-    themes: [
-      "control-vs-acceptance",
-      "daily-practice",
-      "mortality",
-      "duty-as-anchor",
-    ],
-    why: "When someone is exhausted from trying to control what isn't theirs to control.",
-  },
-  {
-    type: "book",
-    title: "On the Shortness of Life",
-    author: "Seneca",
-    url: "https://en.wikipedia.org/wiki/De_Brevitate_Vitae_(Seneca)",
-    blurb:
-      "Seneca on the loudest paradox: that we treat our money as precious and our hours as infinite.",
-    themes: ["time", "mortality", "urgency", "what-matters"],
-    why: "When someone is sleepwalking through their own life and a small jolt would help.",
-  },
-
-  // ── Relationship, intimacy, distance ──────────────────────────────────────
-  {
-    type: "book",
-    title: "Mating in Captivity",
+    type: "video",
+    title: "The Secret to Desire in a Long-Term Relationship",
     author: "Esther Perel",
-    url: "https://en.wikipedia.org/wiki/Esther_Perel",
+    url: "https://www.ted.com/talks/esther_perel_the_secret_to_desire_in_a_long_term_relationship",
     blurb:
-      "Perel on the central paradox of long-term partnership: we want safety AND aliveness, and they pull against each other.",
+      "Perel's TED talk on the central paradox of long-term partnership: we want safety AND aliveness, and they pull against each other.",
     themes: [
       "long-term-relationships",
       "desire",
@@ -308,146 +150,187 @@ const SEED: SeedResource[] = [
     why: "When the relationship is stable but quiet — and someone is wondering what they're doing wrong.",
   },
   {
+    type: "video",
+    title: "12 Truths I Learned From Life and Writing",
+    author: "Anne Lamott",
+    url: "https://www.ted.com/talks/anne_lamott_12_truths_i_learned_from_life_and_writing",
+    blurb:
+      "Lamott's TED talk: twelve hard-won pieces of wisdom about creative work, perfectionism, and starting again every morning.",
+    themes: [
+      "perfectionism",
+      "creative-block",
+      "starting-anyway",
+      "self-criticism",
+    ],
+    why: "When perfectionism is keeping someone from beginning at all. Lamott's voice is permission.",
+  },
+  {
+    type: "video",
+    title: "Listening to Shame",
+    author: "Brené Brown",
+    url: "https://www.ted.com/talks/brene_brown_listening_to_shame",
+    blurb:
+      "Brown's follow-up TED talk on the difference between guilt and shame — and how naming shame robs it of power.",
+    themes: [
+      "shame",
+      "self-criticism",
+      "guilt-vs-shame",
+      "trance-of-unworthiness",
+    ],
+    why: "When someone is using the word guilt but Sage hears shame — the I-am-bad versus I-did-bad distinction.",
+  },
+
+  // ── Famous speeches (free, public archive or YouTube) ─────────────────
+  {
+    type: "video",
+    title: "Stanford Commencement Address (2005)",
+    author: "Steve Jobs",
+    url: "https://news.stanford.edu/2005/06/14/jobs-061505/",
+    blurb:
+      "Three stories: connecting the dots backward, love and loss, and death. Stanford has the full video and transcript.",
+    themes: ["calling", "mortality", "follow-your-bliss", "what-matters"],
+    why: "When someone is sleepwalking through a path they didn't really choose. Jobs's 'don't waste it living someone else's life' is the kind of slap that lands.",
+  },
+  {
+    type: "article",
+    title: "This Is Water",
+    author: "David Foster Wallace",
+    url: "https://fs.blog/david-foster-wallace-this-is-water/",
+    blurb:
+      "DFW's 2005 Kenyon commencement address. The default-setting parable about what it actually takes to be conscious in adult life.",
+    themes: [
+      "awareness",
+      "default-mode",
+      "self-centeredness",
+      "the-everyday-as-spiritual",
+    ],
+    why: "When the conversation is about boredom, irritation, the supermarket-at-rush-hour aspect of being alive — and choosing what to think about.",
+  },
+  {
+    type: "article",
+    title: "Letter from Birmingham Jail",
+    author: "Martin Luther King Jr.",
+    url: "https://www.africa.upenn.edu/Articles_Gen/Letter_Birmingham.html",
+    blurb:
+      "Written from a cell in 1963 in response to white clergy who told him to wait. A masterclass in moral clarity under pressure.",
+    themes: [
+      "moral-clarity",
+      "patience-vs-urgency",
+      "speaking-up",
+      "what-justice-asks",
+    ],
+    why: "When someone is being told to wait for justice they can already see is overdue. Or when they're the one telling someone else to wait.",
+  },
+  {
+    type: "article",
+    title: "The Transformation of Silence into Language and Action",
+    author: "Audre Lorde",
+    url: "https://www.lehigh.edu/~ineng/syll/syll-transformation_of_silence.pdf",
+    blurb:
+      "Lorde's 1977 talk: the cost of staying quiet, the freedom that comes when you finally don't.",
+    themes: ["speaking-up", "shame", "self-betrayal", "voice"],
+    why: "When someone has been silent so long they've started to confuse their silence for safety.",
+  },
+
+  // ── Long-form free essays / blog posts ────────────────────────────────
+  {
+    type: "article",
+    title: "The Tail End",
+    author: "Tim Urban",
+    url: "https://waitbutwhy.com/2015/12/the-tail-end.html",
+    blurb:
+      "Tim Urban draws out a life in months — and especially how few times you'll see the people you love. Quiet gut-punch in essay form.",
+    themes: ["mortality", "what-matters", "time", "deathbed-clarity"],
+    why: "When someone is putting off seeing a parent or a friend because there'll be time later. Urban shows there isn't as much later as we think.",
+  },
+  {
+    type: "article",
+    title: "The Crossroads of Should and Must",
+    author: "Elle Luna",
+    url: "https://medium.com/@elleluna/the-crossroads-of-should-and-must-90c75eb7c5b0",
+    blurb:
+      "A short, illustrated essay about choosing the path you must walk — even when the path you should walk looks safer.",
+    themes: ["calling", "vocation", "should-vs-must", "self-betrayal"],
+    why: "When someone is at a fork between the safe path and the truer one, and naming the difference makes it harder to keep ignoring.",
+  },
+  {
+    type: "article",
+    title: "The Top Five Regrets of the Dying",
+    author: "Bronnie Ware",
+    url: "https://bronnieware.com/blog/regrets-of-the-dying/",
+    blurb:
+      "A palliative-care nurse's record of the regrets her dying patients spoke aloud — none of them about money or status. The original blog post that became a book.",
+    themes: ["regret", "authentic-life", "what-matters", "deathbed-clarity"],
+    why: "When someone is choosing the safe path against the truer one, and the cost isn't yet visible.",
+  },
+  {
+    type: "article",
+    title: "Total Eclipse",
+    author: "Annie Dillard",
+    url: "https://www.theatlantic.com/magazine/archive/2017/08/annie-dillards-classic-total-eclipse-essay/536271/",
+    blurb:
+      "Dillard's 1982 essay on watching a total eclipse. The most precise English-language description of what it feels like when the floor of reality drops away.",
+    themes: ["awe", "groundlessness", "small-self", "the-numinous"],
+    why: "When someone has had an experience that broke their frame and they don't have words for it yet.",
+  },
+
+  // ── Foundation/teacher archives (audio + video lectures, free) ────────
+  // URLs go to the official archive home so you can swap them for a
+  // specific episode/talk via /admin/resources when you've picked one.
+  {
+    type: "lecture",
+    title: "On Loneliness",
+    author: "Jiddu Krishnamurti",
+    url: "https://jkrishnamurti.org/content/loneliness",
+    blurb:
+      "Krishnamurti distinguishes loneliness (a state of inner poverty we run from) from aloneness (intimacy with what is). Free lectures in the official KFA archive.",
+    themes: [
+      "loneliness",
+      "aloneness",
+      "running-from-self",
+      "solitude-vs-isolation",
+    ],
+    why: "When loneliness is the surface complaint but the deeper story is the inability to be alone with oneself.",
+  },
+  {
+    type: "lecture",
+    title: "On Fear",
+    author: "Jiddu Krishnamurti",
+    url: "https://jkrishnamurti.org/content/fear",
+    blurb:
+      "Krishnamurti on the difference between fear of a real thing and the fear that lives in the mind — and what looking at it directly does.",
+    themes: ["fear", "conditioning", "escape-mechanisms", "looking-directly"],
+    why: "When someone is constantly afraid of something but can't pin down what.",
+  },
+  {
+    type: "lecture",
+    title: "The Real You",
+    author: "Alan Watts",
+    url: "https://alanwatts.org/transcripts/the-real-you/",
+    blurb:
+      "Watts on the costume of personality and the question 'who is the one who is asking?' Free transcript and audio in the official Alan Watts archive.",
+    themes: ["identity", "ego", "self-as-construction", "who-am-i"],
+    why: "When someone is sitting with the feeling of not knowing who they really are — beyond roles, beyond performance.",
+  },
+
+  // ── Free podcast episodes / interviews ────────────────────────────────
+  {
     type: "podcast",
     title: "Where Should We Begin?",
     author: "Esther Perel",
     url: "https://whereshouldwebegin.estherperel.com/",
     blurb:
-      "Couples therapy, in real sessions, with permission. Eavesdropping that teaches you about your own relationships.",
+      "Couples therapy, in real sessions, with permission. Eavesdropping that teaches you about your own relationships. Free first episode of every season.",
     themes: ["relationships", "couples", "communication", "rupture-and-repair"],
     why: "When the conversation is about a specific relational dynamic and hearing it played out elsewhere helps name it.",
   },
-  {
-    type: "book",
-    title: "Anam Cara",
-    author: "John O'Donohue",
-    url: "https://en.wikipedia.org/wiki/John_O%27Donohue",
-    blurb:
-      "Celtic wisdom on friendship, soul, longing, and the hospitality of inner life.",
-    themes: ["friendship", "soul", "longing", "belonging"],
-    why: "When the conversation is about loneliness or longing in a way that wants softer language than therapy.",
-  },
-
-  // ── Hero's journey, calling, transformation ───────────────────────────────
-  {
-    type: "video",
-    title: "The Power of Myth",
-    author: "Joseph Campbell",
-    url: "https://en.wikipedia.org/wiki/The_Power_of_Myth",
-    blurb:
-      "Campbell's six-part conversation with Bill Moyers: myth as a map for the inner life and the call to follow your bliss.",
-    themes: [
-      "hero-journey",
-      "calling",
-      "follow-your-bliss",
-      "meaning-making",
-    ],
-    why: "When someone is sensing a calling but can't quite name it — or is afraid to.",
-  },
-  {
-    type: "book",
-    title: "The Three Marriages",
-    author: "David Whyte",
-    url: "https://en.wikipedia.org/wiki/David_Whyte_(poet)",
-    blurb:
-      "Whyte on the marriages every person undertakes — to another, to work, and to oneself — and the impossibility of bargaining one against the others.",
-    themes: ["work-self-other", "integration", "belonging", "vocation"],
-    why: "When someone is splitting themselves between work and relationship and feeling no part of them is getting enough.",
-  },
-
-  // ── Death, regret, what matters ───────────────────────────────────────────
-  {
-    type: "book",
-    title: "The Top Five Regrets of the Dying",
-    author: "Bronnie Ware",
-    url: "https://en.wikipedia.org/wiki/Bronnie_Ware",
-    blurb:
-      "A palliative-care nurse's record of the regrets her dying patients spoke aloud — none of them about money or status.",
-    themes: ["regret", "authentic-life", "what-matters", "deathbed-clarity"],
-    why: "When someone is choosing the safe path against the truer one, and the cost isn't yet visible.",
-  },
-
-  // ── Daily practice, presence ──────────────────────────────────────────────
-  {
-    type: "book",
-    title: "The Book of Awakening",
-    author: "Mark Nepo",
-    url: "https://en.wikipedia.org/wiki/Mark_Nepo",
-    blurb:
-      "365 short reflections — one per day — on awakening to the life you already have.",
-    themes: ["daily-practice", "awakening", "presence", "small-doors"],
-    why: "When someone wants a practice but doesn't want a system. Small daily entry points.",
-  },
-
-  // ── Wounded healer, suffering as gift ─────────────────────────────────────
-  {
-    type: "book",
-    title: "The Wounded Healer",
-    author: "Henri Nouwen",
-    url: "https://en.wikipedia.org/wiki/The_Wounded_Healer",
-    blurb:
-      "Nouwen on ministry from one's own woundedness — that what we offer most is what we ourselves have struggled with.",
-    themes: [
-      "woundedness-as-gift",
-      "service-from-pain",
-      "vulnerability",
-      "calling",
-    ],
-    why: "When someone is hiding their wounds because they think it disqualifies them — when in fact it's the opposite.",
-  },
-
-  // ── Avoidance, values, ACT ────────────────────────────────────────────────
-  {
-    type: "book",
-    title: "The Happiness Trap",
-    author: "Russ Harris",
-    url: "https://en.wikipedia.org/wiki/Acceptance_and_commitment_therapy",
-    blurb:
-      "An accessible introduction to Acceptance and Commitment Therapy: stop fighting your thoughts, clarify your values, take action anyway.",
-    themes: [
-      "avoidance",
-      "values-clarification",
-      "defusion",
-      "experiential-avoidance",
-    ],
-    why: "When someone is in a long fight with their own thoughts. ACT changes the fight to a question of direction.",
-  },
-  {
-    type: "book",
-    title: "Pleasure Activism",
-    author: "adrienne maree brown",
-    url: "https://en.wikipedia.org/wiki/Adrienne_Maree_Brown",
-    blurb:
-      "brown on pleasure as a measure of liberation and a daily practice of returning to oneself.",
-    themes: ["pleasure", "joy-as-resistance", "embodiment", "self-trust"],
-    why: "When someone has earned a stripe of seriousness so deep they've forgotten what delight feels like.",
-  },
-
-  // ── Poetry that names patterns ────────────────────────────────────────────
-  {
-    type: "article",
-    title: "Wild Geese",
-    author: "Mary Oliver",
-    url: "https://en.wikipedia.org/wiki/Mary_Oliver",
-    blurb:
-      "A short poem about belonging, self-acceptance, and the family of things.",
-    themes: [
-      "belonging",
-      "self-acceptance",
-      "you-do-not-have-to-be-good",
-      "nature-as-mirror",
-    ],
-    why: "When the conversation has reached the place where prose stops working and a poem fits.",
-  },
-
-  // ── Long-form podcasts ────────────────────────────────────────────────────
   {
     type: "podcast",
     title: "On Being",
     author: "Krista Tippett",
     url: "https://onbeing.org/series/podcast/",
     blurb:
-      "Long-form conversations with poets, scientists, theologians, activists — about the questions that don't have easy answers.",
+      "Long-form conversations with poets, scientists, theologians, activists — about the questions that don't have easy answers. Full archive free.",
     themes: [
       "meaning-making",
       "listening",
@@ -456,22 +339,69 @@ const SEED: SeedResource[] = [
     ],
     why: "When someone wants to hear a real conversation between thoughtful adults about what's actually hard.",
   },
-
-  // ── Boundaries, family of origin ──────────────────────────────────────────
   {
-    type: "article",
-    title: "Differentiation of Self",
-    author: "Murray Bowen",
-    url: "https://en.wikipedia.org/wiki/Bowen_family_systems_theory",
+    type: "podcast",
+    title: "John O'Donohue — The Inner Landscape of Beauty",
+    author: "On Being / Krista Tippett",
+    url: "https://onbeing.org/programs/john-odonohue-the-inner-landscape-of-beauty/",
     blurb:
-      "Bowen's idea of differentiation: the capacity to stay connected to your family without dissolving into its anxiety.",
+      "One of the most-played episodes of On Being. Celtic mystic O'Donohue on friendship, beauty, longing, and the soul. Recorded shortly before his death.",
+    themes: ["friendship", "soul", "longing", "belonging", "beauty"],
+    why: "When the conversation is about loneliness or longing in a way that wants softer language than therapy.",
+  },
+
+  // ── Practice / guided audio ───────────────────────────────────────────
+  {
+    type: "audiobook",
+    title: "The RAIN of Self-Compassion",
+    author: "Tara Brach",
+    url: "https://www.tarabrach.com/rain/",
+    blurb:
+      "Tara Brach's free guided meditation: a four-step practice (Recognize, Allow, Investigate, Nurture) for meeting yourself when you're being merciless with yourself.",
     themes: [
-      "family-of-origin",
-      "individuation",
-      "anxiety-in-systems",
-      "boundaries",
+      "self-criticism",
+      "trance-of-unworthiness",
+      "self-compassion",
+      "acceptance",
     ],
-    why: "When someone keeps getting pulled back into a family pattern they thought they'd outgrown.",
+    why: "When someone is being cruel to themselves and would benefit from being walked through the practice instead of just being told about it.",
+  },
+  {
+    type: "video",
+    title: "ACT in a Nutshell",
+    author: "Russ Harris",
+    url: "https://www.actmindfully.com.au/free-stuff/free-videos/",
+    blurb:
+      "Russ Harris's free intro videos to Acceptance and Commitment Therapy: stop fighting your thoughts, clarify your values, take action anyway.",
+    themes: [
+      "avoidance",
+      "values-clarification",
+      "defusion",
+      "experiential-avoidance",
+    ],
+    why: "When someone is in a long fight with their own thoughts. ACT changes the fight to a question of direction.",
+  },
+
+  // ── Working from inside the catalog of accessible long classics ───────
+  {
+    type: "lecture",
+    title: "The Hero's Adventure (The Power of Myth, Ep. 1)",
+    author: "Joseph Campbell, with Bill Moyers",
+    url: "https://www.jcf.org/learn/the-hero-with-a-thousand-faces",
+    blurb:
+      "Campbell on myth as a map for the inner life. The Joseph Campbell Foundation hosts the conversations and supplementary writings.",
+    themes: ["hero-journey", "calling", "follow-your-bliss", "meaning-making"],
+    why: "When someone is sensing a calling but can't quite name it — or is afraid to.",
+  },
+  {
+    type: "podcast",
+    title: "David Whyte — Living the Questions",
+    author: "On Being / Krista Tippett",
+    url: "https://onbeing.org/programs/david-whyte-the-conversational-nature-of-reality/",
+    blurb:
+      "Poet David Whyte on the three marriages — to another, to work, and to self — and the impossibility of bargaining one against the others.",
+    themes: ["work-self-other", "integration", "belonging", "vocation"],
+    why: "When someone is splitting themselves between work and relationship and feeling no part of them is getting enough.",
   },
 ];
 
@@ -511,6 +441,31 @@ async function main() {
       created++;
     }
   }
+
+  // Deactivation pass — anything that's still active in the DB but not in
+  // the new SEED list gets isActive: false. Preserves existing recommendation
+  // rows but hides the dropped items from new matches and from /library.
+  const seedKeys = new Set(SEED.map((s) => `${s.title}::${s.author}`));
+  const allActive = await prisma.resource.findMany({
+    where: { isActive: true },
+    select: { id: true, title: true, author: true },
+  });
+  const toDeactivate = allActive.filter(
+    (r) => !seedKeys.has(`${r.title}::${r.author ?? ""}`)
+  );
+  if (toDeactivate.length > 0) {
+    await prisma.resource.updateMany({
+      where: { id: { in: toDeactivate.map((r) => r.id) } },
+      data: { isActive: false },
+    });
+    console.log(
+      `Deactivated ${toDeactivate.length} stale resource(s) not in current seed:`
+    );
+    for (const r of toDeactivate) {
+      console.log(`  - ${r.title} (${r.author})`);
+    }
+  }
+
   console.log(`Done. Created ${created}, updated ${updated}.`);
 }
 
