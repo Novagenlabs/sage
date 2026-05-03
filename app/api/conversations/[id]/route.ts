@@ -33,6 +33,25 @@ export async function GET(request: Request, { params }: RouteParams) {
         insights: {
           orderBy: { createdAt: "desc" },
         },
+        // Most recent recommendation tied to this session, joined to the
+        // resource so the entry-detail page can render the same card the
+        // user saw post-session (or a still-pending one if they skipped it).
+        recommendations: {
+          orderBy: { createdAt: "desc" },
+          take: 1,
+          include: {
+            resource: {
+              select: {
+                id: true,
+                type: true,
+                title: true,
+                author: true,
+                url: true,
+                blurb: true,
+              },
+            },
+          },
+        },
       },
     });
 
