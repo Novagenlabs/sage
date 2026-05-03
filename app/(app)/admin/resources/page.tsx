@@ -7,7 +7,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { Loader2, Plus, Trash2, Save, X } from "lucide-react";
+import { Loader2, Plus, Trash2, Save, X, ExternalLink } from "lucide-react";
 
 const TYPE_OPTIONS = [
   "book",
@@ -284,25 +284,63 @@ export default function AdminResourcesPage() {
         </div>
       )}
 
-      <div className="px-6 pb-12 space-y-3">
+      <div className="px-6 pb-12 space-y-3 lg:max-w-3xl lg:mx-auto">
         {items.map((r) => (
           <div
             key={r.id}
-            className={`v2-card flex items-start gap-3 ${
+            className={`v2-card flex flex-col gap-3 sm:flex-row sm:items-start ${
               r.isActive ? "" : "opacity-60"
             }`}
           >
-            <div className="flex-1 min-w-0">
-              <p className="text-[10px] uppercase tracking-widest text-chamber-500">
-                {r.type}
-                {r.author ? ` · ${r.author}` : ""}
+            <div className="flex-1 min-w-0 space-y-2">
+              <div className="flex items-center gap-2 text-[10px] uppercase tracking-widest text-chamber-500">
+                <span>{r.type}</span>
+                {r.author && (
+                  <>
+                    <span aria-hidden>·</span>
+                    <span className="normal-case tracking-normal text-chamber-400">
+                      {r.author}
+                    </span>
+                  </>
+                )}
+                {!r.isActive && (
+                  <span className="ml-1 rounded-full bg-chamber-700 px-1.5 py-0.5 text-[9px] text-chamber-300">
+                    inactive
+                  </span>
+                )}
+              </div>
+              <p className="text-base text-chamber-50 leading-snug">
+                {r.title}
               </p>
-              <p className="text-sm text-chamber-100 truncate">{r.title}</p>
-              <p className="text-xs text-chamber-400 truncate mt-1">
-                {r.themes.join(", ")}
+              {/* Blurb — the recommendation card text users actually see. */}
+              <p className="text-xs text-chamber-300 leading-relaxed line-clamp-2">
+                {r.blurb}
               </p>
+              {/* Themes pills — readable, not just a comma list. */}
+              {r.themes.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {r.themes.map((t) => (
+                    <span
+                      key={t}
+                      className="rounded-full bg-chamber-900/70 border border-chamber-800 px-2 py-0.5 text-[10px] text-chamber-300"
+                    >
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              )}
+              {/* Actual destination URL — clickable, opens in new tab. */}
+              <a
+                href={r.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-[11px] text-ember-300 hover:text-ember-200 lowercase break-all"
+              >
+                <ExternalLink className="h-3 w-3 flex-shrink-0" />
+                <span className="truncate max-w-xs">{r.url}</span>
+              </a>
             </div>
-            <div className="flex flex-col gap-1.5 flex-shrink-0">
+            <div className="flex sm:flex-col gap-2 flex-shrink-0 sm:gap-1.5">
               <button
                 onClick={() => startEdit(r)}
                 className="text-xs text-ember-300 hover:text-ember-200 lowercase"
