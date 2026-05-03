@@ -335,31 +335,43 @@ function DetailSheet({
           </button>
         </div>
 
-        {/* Cover hero — anchors the detail page visually */}
-        <div className="mx-auto mb-6 w-40 sm:w-48 lg:w-56">
-          <ResourceCover
-            id={resource.id}
-            title={resource.title}
-            type={resource.type}
-            themes={resource.themes}
-          />
+        {/* Cover + meta as a horizontal row — keeps the cover compact so
+            the player and copy below get most of the vertical space. */}
+        <div className="flex items-start gap-4 mb-5">
+          <div className="w-20 sm:w-24 lg:w-28 flex-shrink-0">
+            <ResourceCover
+              id={resource.id}
+              title={resource.title}
+              type={resource.type}
+              themes={resource.themes}
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] uppercase tracking-[0.22em] text-ember-400 mb-1">
+              {resource.type}
+              {resource.author ? (
+                <span className="text-chamber-500"> · {resource.author}</span>
+              ) : null}
+            </p>
+            <h2 className="font-display text-xl text-chamber-50 leading-snug lg:text-2xl">
+              {resource.title}
+            </h2>
+            {resource.themes.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-2">
+                {resource.themes.slice(0, 4).map((t) => (
+                  <span
+                    key={t}
+                    className="rounded-full bg-chamber-800/70 border border-chamber-800 px-2 py-0.5 text-[10px] text-chamber-300 lowercase"
+                  >
+                    {t}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Themes pills */}
-        {resource.themes.length > 0 && (
-          <div className="flex flex-wrap justify-center gap-1.5 mb-5">
-            {resource.themes.slice(0, 5).map((t) => (
-              <span
-                key={t}
-                className="rounded-full bg-chamber-800/70 border border-chamber-800 px-2 py-0.5 text-[10px] text-chamber-300 lowercase"
-              >
-                {t}
-              </span>
-            ))}
-          </div>
-        )}
-
-        <ResourcePlayer resource={playerResource} />
+        <ResourcePlayer resource={playerResource} hideHeading />
       </motion.div>
     </>
   );

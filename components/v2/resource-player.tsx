@@ -23,16 +23,19 @@ interface Props {
   /** Called when the user clicks the external-open link. Lets the parent
    *  fire the click-tracking endpoint before the new tab opens. */
   onClickOpen?: () => void;
+  /** Hide the internal title/author heading. Use when the surrounding sheet
+   *  already shows it (e.g. the library detail sheet). */
+  hideHeading?: boolean;
 }
 
-export function ResourcePlayer({ resource, onClickOpen }: Props) {
+export function ResourcePlayer({ resource, onClickOpen, hideHeading }: Props) {
   const embed = detectEmbed(resource.url);
 
   const trackOpen = () => {
     onClickOpen?.();
   };
 
-  const heading = (
+  const heading = hideHeading ? null : (
     <div className="mb-4">
       <p className="text-[10px] uppercase tracking-widest text-chamber-500 mb-1">
         {resource.type}
