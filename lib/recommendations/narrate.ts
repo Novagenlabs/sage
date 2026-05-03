@@ -1,17 +1,19 @@
-// Generate a Sage-narrated audio intro for a Resource. Lives here (rather
+// Generate a Sage-narrated audio reading for a Resource. Lives here (rather
 // than only in the script) so the admin "regenerate audio" button can call
 // the same code path as the bulk seed script.
 //
-// The narration is short — just enough for someone listening on the way to
-// work to know whether the resource resonates. Sage opens with the title,
-// gives a one-sentence framing, then says why it might matter for this user.
+// The audio is the spoken version of `Resource.bodyText` — Sage's
+// transformative reading of the work, voiced. Length is whatever the text
+// requires (typically 2-3 minutes for our ~250-350 word commentaries).
+// When bodyText is missing we fall back to a short intro built from
+// (blurb + why), which produces a ~30s teaser.
 //
 // Audio files land at /public/resource-audio/<resourceId>.mp3 and the
 // Resource row's audioUrl is updated to the public path.
 
 import fs from "fs";
 import path from "path";
-import { getDefaultVoice } from "@/lib/voices";
+import { AVAILABLE_VOICES } from "@/lib/voices";
 
 export interface NarratableResource {
   id: string;
@@ -19,15 +21,42 @@ export interface NarratableResource {
   author: string | null;
   blurb: string;
   why: string;
+  /** Sage's full reading. When present, we narrate this verbatim. */
+  bodyText?: string | null;
+  /** Citation appended after the body, voiced quietly as the outro. */
+  bodySource?: string | null;
 }
 
-const MODEL_ID = "eleven_turbo_v2_5";
+// eleven_multilingual_v2 is the highest-quality stable model on ElevenLabs.
+// Slower than turbo but the voicing is noticeably richer — the right trade
+// for pre-rendered narrations that ship to /public.
+//
+// To experiment with the v3 alpha, set NARRATION_MODEL_ID in env.
+const DEFAULT_MODEL_ID =
+  process.env.NARRATION_MODEL_ID ?? "eleven_multilingual_v2";
+
+// Default narrator: Emily — soft, nurturing, fits the literary-journal tone
+// of Sage's commentary better than the IFy chat voice. Override per-call
+// via opts.voiceId or globally via NARRATION_VOICE_KEY in env.
+const DEFAULT_NARRATION_VOICE_KEY =
+  process.env.NARRATION_VOICE_KEY ?? "emily";
+
 const PUBLIC_AUDIO_DIR = path.join(process.cwd(), "public", "resource-audio");
 
 export function buildNarrationScript(r: NarratableResource): string {
   const byline = r.author ? `${r.title}, by ${r.author}.` : `${r.title}.`;
-  // Two short paragraphs — enough for ~30-50 seconds of audio. We let Sage
-  // speak in first person (matches how she sounds in conversations).
+
+  if (r.bodyText && r.bodyText.trim()) {
+    // Full reading. Title intro, then the body, then a quiet attribution
+    // outro so the listener always hears where the source is from.
+    const tail = r.bodySource
+      ? `\n\n${r.bodySource}`
+      : "";
+    return `${byline}\n\n${r.bodyText.trim()}${tail}`;
+  }
+
+  // Fallback: short intro from blurb + why. Used when bodyText hasn't been
+  // written yet so the audio surface still works.
   return `${byline}\n\n${r.blurb}\n\n${r.why}`;
 }
 
@@ -36,22 +65,31 @@ export function buildNarrationScript(r: NarratableResource): string {
  * (e.g. "/resource-audio/<id>.mp3") that should be stored in
  * Resource.audioUrl.
  *
- * Uses Sage's default voice (lib/voices.DEFAULT_VOICE_KEY) with a softer
- * stability so the narration doesn't sound flat — recommendation copy
- * benefits from a bit of warmth.
+ * Defaults to Emily voice + multilingual_v2 model. Both can be overridden
+ * via opts (used by the admin "regenerate audio" button if we ever wire it
+ * to a voice picker).
  */
 export async function generateResourceNarration(
   resource: NarratableResource,
-  opts?: { apiKey?: string; voiceId?: string }
+  opts?: {
+    apiKey?: string;
+    voiceId?: string;
+    voiceKey?: string;
+    modelId?: string;
+  }
 ): Promise<{ publicPath: string; bytes: number }> {
   const apiKey = opts?.apiKey ?? process.env.ELEVEN_API_KEY;
   if (!apiKey) {
     throw new Error("ELEVEN_API_KEY is not set");
   }
 
-  const voice = getDefaultVoice();
-  const voiceId = opts?.voiceId ?? voice.id;
+  // Resolve voice: explicit voiceId wins, then voiceKey, then env default.
+  const voiceKey = opts?.voiceKey ?? DEFAULT_NARRATION_VOICE_KEY;
+  const matchedVoice =
+    AVAILABLE_VOICES.find((v) => v.key === voiceKey) ?? AVAILABLE_VOICES[0];
+  const voiceId = opts?.voiceId ?? matchedVoice.id;
 
+  const modelId = opts?.modelId ?? DEFAULT_MODEL_ID;
   const text = buildNarrationScript(resource);
 
   const res = await fetch(
@@ -65,14 +103,15 @@ export async function generateResourceNarration(
       },
       body: JSON.stringify({
         text,
-        model_id: MODEL_ID,
+        model_id: modelId,
         voice_settings: {
-          ...voice.settings,
-          // A touch more expression than the picker-preview default so the
-          // narration sounds like Sage telling you about something she
-          // values, not a flat read.
-          stability: Math.max(0.55, voice.settings.stability - 0.15),
-          style: Math.max(voice.settings.style, 0.15),
+          ...matchedVoice.settings,
+          // Long-form reading benefits from slightly less stability (more
+          // natural variation across paragraphs) and a touch more style
+          // (interpretive warmth across longer sentences). Floors keep us
+          // safely inside the supported range.
+          stability: Math.max(0.5, matchedVoice.settings.stability - 0.2),
+          style: Math.max(matchedVoice.settings.style, 0.2),
         },
       }),
     }

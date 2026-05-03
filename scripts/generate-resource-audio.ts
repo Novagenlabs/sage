@@ -7,9 +7,11 @@
 //   npx tsx scripts/generate-resource-audio.ts --force  # regenerate all
 //   npx tsx scripts/generate-resource-audio.ts <id>...  # specific ids
 //
-// Cost: ~150 chars per narration × 30 resources = ~4,500 chars. ElevenLabs
-// turbo v2.5 is around $0.00017/char on the cheap tier ≈ $0.80 per full
-// regeneration. Cheap enough to commit the MP3s.
+// Cost: when bodyText is present (~250-350 words ≈ 1,800 chars per item),
+// the full catalog of ~22 items runs around 40,000 characters. With
+// eleven_multilingual_v2 (the high-quality stable model) that's roughly
+// $4-5 per full regeneration. Pre-rendered to /public so production never
+// pays this cost again.
 
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
@@ -46,6 +48,8 @@ async function main() {
       blurb: true,
       why: true,
       audioUrl: true,
+      bodyText: true,
+      bodySource: true,
     },
     orderBy: { createdAt: "asc" },
   });
