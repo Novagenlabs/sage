@@ -163,7 +163,7 @@ function CreditsInner() {
 
   return (
     <div className="min-h-[100dvh] bg-chamber-900 pb-12">
-      <div className="px-6 pt-[calc(env(safe-area-inset-top)+1.25rem)]">
+      <div className="px-6 pt-[calc(env(safe-area-inset-top)+1.25rem)] lg:max-w-6xl lg:mx-auto lg:px-10 lg:pt-12">
         {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <Link
@@ -178,22 +178,22 @@ function CreditsInner() {
         </div>
 
         {/* Headline */}
-        <div className="mb-6">
+        <div className="mb-6 lg:text-center lg:mb-10">
           <div className="inline-flex items-center gap-2 mb-3">
             <SageMark size={32} animated />
             <span className="font-display text-2xl tracking-tight lowercase">
               sage credits
             </span>
           </div>
-          <h1 className="v2-h1 mb-2">top up to keep going</h1>
-          <p className="v2-sub">
+          <h1 className="v2-h1 mb-2 lg:text-5xl">top up to keep going</h1>
+          <p className="v2-sub lg:max-w-xl lg:mx-auto">
             credits power voice and chat. one credit ≈ one second of voice or a
             short text exchange.
           </p>
         </div>
 
         {/* Current balance */}
-        <div className="rounded-2xl bg-chamber-800/40 border border-chamber-800 p-4 mb-5 flex items-center gap-4">
+        <div className="rounded-2xl bg-chamber-800/40 border border-chamber-800 p-4 mb-5 flex items-center gap-4 lg:max-w-md lg:mx-auto lg:mb-10">
           <div className="h-11 w-11 rounded-xl bg-ember-500/15 ring-1 ring-ember-500/30 flex items-center justify-center">
             <Coins className="h-5 w-5 text-ember-400" />
           </div>
@@ -244,8 +244,9 @@ function CreditsInner() {
           </div>
         )}
 
-        {/* Packages */}
-        <div className="space-y-3">
+        {/* Packages — mobile: stacked. Desktop: side-by-side grid with the
+            featured plan slightly raised for visual emphasis. */}
+        <div className="space-y-3 lg:space-y-0 lg:grid lg:grid-cols-3 lg:gap-6 lg:items-stretch">
           {CREDIT_PACKAGES.map((pkg, i) => {
             const meta = PACKAGE_META[pkg.id] ?? PACKAGE_META.starter;
             const featured = pkg.id === "plus";
@@ -256,9 +257,9 @@ function CreditsInner() {
             return (
               <div
                 key={pkg.id}
-                className={`relative rounded-3xl p-5 transition-all ${
+                className={`relative rounded-3xl p-5 transition-all flex flex-col lg:p-7 ${
                   featured
-                    ? "bg-chamber-800/70 border border-ember-500/40 shadow-[0_8px_28px_-12px_rgba(224,124,56,0.45)]"
+                    ? "bg-chamber-800/70 border border-ember-500/40 shadow-[0_8px_28px_-12px_rgba(224,124,56,0.45)] lg:-translate-y-2"
                     : "bg-chamber-800/40 border border-chamber-800"
                 }`}
               >
@@ -297,7 +298,7 @@ function CreditsInner() {
                   </span>
                 </div>
 
-                <ul className="space-y-1.5 mb-5">
+                <ul className="space-y-1.5 mb-5 flex-1">
                   {meta.features.map((f) => (
                     <li
                       key={f}
@@ -317,7 +318,7 @@ function CreditsInner() {
                 <button
                   onClick={() => buy(pkg)}
                   disabled={anyLoading}
-                  className={`v2-btn w-full ${
+                  className={`v2-btn w-full mt-auto ${
                     featured ? "v2-btn-primary" : "v2-btn-light"
                   } disabled:opacity-50`}
                 >

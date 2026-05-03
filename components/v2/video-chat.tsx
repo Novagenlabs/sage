@@ -410,7 +410,7 @@ export function VideoChat({ userCredits, onClose, onCreditsUpdate }: Props) {
         <>
           <div className="pointer-events-none absolute inset-0">
             <motion.div
-              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[420px] h-[420px] rounded-full"
+              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[420px] h-[420px] lg:w-[820px] lg:h-[820px] rounded-full"
               style={{
                 background:
                   "radial-gradient(circle, rgba(224,124,56,0.55) 0%, rgba(224,124,56,0.2) 35%, transparent 70%)",
@@ -442,8 +442,9 @@ export function VideoChat({ userCredits, onClose, onCreditsUpdate }: Props) {
         <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/60 pointer-events-none" />
       )}
 
-      {/* Top bar */}
-      <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] lg:px-8 lg:pt-6">
+      {/* Top bar — capped to a max-width on desktop so the chrome doesn't
+          stretch across an ultrawide screen. */}
+      <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between px-4 pt-[calc(env(safe-area-inset-top)+0.75rem)] lg:px-10 lg:pt-8 lg:max-w-6xl lg:mx-auto">
         <button
           onClick={() => (phase === "live" ? finishSession() : onClose(null))}
           className="h-9 w-9 rounded-full bg-chamber-900/70 backdrop-blur flex items-center justify-center"
@@ -466,8 +467,9 @@ export function VideoChat({ userCredits, onClose, onCreditsUpdate }: Props) {
         )}
       </div>
 
-      {/* Bottom controls — capped on desktop so the three clusters stay grouped. */}
-      <div className="absolute bottom-12 left-0 right-0 z-20 px-6 lg:bottom-16">
+      {/* Bottom controls — capped on desktop so the three clusters stay
+          grouped instead of spreading across the full viewport. */}
+      <div className="absolute bottom-12 left-0 right-0 z-20 px-6 lg:bottom-16 lg:px-10 lg:max-w-3xl lg:left-1/2 lg:-translate-x-1/2">
         {phase === "live" ? (
           <div className="flex items-end justify-between mx-auto lg:max-w-2xl">
             {/* Stop */}
@@ -542,7 +544,7 @@ export function VideoChat({ userCredits, onClose, onCreditsUpdate }: Props) {
             </div>
           )
         ) : (
-          <div className="flex flex-col items-center gap-4">
+          <div className="flex flex-col items-center gap-4 lg:gap-5">
             <Link
               href="/ghost"
               className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] uppercase tracking-widest transition-colors ${
@@ -554,7 +556,7 @@ export function VideoChat({ userCredits, onClose, onCreditsUpdate }: Props) {
               <Moon className="h-3 w-3" />
               ghost {ghostMode ? "· on" : "· off"}
             </Link>
-            <p className="text-center text-sm text-chamber-300 lowercase max-w-xs">
+            <p className="text-center text-sm text-chamber-300 lowercase max-w-xs lg:text-base lg:max-w-md">
               {error
                 ? error
                 : ghostMode
@@ -564,7 +566,7 @@ export function VideoChat({ userCredits, onClose, onCreditsUpdate }: Props) {
             <button
               onClick={start}
               disabled={phase === "connecting"}
-              className="v2-btn v2-btn-primary w-full max-w-xs disabled:opacity-50"
+              className="v2-btn v2-btn-primary w-full max-w-xs disabled:opacity-50 lg:max-w-sm lg:py-5 lg:text-base"
             >
               {phase === "connecting" ? (
                 <>

@@ -61,8 +61,8 @@ function Inner() {
   };
 
   return (
-    <div className="v2-screen bg-chamber-900 px-0">
-      <div className="px-6 mb-4 flex items-center justify-between">
+    <div className="v2-screen bg-chamber-900 px-0 lg:!max-w-3xl lg:px-10 lg:pt-10">
+      <div className="px-6 mb-4 flex items-center justify-between lg:px-0 lg:mb-8">
         <Link
           href="/entries"
           className="h-9 w-9 rounded-full bg-chamber-800 flex items-center justify-center"
@@ -73,10 +73,12 @@ function Inner() {
         <span className="w-9" />
       </div>
 
-      <h1 className="v2-h1 px-6 mb-8">what colour was this?</h1>
+      <h1 className="v2-h1 px-6 mb-8 lg:px-0 lg:text-5xl lg:text-center lg:mb-10">
+        what colour was this?
+      </h1>
 
       <div
-        className="mx-6 rounded-3xl flex-1 flex items-end p-4 transition-all"
+        className="mx-6 rounded-3xl flex-1 flex items-end p-4 transition-all lg:mx-0 lg:min-h-[440px] lg:p-8"
         style={{
           background: `linear-gradient(180deg, ${
             COLORS.find((x) => x.id === color)?.c
@@ -87,19 +89,19 @@ function Inner() {
           key={color}
           initial={{ scale: 0.85, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="ml-auto h-7 w-7 rounded-full bg-white/30 backdrop-blur border border-white/40"
+          className="ml-auto h-7 w-7 rounded-full bg-white/30 backdrop-blur border border-white/40 lg:h-10 lg:w-10"
         />
       </div>
 
-      <div className="flex gap-3 px-6 py-6 overflow-x-auto">
+      <div className="flex gap-3 px-6 py-6 overflow-x-auto lg:px-0 lg:justify-center lg:gap-5 lg:py-8 lg:overflow-visible">
         {COLORS.map((c) => (
           <button
             key={c.id}
             onClick={() => setColor(c.id)}
-            className={`h-10 w-10 rounded-full flex-shrink-0 ${
+            className={`h-10 w-10 rounded-full flex-shrink-0 lg:h-14 lg:w-14 transition-transform ${
               c.id === color
-                ? "ring-2 ring-chamber-50 ring-offset-2 ring-offset-chamber-900"
-                : ""
+                ? "ring-2 ring-chamber-50 ring-offset-2 ring-offset-chamber-900 lg:scale-110"
+                : "hover:scale-105"
             }`}
             style={{ background: c.c }}
             aria-label={c.id}
@@ -107,7 +109,7 @@ function Inner() {
         ))}
       </div>
 
-      <div className="px-6 pb-[calc(env(safe-area-inset-bottom)+1rem)] flex items-center justify-between gap-3">
+      <div className="px-6 pb-[calc(env(safe-area-inset-bottom)+1rem)] flex items-center justify-between gap-3 lg:px-0 lg:max-w-md lg:mx-auto lg:w-full lg:pb-8">
         <Link
           href={`/mood${conversationId ? `?id=${conversationId}` : ""}`}
           className="flex items-center gap-2 rounded-full bg-chamber-800/70 px-4 py-3 text-sm text-chamber-100"
