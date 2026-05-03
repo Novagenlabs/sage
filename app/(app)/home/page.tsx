@@ -216,9 +216,12 @@ function MobileHome({
               </span>
               <span className="v2-action-label">talk</span>
             </Link>
-            <Link href="/chat/video" className="v2-action">
+            <Link href="/chat/video" className="v2-action relative">
               <span className="v2-action-orb">
                 <Video className="h-5 w-5" />
+              </span>
+              <span className="absolute -top-1 -right-1 rounded-full bg-ember-500/90 text-white text-[8px] uppercase tracking-widest px-1.5 py-0.5 leading-none">
+                beta
               </span>
               <span className="v2-action-label">see</span>
             </Link>
@@ -307,6 +310,7 @@ function DesktopHome({
                     label="see"
                     sub="video avatar (uses ~3× credits)"
                     primary={false}
+                    beta
                   />
                 </div>
               </div>
@@ -392,17 +396,19 @@ function DesktopAction({
   label,
   sub,
   primary,
+  beta,
 }: {
   href: string;
   icon: React.ReactNode;
   label: string;
   sub: string;
   primary?: boolean;
+  beta?: boolean;
 }) {
   return (
     <Link
       href={href}
-      className={`group flex items-center gap-4 rounded-2xl px-5 py-4 border transition-all ${
+      className={`group flex items-center gap-4 rounded-2xl px-5 py-4 border transition-all relative ${
         primary
           ? "bg-ember-500 hover:bg-ember-600 text-white border-ember-500 shadow-[0_8px_24px_-8px_rgba(224,124,56,0.5)]"
           : "bg-chamber-800/50 hover:bg-chamber-800 text-chamber-100 border-chamber-700"
@@ -416,7 +422,14 @@ function DesktopAction({
         {icon}
       </span>
       <div className="flex-1 min-w-0">
-        <p className="font-medium lowercase">{label}</p>
+        <p className="font-medium lowercase inline-flex items-center gap-2">
+          {label}
+          {beta && (
+            <span className="rounded-full bg-ember-500/90 text-white text-[8px] uppercase tracking-widest px-1.5 py-0.5 leading-none">
+              beta
+            </span>
+          )}
+        </p>
         <p
           className={`text-xs lowercase ${
             primary ? "text-white/80" : "text-chamber-400"

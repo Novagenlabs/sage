@@ -169,14 +169,14 @@ function SageReading({
         </button>
       </header>
       {open && (
-        <div className="px-4 sm:px-5 py-5 sm:py-6">
-          <div className="space-y-4 text-[15px] leading-[1.7] text-chamber-100 font-display [&>p:first-child::first-letter]:font-display [&>p:first-child::first-letter]:text-5xl [&>p:first-child::first-letter]:leading-none [&>p:first-child::first-letter]:float-left [&>p:first-child::first-letter]:mr-2 [&>p:first-child::first-letter]:mt-1 [&>p:first-child::first-letter]:text-ember-400">
+        <div className="px-4 sm:px-5 lg:px-7 py-5 sm:py-6 lg:py-8">
+          <div className="space-y-4 lg:space-y-5 text-[15px] leading-[1.7] lg:text-[17px] lg:leading-[1.8] text-chamber-100 font-display max-w-prose mx-auto [&>p:first-child::first-letter]:font-display [&>p:first-child::first-letter]:text-5xl lg:[&>p:first-child::first-letter]:text-6xl [&>p:first-child::first-letter]:leading-none [&>p:first-child::first-letter]:float-left [&>p:first-child::first-letter]:mr-2 [&>p:first-child::first-letter]:mt-1 [&>p:first-child::first-letter]:text-ember-400">
             {paragraphs.map((p, i) => (
               <p key={i}>{p}</p>
             ))}
           </div>
           {source && (
-            <p className="mt-6 pt-4 border-t border-chamber-800 text-[11px] text-chamber-500 italic">
+            <p className="mt-6 lg:mt-8 pt-4 border-t border-chamber-800 text-[11px] text-chamber-500 italic max-w-prose mx-auto">
               {source}
             </p>
           )}
@@ -256,7 +256,7 @@ function SageNarration({ src }: { src: string }) {
             sage on this
           </p>
           <p className="text-xs text-chamber-400 lowercase">
-            short narrated intro · ~30s
+            listen instead of read
           </p>
         </div>
       </div>

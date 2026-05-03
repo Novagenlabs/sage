@@ -73,9 +73,9 @@ export function LibraryGrid({ resources }: { resources: LibraryResource[] }) {
         />
       </div>
 
-      <div className="relative z-10 mx-auto max-w-6xl px-6 pt-[calc(env(safe-area-inset-top)+1.25rem)] lg:px-10 lg:pt-12">
+      <div className="relative z-10 mx-auto max-w-6xl px-6 pt-[calc(env(safe-area-inset-top)+1rem)] lg:px-10 lg:pt-12">
         {/* Header */}
-        <div className="flex items-center justify-between mb-10 lg:mb-16">
+        <div className="flex items-center justify-between mb-6 lg:mb-16">
           <Link
             href="/home"
             className="inline-flex items-center gap-1.5 text-chamber-400 hover:text-chamber-100 lowercase text-sm"
@@ -90,18 +90,17 @@ export function LibraryGrid({ resources }: { resources: LibraryResource[] }) {
         </div>
 
         {/* Editorial title — italic Cormorant with a gold underline rule */}
-        <header className="mb-10 lg:mb-16">
-          <h1 className="font-display italic text-5xl sm:text-6xl lg:text-7xl tracking-tight text-chamber-50 leading-[0.95]">
+        <header className="mb-6 lg:mb-16">
+          <h1 className="font-display italic text-4xl sm:text-5xl lg:text-7xl tracking-tight text-chamber-50 leading-[0.95]">
             things worth
             <br />
             sitting with.
           </h1>
-          <p className="mt-6 max-w-xl text-base text-chamber-300 leading-relaxed lg:text-lg">
-            books, lectures, conversations, and short readings sage has
-            picked for the patterns that show up in our sessions. each one
-            comes with a brief narrated intro.
+          <p className="mt-3 lg:mt-6 max-w-xl text-sm sm:text-base text-chamber-300 leading-relaxed lg:text-lg">
+            sage's reading on books, lectures, articles, and conversations
+            she returns to often. each comes with a narrated audio version.
           </p>
-          <div className="mt-8 h-px w-32 bg-gradient-to-r from-gold-400 to-transparent" />
+          <div className="mt-5 lg:mt-8 h-px w-24 lg:w-32 bg-gradient-to-r from-gold-400 to-transparent" />
         </header>
 
         {/* Filter chips + search */}
@@ -326,7 +325,7 @@ function DetailSheet({
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: "100%", opacity: 0 }}
         transition={{ type: "spring", stiffness: 300, damping: 34 }}
-        className="fixed inset-x-0 bottom-0 z-50 h-[96dvh] overflow-y-auto bg-chamber-900 border-t border-chamber-800 rounded-t-3xl px-6 pb-[calc(env(safe-area-inset-bottom)+2rem)] pt-4 lg:inset-auto lg:left-1/2 lg:top-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2 lg:w-[640px] lg:h-auto lg:max-h-[88vh] lg:rounded-3xl lg:border lg:px-10 lg:pb-10"
+        className="fixed inset-x-0 bottom-0 z-50 h-[96dvh] overflow-y-auto bg-chamber-900 border-t border-chamber-800 rounded-t-3xl px-6 pb-[calc(env(safe-area-inset-bottom)+2rem)] pt-4 lg:inset-auto lg:left-1/2 lg:top-1/2 lg:-translate-x-1/2 lg:-translate-y-1/2 lg:w-[min(880px,92vw)] lg:h-auto lg:max-h-[90vh] lg:rounded-3xl lg:border lg:px-12 lg:pt-7 lg:pb-12"
       >
         <div className="flex items-center justify-between mb-6">
           <span className="text-xs text-chamber-500 uppercase tracking-widest">
@@ -342,9 +341,10 @@ function DetailSheet({
         </div>
 
         {/* Cover + meta as a horizontal row — keeps the cover compact so
-            the player and copy below get most of the vertical space. */}
-        <div className="flex items-start gap-4 mb-5">
-          <div className="w-20 sm:w-24 lg:w-28 flex-shrink-0">
+            the player and copy below get most of the vertical space. On
+            desktop we give the cover and the meta column more room. */}
+        <div className="flex items-start gap-4 lg:gap-6 mb-5 lg:mb-7">
+          <div className="w-20 sm:w-24 lg:w-36 flex-shrink-0">
             <ResourceCover
               id={resource.id}
               title={resource.title}
@@ -353,17 +353,17 @@ function DetailSheet({
             />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] uppercase tracking-[0.22em] text-ember-400 mb-1">
+            <p className="text-[10px] uppercase tracking-[0.22em] text-ember-400 mb-1 lg:text-[11px]">
               {resource.type}
               {resource.author ? (
                 <span className="text-chamber-500"> · {resource.author}</span>
               ) : null}
             </p>
-            <h2 className="font-display text-xl text-chamber-50 leading-snug lg:text-2xl">
+            <h2 className="font-display text-xl text-chamber-50 leading-snug lg:text-3xl">
               {resource.title}
             </h2>
             {resource.themes.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
+              <div className="flex flex-wrap gap-1 mt-2 lg:mt-3">
                 {resource.themes.slice(0, 4).map((t) => (
                   <span
                     key={t}

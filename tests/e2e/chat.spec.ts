@@ -90,6 +90,12 @@ test("video screen: shows start button without mounting Anam SDK", async ({
   page,
 }) => {
   await signIn(page);
+  // Skip the beta-warning sheet so the test can interact with the start
+  // button directly. Real users see the warning on first visit and can
+  // dismiss with "got it · continue" — covered by manual QA.
+  await page.addInitScript(() => {
+    window.localStorage.setItem("sage-video-beta-ack", "1");
+  });
   await page.goto("/chat/video");
 
   await expect(
@@ -102,4 +108,25 @@ test("video screen: shows start button without mounting Anam SDK", async ({
   await expect(
     page.getByText(/stubbed for tests|couldn't reach|out of credits|couldn't start/i)
   ).toBeVisible({ timeout: 10_000 });
+});
+
+test("video screen: shows the beta warning on first visit", async ({
+  page,
+}) => {
+  await signIn(page);
+  await page.goto("/chat/video");
+
+  // Beta warning should be the first thing the user sees.
+  const dialog = page.getByRole("dialog", { name: /video is in beta/i });
+  await expect(dialog).toBeVisible({ timeout: 10_000 });
+  await expect(
+    dialog.getByRole("button", { name: /got it/i })
+  ).toBeVisible();
+  await dialog.getByRole("button", { name: /got it/i }).click();
+  await expect(dialog).toBeHidden({ timeout: 3_000 });
+
+  // Once acknowledged, the start button is reachable.
+  await expect(
+    page.getByRole("button", { name: /start video session/i })
+  ).toBeVisible();
 });

@@ -124,8 +124,10 @@ test("ghost mode: video page POSTs ghost: true to /api/anam/session", async ({
   });
 
   await signIn(page);
-  await page.evaluate(() => {
+  await page.addInitScript(() => {
     window.localStorage.setItem("sage-ghost-mode", "1");
+    // Acknowledge the video beta warning so it doesn't intercept the click.
+    window.localStorage.setItem("sage-video-beta-ack", "1");
   });
   await page.goto("/chat/video");
   await page.getByRole("button", { name: /start video session/i }).click();
