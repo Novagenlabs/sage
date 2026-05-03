@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { X, ArrowUp, Mic, Plus, AudioLines, Loader2, RotateCcw } from "lucide-react";
+import { X, ArrowUp, AudioLines, Loader2, RotateCcw, Check } from "lucide-react";
 import { useSocraticChat } from "@/lib/use-chat";
 import { useRecommendationStream } from "@/lib/use-recommendation-stream";
 import { RecommendationCard } from "@/components/v2/recommendation-card";
@@ -236,14 +236,18 @@ function Inner() {
       {/* Header */}
       <div className="flex items-center justify-between px-4 mb-4 lg:px-2">
         {messages.length > 0 ? (
+          // Once there's actual conversation, the "leave" affordance becomes
+          // a labeled "finish & reflect" — explicit so users don't have to
+          // guess that the small X is what ends the session.
           <button
             onClick={finishAndReflect}
             disabled={endingPhase !== "idle"}
-            className="h-9 w-9 rounded-full bg-chamber-800 flex items-center justify-center text-chamber-200 disabled:opacity-50 hover:bg-chamber-700"
+            className="inline-flex items-center gap-1.5 rounded-full bg-chamber-800 hover:bg-chamber-700 text-chamber-100 px-3 py-1.5 text-xs lowercase disabled:opacity-50"
             aria-label="finish and reflect"
-            title="finish & reflect"
+            title="end this session"
           >
-            <X className="h-4 w-4" />
+            <Check className="h-3.5 w-3.5" strokeWidth={2.5} />
+            finish
           </button>
         ) : (
           <Link
@@ -395,9 +399,9 @@ function Inner() {
             className="flex-1 bg-transparent text-sm text-chamber-100 placeholder:text-chamber-500 focus:outline-none py-2"
             style={{ fontSize: 16 }}
           />
-          <button className="h-8 w-8 rounded-full bg-chamber-700 flex items-center justify-center">
-            <Mic className="h-4 w-4 text-chamber-100" />
-          </button>
+          {/* Removed: a decorative mic button used to live here. It implied
+              voice-note input that didn't exist. We'll add it back when the
+              record-then-transcribe feature ships. */}
           {draft.trim() ? (
             <button
               onClick={send}

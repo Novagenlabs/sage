@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { matchResource } from "@/lib/recommendations/match";
+import {
+  matchResource,
+  themeOverlapFallback,
+} from "@/lib/recommendations/match";
 import type { CatalogResource } from "@/lib/recommendations/types";
 
 const CATALOG: CatalogResource[] = [
@@ -159,6 +162,58 @@ describe("matchResource", () => {
     expect(result).toBeNull();
   });
 
+  it("falls back to theme overlap when the LLM returns null and the user has signal", async () => {
+    const fetchImpl = stubFetchOnce("null");
+    const result = await matchResource(
+      {
+        ...baseInput,
+        // User signal includes "decision" — should match r_decision /
+        // r_decision_alt themes via the haystack tokenizer.
+        profileSummary:
+          "tends to spiral when there's a decision in front of them and gets stuck on whether they're picking the right one.",
+      },
+      { fetchImpl: fetchImpl as unknown as typeof fetch }
+    );
+    expect(result).not.toBeNull();
+    // Either decision-themed resource is acceptable.
+    expect(["r_decision", "r_decision_alt"]).toContain(result?.resourceId);
+    expect(result?.reason).toMatch(/decision/i);
+  });
+
+  it("falls back to theme overlap on non-OK API responses too", async () => {
+    const fetchImpl = vi.fn(async () => new Response("rate limited", { status: 429 }));
+    const result = await matchResource(
+      {
+        ...baseInput,
+        profileSummary: "feels deeply alone in their insight, can't get others to see it",
+      },
+      { fetchImpl: fetchImpl as unknown as typeof fetch }
+    );
+    expect(result?.resourceId).toBe("r_isolation");
+  });
+
+  it("fallback excludes dismissed resources", async () => {
+    const fetchImpl = stubFetchOnce("null");
+    const result = await matchResource(
+      {
+        ...baseInput,
+        profileSummary: "spiral on decisions, paralysis, regret",
+        dismissedResourceIds: ["r_decision"],
+      },
+      { fetchImpl: fetchImpl as unknown as typeof fetch }
+    );
+    expect(result?.resourceId).toBe("r_decision_alt");
+  });
+
+  it("fallback returns null only when there's no signal at all", async () => {
+    const fetchImpl = stubFetchOnce("null");
+    const result = await matchResource(baseInput, {
+      fetchImpl: fetchImpl as unknown as typeof fetch,
+    });
+    // baseInput has empty haystack — fallback also returns null.
+    expect(result).toBeNull();
+  });
+
   it("includes dismissed + loved ids in the LLM prompt body", async () => {
     const fetchImpl = vi.fn(async () =>
       new Response(JSON.stringify({ choices: [{ message: { content: "null" } }] }), {
@@ -179,5 +234,45 @@ describe("matchResource", () => {
     expect(init.body).toContain("r_isolation");
     expect(init.body).toContain("dismissed");
     expect(init.body).toContain("helpful");
+  });
+});
+
+describe("themeOverlapFallback", () => {
+  it("returns null when there's no haystack signal", () => {
+    const result = themeOverlapFallback({
+      profileSummary: null,
+      catalog: CATALOG,
+    });
+    expect(result).toBeNull();
+  });
+
+  it("returns null when nothing in the catalog overlaps", () => {
+    const result = themeOverlapFallback({
+      profileSummary: "thinking about quantum mechanics and macroeconomics today",
+      catalog: CATALOG,
+    });
+    expect(result).toBeNull();
+  });
+
+  it("picks the resource with the most theme overlap", () => {
+    const result = themeOverlapFallback({
+      profileSummary: "feels alienated, sees what others don't, awakening",
+      catalog: CATALOG,
+    });
+    expect(result?.resourceId).toBe("r_isolation");
+    // Reason embeds whichever theme token actually showed up first.
+    expect(result?.reason.toLowerCase()).toMatch(
+      /awakening|alienation|isolation|insight/
+    );
+  });
+
+  it("excludes dismissed resources even on a fallback match", () => {
+    const result = themeOverlapFallback({
+      profileSummary: "alienation, awakening, isolation",
+      catalog: CATALOG,
+      dismissedResourceIds: ["r_isolation"],
+    });
+    // Only r_isolation matches that text, so excluding it should null out.
+    expect(result).toBeNull();
   });
 });

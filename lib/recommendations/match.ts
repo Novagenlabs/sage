@@ -5,16 +5,21 @@
 
 import type { CatalogResource, MatchInput, MatchResult } from "./types";
 
-const MATCH_SYSTEM_PROMPT = `You are Sage, a Socratic AI mentor. You've just finished a conversation with this user. Your job: from the catalog below, pick AT MOST ONE resource that genuinely resonates with the pattern you noticed in their session.
+const MATCH_SYSTEM_PROMPT = `You are Sage, a Socratic AI mentor. You've just finished a conversation with this user. Your job: from the catalog below, pick the ONE resource most likely to be useful given the pattern you noticed in their session.
 
-Strong defaults:
-- If nothing in the catalog truly fits, return null. Silence is better than a weak match.
+How to choose:
+- PREFER recommending. If something in the catalog reasonably maps to anything the user is sitting with — even loosely — surface it. Most users WANT a recommendation; silence should be the rare exception.
+- Only return null if literally nothing in the catalog has any thematic connection to the user's session at all. (This is rare — the catalog spans relationships, decisions, mortality, vulnerability, identity, calling, awakening, regret. Most conversations land somewhere on that map.)
 - Never recommend a resource the user has already dismissed.
 - If a similar resource was marked helpful before, lean toward the same theme.
-- The "reason" must be one sentence Sage would actually say to the user. Tie it to what you noticed in the session — not generic blurbs. Examples of good reasons:
+
+How to write the reason:
+- One sentence Sage would actually say to the user. Tie it to what you noticed in the session — not generic blurbs.
+- Good examples:
   - "You kept circling around how isolating it feels when others can't see what you see — this might name that experience."
   - "There's a thread here about hesitating to choose — this framework gives you a way through it."
-- Output strict JSON — either { "resourceId": "<id>", "reason": "<one sentence>" } or null. No prose, no markdown, no explanation.`;
+
+Output strict JSON — either { "resourceId": "<id>", "reason": "<one sentence>" } or null. No prose, no markdown, no explanation.`;
 
 function buildUserMessage(input: MatchInput): string {
   const parts: string[] = [];
@@ -69,6 +74,75 @@ function extractJson(content: string): string | null {
   const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
   if (fenced) return fenced[1].trim();
   return trimmed;
+}
+
+/**
+ * Deterministic fallback when the LLM either returns null or errors.
+ *
+ * Builds a haystack from all the user's free-text signal (profileSummary,
+ * latestSummary, insight contents, moods) and scores each catalog
+ * resource by how many of its theme tokens appear in that haystack. The
+ * highest-scoring resource is returned; ties resolve to the most recently
+ * created resource (most curated last).
+ *
+ * Returns null only when there is no haystack to match against (a
+ * brand-new user with zero session signal) or no resource shares any
+ * tokens with the haystack.
+ *
+ * Used so users with a real session don't leave empty-handed just
+ * because the LLM was conservative on a particular call.
+ */
+export function themeOverlapFallback(input: MatchInput): MatchResult | null {
+  const dismissed = new Set(input.dismissedResourceIds ?? []);
+
+  const haystack = [
+    input.profileSummary ?? "",
+    input.latestSummary ?? "",
+    ...(input.latestInsights ?? []).map((i) => i.content),
+    ...(input.recentMoods ?? []),
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  if (!haystack.trim()) return null;
+
+  // Tokenize a theme tag like "isolation-of-insight" into ["isolation",
+  // "insight"] (stopwords + tiny tokens dropped). The catalog uses hyphenated
+  // pattern-level tags, so this picks up e.g. "decision-paralysis" matching
+  // either "decision" or "paralysis" in user text.
+  const STOP = new Set([
+    "of", "the", "a", "an", "and", "or", "as", "in", "on", "to", "for", "with",
+    "is", "are", "be", "by", "vs", "at", "from", "into", "you", "your",
+  ]);
+  const tokenize = (theme: string) =>
+    theme
+      .toLowerCase()
+      .split(/[-\s]+/)
+      .filter((t) => t.length > 2 && !STOP.has(t));
+
+  type Scored = { id: string; score: number; matchedThemes: string[] };
+  const scored: Scored[] = [];
+  for (const r of input.catalog) {
+    if (dismissed.has(r.id)) continue;
+    const matched = r.themes.filter((theme) =>
+      tokenize(theme).some((tok) => haystack.includes(tok))
+    );
+    if (matched.length > 0) {
+      scored.push({ id: r.id, score: matched.length, matchedThemes: matched });
+    }
+  }
+  if (scored.length === 0) return null;
+
+  scored.sort((a, b) => b.score - a.score);
+  const top = scored[0];
+  // Soft, non-claimy reason — we're fallback-matching, not making a confident
+  // pattern read. Pick the first matched theme (highest-signal token) as the
+  // hook.
+  const hook = top.matchedThemes[0].replace(/-/g, " ");
+  return {
+    resourceId: top.id,
+    reason: `something about ${hook} keeps surfacing — this might be worth sitting with.`,
+  };
 }
 
 /**
@@ -132,45 +206,45 @@ export async function matchResource(
     );
   } catch (err) {
     console.error("[match] Network error:", err);
-    return null;
+    return themeOverlapFallback(input);
   }
 
   if (!response.ok) {
     const text = await response.text().catch(() => "");
     console.error("[match] OpenRouter error", response.status, text.slice(0, 200));
-    return null;
+    return themeOverlapFallback(input);
   }
 
   const data = (await response.json().catch(() => null)) as
     | { choices?: Array<{ message?: { content?: string } }> }
     | null;
   const content = data?.choices?.[0]?.message?.content;
-  if (!content) return null;
+  if (!content) return themeOverlapFallback(input);
 
   const rawJson = extractJson(content);
-  if (!rawJson || rawJson === "null") return null;
+  if (!rawJson || rawJson === "null") return themeOverlapFallback(input);
 
   let parsed: unknown;
   try {
     parsed = JSON.parse(rawJson);
   } catch {
     console.warn("[match] Could not parse model response as JSON:", rawJson.slice(0, 200));
-    return null;
+    return themeOverlapFallback(input);
   }
 
-  if (parsed === null) return null;
+  if (parsed === null) return themeOverlapFallback(input);
   if (
     typeof parsed !== "object" ||
     parsed === null ||
     !("resourceId" in parsed) ||
     !("reason" in parsed)
   ) {
-    return null;
+    return themeOverlapFallback(input);
   }
 
   const candidate = parsed as { resourceId: unknown; reason: unknown };
   if (typeof candidate.resourceId !== "string" || typeof candidate.reason !== "string") {
-    return null;
+    return themeOverlapFallback(input);
   }
 
   // Defensive guards in case the model ignores the "exclude dismissed" rule
@@ -180,11 +254,18 @@ export async function matchResource(
       "[match] Model picked unknown resourceId:",
       candidate.resourceId
     );
-    return null;
+    return themeOverlapFallback(input);
   }
   if (dismissed.has(candidate.resourceId)) {
-    console.warn("[match] Model picked dismissed resourceId — overriding to null");
-    return null;
+    console.warn("[match] Model picked dismissed resourceId — overriding to fallback");
+    return themeOverlapFallback({
+      ...input,
+      // Exclude this id from the fallback too, so we don't re-pick it.
+      dismissedResourceIds: [
+        ...(input.dismissedResourceIds ?? []),
+        candidate.resourceId,
+      ],
+    });
   }
 
   return { resourceId: candidate.resourceId, reason: candidate.reason };
