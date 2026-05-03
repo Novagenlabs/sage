@@ -7,11 +7,25 @@ import {
   resetMocks,
 } from "./_mocks";
 
-import { POST } from "@/app/api/anam/session/route";
+// Stub the LiveKit SDK so we don't depend on its real signing/JWT machinery.
+vi.mock("livekit-server-sdk", () => {
+  class FakeAccessToken {
+    constructor(_key: string, _secret: string, _opts: unknown) {}
+    addGrant(_grant: unknown) {}
+    async toJwt() {
+      return "fake.jwt.token";
+    }
+  }
+  return { AccessToken: FakeAccessToken };
+});
+
+import { POST } from "@/app/api/livekit/token/route";
 
 beforeEach(() => {
   resetMocks();
-  process.env.ANAM_API_KEY = "test-anam";
+  process.env.LIVEKIT_API_KEY = "lk_key";
+  process.env.LIVEKIT_API_SECRET = "lk_secret";
+  process.env.LIVEKIT_URL = "wss://livekit.test";
   mockAuth.mockResolvedValue({ user: { id: "u1" } });
   mockHasEnoughCredits.mockResolvedValue(true);
   mockPrisma.user.findUnique.mockResolvedValue({
@@ -21,46 +35,52 @@ beforeEach(() => {
   mockPrisma.conversation.findMany.mockResolvedValue([]);
   mockPrisma.conversation.updateMany.mockResolvedValue({});
   mockPrisma.conversation.create.mockResolvedValue({ id: "conv_new" });
-
-  // Default: Anam returns a token
-  vi.stubGlobal(
-    "fetch",
-    vi.fn(async () =>
-      new Response(JSON.stringify({ sessionToken: "anam_token_xyz" }), {
-        status: 200,
-      })
-    )
-  );
 });
 
 afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("POST /api/anam/session", () => {
+const validBody = {
+  roomName: "sage-test-room",
+  participantName: "user-abc",
+  voiceKey: "ify",
+};
+
+describe("POST /api/livekit/token", () => {
   it("rejects unauthenticated", async () => {
     mockAuth.mockResolvedValue(null);
-    const res = await POST(makeReq("http://localhost/api/anam/session", { method: "POST" }));
+    const res = await POST(
+      makeReq("http://localhost/api/livekit/token", { body: validBody })
+    );
     expect(res.status).toBe(401);
   });
 
   it("rejects when out of credits", async () => {
     mockHasEnoughCredits.mockResolvedValue(false);
-    const res = await POST(makeReq("http://localhost/api/anam/session", { method: "POST" }));
+    const res = await POST(
+      makeReq("http://localhost/api/livekit/token", { body: validBody })
+    );
     expect(res.status).toBe(402);
   });
 
-  it("500s when ANAM_API_KEY is unset", async () => {
-    delete process.env.ANAM_API_KEY;
-    const res = await POST(makeReq("http://localhost/api/anam/session", { method: "POST" }));
-    expect(res.status).toBe(500);
+  it("400s without roomName / participantName", async () => {
+    const res = await POST(
+      makeReq("http://localhost/api/livekit/token", {
+        body: { voiceKey: "ify" },
+      })
+    );
+    expect(res.status).toBe(400);
   });
 
-  it("creates a Conversation row + returns sessionToken", async () => {
-    const res = await POST(makeReq("http://localhost/api/anam/session", { method: "POST" }));
+  it("creates a Conversation row + returns token, url, conversationId", async () => {
+    const res = await POST(
+      makeReq("http://localhost/api/livekit/token", { body: validBody })
+    );
     expect(res.status).toBe(200);
     const data = await res.json();
-    expect(data.sessionToken).toBe("anam_token_xyz");
+    expect(data.token).toBe("fake.jwt.token");
+    expect(data.url).toBe("wss://livekit.test");
     expect(data.conversationId).toBe("conv_new");
     expect(mockPrisma.conversation.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -70,7 +90,7 @@ describe("POST /api/anam/session", () => {
         }),
       })
     );
-    // Old active conversations get deactivated first
+    // Old active conversations get deactivated first.
     expect(mockPrisma.conversation.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { userId: "u1", isActive: true },
@@ -79,46 +99,26 @@ describe("POST /api/anam/session", () => {
     );
   });
 
-  it("502s when Anam returns a non-OK response", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => new Response("rate limited", { status: 429 }))
-    );
-    const res = await POST(makeReq("http://localhost/api/anam/session", { method: "POST" }));
-    expect(res.status).toBe(502);
-  });
-
-  it("502s when Anam returns no token", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => new Response(JSON.stringify({}), { status: 200 }))
-    );
-    const res = await POST(makeReq("http://localhost/api/anam/session", { method: "POST" }));
-    expect(res.status).toBe(502);
-  });
-
   describe("ghost mode", () => {
     it("when ghost: true, skips Conversation creation and returns conversationId: null", async () => {
       const res = await POST(
-        makeReq("http://localhost/api/anam/session", {
-          method: "POST",
-          body: { ghost: true },
+        makeReq("http://localhost/api/livekit/token", {
+          body: { ...validBody, ghost: true },
         })
       );
       expect(res.status).toBe(200);
       const data = await res.json();
-      expect(data.sessionToken).toBe("anam_token_xyz");
+      expect(data.token).toBe("fake.jwt.token");
       expect(data.conversationId).toBeNull();
-      // Critical: nothing about a ghost call should land in the DB
+      // Nothing about a ghost call should touch the DB write paths.
       expect(mockPrisma.conversation.create).not.toHaveBeenCalled();
       expect(mockPrisma.conversation.updateMany).not.toHaveBeenCalled();
     });
 
-    it("when ghost: false (or omitted), behaves the same as a non-ghost session", async () => {
+    it("when ghost: false, persists a Conversation row as usual", async () => {
       const res = await POST(
-        makeReq("http://localhost/api/anam/session", {
-          method: "POST",
-          body: { ghost: false },
+        makeReq("http://localhost/api/livekit/token", {
+          body: { ...validBody, ghost: false },
         })
       );
       expect(res.status).toBe(200);
