@@ -1,9 +1,24 @@
-// Resource matcher — single LLM call over the whole catalog, returns one
-// recommendation or null. Catalog at v1 size (~30-50) fits comfortably under
-// context limits; we'll add embedding-based candidate retrieval when the
-// catalog grows past ~100 items.
+// Resource matcher.
+//
+// Two paths:
+//   - PRIMARY (when embeddings are populated on every catalog row AND the
+//     user has signal to embed): cosine-sim candidate retrieval picks the
+//     top 5 most-similar resources, then a small LLM call reranks those
+//     5 picking the best (or null). This is the proper recommendation
+//     architecture — semantic relevance does the heavy lifting, LLM
+//     handles the "is this actually a good fit for *this* user" finishing
+//     pass.
+//
+//   - LEGACY (when embeddings aren't available, e.g. OPENAI_API_KEY is
+//     unset or the seed script hasn't run): fall through to the original
+//     LLM-over-full-catalog path with theme-overlap fallback. Identical
+//     behaviour to before embeddings shipped.
+//
+// Either way, exclusion rules (dismissed + already-recommended) apply to
+// both paths.
 
 import type { CatalogResource, MatchInput, MatchResult } from "./types";
+import { cosineSimilarity, embedText } from "./embed-vector";
 
 const MATCH_SYSTEM_PROMPT = `You are Sage, a Socratic AI mentor. You've just finished a conversation with this user. Your job: from the catalog below, pick the ONE resource most likely to be useful given the pattern you noticed in their session.
 
@@ -159,13 +174,250 @@ export function themeOverlapFallback(input: MatchInput): MatchResult | null {
   };
 }
 
+/** Number of catalog resources we send to the LLM rerank pass. */
+const RERANK_CANDIDATES = 5;
+
 /**
- * Match a single resource for the user. Returns null when:
- *   - catalog is empty
- *   - LLM returns null (no good match)
- *   - LLM returns a resourceId that isn't in the catalog (defensive)
- *   - LLM returns the resource the user already dismissed (defensive)
- *   - any LLM/parse error (caller decides whether to retry)
+ * Build the haystack we'll embed for the user — same shape as the
+ * theme-overlap fallback's haystack, but kept as a structured paragraph
+ * so it embeds well.
+ */
+function userHaystack(input: MatchInput): string {
+  const parts: string[] = [];
+  if (input.profileSummary) parts.push(input.profileSummary);
+  if (input.latestSummary) parts.push(input.latestSummary);
+  if (input.latestInsights && input.latestInsights.length > 0) {
+    parts.push(input.latestInsights.map((i) => i.content).join(" "));
+  }
+  if (input.recentMoods && input.recentMoods.length > 0) {
+    parts.push(`moods: ${input.recentMoods.join(", ")}`);
+  }
+  return parts.join("\n\n");
+}
+
+/**
+ * Embedding-based candidate retrieval + LLM rerank.
+ *
+ * 1. Embed the user's session signal.
+ * 2. Cosine-sim it against every NON-EXCLUDED catalog resource that has
+ *    its own embedding.
+ * 3. Top RERANK_CANDIDATES (5) get sent to a small LLM call that picks
+ *    the best (or null) and writes the one-sentence "reason."
+ *
+ * Returns:
+ *   - MatchResult on success
+ *   - null when the LLM picks null AND the user has no other meaningful
+ *     candidate (rare — there's almost always a top-cosine fallback)
+ *   - "use-legacy" when embeddings aren't usable (no API key, no
+ *     embeddings on the catalog rows, or the user signal couldn't be
+ *     embedded). Caller falls back to the legacy LLM-over-full-catalog
+ *     path.
+ */
+async function embedAndRank(
+  input: MatchInput,
+  opts: {
+    embedFetch?: typeof fetch;
+    rerankFetch?: typeof fetch;
+    rerankModel?: string;
+    apiKey?: string;
+    siteUrl?: string;
+    embeddingApiKey?: string;
+  }
+): Promise<MatchResult | null | "use-legacy"> {
+  // Need at least one catalog row with an embedding to even try.
+  const candidatesWithEmbeddings = input.catalog.filter(
+    (r) => Array.isArray(r.embedding) && r.embedding.length > 0
+  );
+  if (candidatesWithEmbeddings.length === 0) return "use-legacy";
+
+  const haystack = userHaystack(input);
+  if (!haystack.trim()) return "use-legacy";
+
+  const userVector = await embedText(haystack, {
+    apiKey: opts.embeddingApiKey,
+    fetchImpl: opts.embedFetch,
+  });
+  if (!userVector) return "use-legacy";
+
+  const excluded = new Set([
+    ...(input.dismissedResourceIds ?? []),
+    ...(input.alreadyRecommendedResourceIds ?? []),
+  ]);
+
+  const scored = candidatesWithEmbeddings
+    .filter((r) => !excluded.has(r.id))
+    .map((r) => ({
+      resource: r,
+      score: cosineSimilarity(userVector, r.embedding!),
+    }))
+    .sort((a, b) => b.score - a.score);
+
+  if (scored.length === 0) return null;
+  const top = scored.slice(0, RERANK_CANDIDATES);
+
+  // LLM rerank — small, fast, just picks the best of the top 5 and
+  // writes a one-sentence reason. Same OpenRouter-via-chat-completions
+  // surface as the legacy path.
+  const apiKey = opts.apiKey ?? process.env.OPENROUTER_API_KEY;
+  if (!apiKey) {
+    // No key for the rerank? Just take the top-cosine result.
+    const t = top[0];
+    return {
+      resourceId: t.resource.id,
+      reason: deterministicReason(t.resource),
+    };
+  }
+
+  const fetchImpl = opts.rerankFetch ?? fetch;
+  const siteUrl =
+    opts.siteUrl ?? process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const model = opts.rerankModel ?? "openai/gpt-4o-mini";
+
+  const rerankPrompt = `You are Sage, a Socratic mentor. From the ${top.length} candidates below — already filtered as the most semantically similar to the user's recent conversations — pick the ONE most likely to resonate with what they're sitting with right now. Strongly prefer recommending; only return null if none of these even loosely fit.
+
+Output JSON: { "resourceId": "...", "reason": "<one sentence in Sage's voice, tied to what you noticed>" } | null
+
+[user signal]
+${haystack}
+
+[candidates]
+${JSON.stringify(
+  top.map((t) => ({
+    id: t.resource.id,
+    title: t.resource.title,
+    author: t.resource.author,
+    blurb: t.resource.blurb,
+    themes: t.resource.themes,
+    why: t.resource.why,
+    similarity: t.score.toFixed(3),
+  })),
+  null,
+  2
+)}`;
+
+  let response: Response;
+  try {
+    response = await fetchImpl(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": siteUrl,
+          "X-Title": "Sage - Match (rerank)",
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: "user", content: rerankPrompt }],
+          temperature: 0.4,
+          max_tokens: 200,
+        }),
+      }
+    );
+  } catch (err) {
+    console.error("[match/rerank] network error:", err);
+    // Top-cosine candidate is still a sensible fallback.
+    const t = top[0];
+    return {
+      resourceId: t.resource.id,
+      reason: deterministicReason(t.resource),
+    };
+  }
+
+  if (!response.ok) {
+    const t = top[0];
+    return {
+      resourceId: t.resource.id,
+      reason: deterministicReason(t.resource),
+    };
+  }
+  const data = (await response.json().catch(() => null)) as
+    | { choices?: Array<{ message?: { content?: string } }> }
+    | null;
+  const content = data?.choices?.[0]?.message?.content;
+  if (!content) {
+    const t = top[0];
+    return {
+      resourceId: t.resource.id,
+      reason: deterministicReason(t.resource),
+    };
+  }
+
+  const rawJson = extractJson(content);
+  if (!rawJson || rawJson === "null") {
+    // LLM said null. Top-cosine is still our best guess.
+    const t = top[0];
+    return {
+      resourceId: t.resource.id,
+      reason: deterministicReason(t.resource),
+    };
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(rawJson);
+  } catch {
+    const t = top[0];
+    return {
+      resourceId: t.resource.id,
+      reason: deterministicReason(t.resource),
+    };
+  }
+  if (
+    parsed === null ||
+    typeof parsed !== "object" ||
+    !("resourceId" in parsed) ||
+    !("reason" in parsed)
+  ) {
+    const t = top[0];
+    return {
+      resourceId: t.resource.id,
+      reason: deterministicReason(t.resource),
+    };
+  }
+
+  const candidate = parsed as { resourceId: unknown; reason: unknown };
+  if (
+    typeof candidate.resourceId !== "string" ||
+    typeof candidate.reason !== "string"
+  ) {
+    const t = top[0];
+    return {
+      resourceId: t.resource.id,
+      reason: deterministicReason(t.resource),
+    };
+  }
+
+  // Validate against the candidate set (model can't pick outside the top
+  // RERANK_CANDIDATES we sent).
+  const allowed = new Set(top.map((t) => t.resource.id));
+  if (!allowed.has(candidate.resourceId) || excluded.has(candidate.resourceId)) {
+    const t = top[0];
+    return {
+      resourceId: t.resource.id,
+      reason: deterministicReason(t.resource),
+    };
+  }
+
+  return { resourceId: candidate.resourceId, reason: candidate.reason };
+}
+
+/** Soft auto-generated reason when we don't have an LLM-written one. */
+function deterministicReason(r: CatalogResource): string {
+  const hook = r.themes[0]?.replace(/-/g, " ");
+  return hook
+    ? `there's something around ${hook} in what you've been sitting with — this might land.`
+    : `this came up as a close match to what you've been sitting with.`;
+}
+
+/**
+ * Match a single resource for the user.
+ *
+ * Tries the embedding path first; if embeddings aren't available, falls
+ * through to the legacy LLM-over-full-catalog path with theme-overlap
+ * fallback. Either way, dismissed and already-recommended resources are
+ * excluded.
  *
  * Pure-ish: takes input + a fetch function + an api key, no global lookups.
  * The optional `fetchImpl` lets tests stub network without touching globals.
@@ -177,9 +429,26 @@ export async function matchResource(
     model?: string;
     fetchImpl?: typeof fetch;
     siteUrl?: string;
+    /** Override OpenAI key for embeddings (test injection point). */
+    embeddingApiKey?: string;
+    /** Stub for the OpenAI embeddings endpoint (test injection). */
+    embedFetch?: typeof fetch;
   }
 ): Promise<MatchResult | null> {
   if (input.catalog.length === 0) return null;
+
+  // Try the embedding path first. Only falls through to the legacy path
+  // when no catalog rows have embeddings, the user has no signal, or the
+  // embedding API is unconfigured.
+  const embeddingResult = await embedAndRank(input, {
+    apiKey: opts?.apiKey,
+    embeddingApiKey: opts?.embeddingApiKey,
+    embedFetch: opts?.embedFetch,
+    rerankFetch: opts?.fetchImpl,
+    rerankModel: opts?.model,
+    siteUrl: opts?.siteUrl,
+  });
+  if (embeddingResult !== "use-legacy") return embeddingResult;
 
   const apiKey = opts?.apiKey ?? process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
@@ -301,7 +570,16 @@ export function toCatalogResource(row: {
   blurb: string;
   themes: string[];
   why: string;
+  embedding?: unknown;
 }): CatalogResource {
+  // The DB stores Json; normalise to number[] | null so the matcher can
+  // safely check Array.isArray without leaking the JsonValue type.
+  let embedding: number[] | null = null;
+  if (Array.isArray(row.embedding) && row.embedding.length > 0) {
+    if (row.embedding.every((v) => typeof v === "number")) {
+      embedding = row.embedding as number[];
+    }
+  }
   return {
     id: row.id,
     type: row.type as CatalogResource["type"],
@@ -310,5 +588,6 @@ export function toCatalogResource(row: {
     blurb: row.blurb,
     themes: row.themes,
     why: row.why,
+    embedding,
   };
 }

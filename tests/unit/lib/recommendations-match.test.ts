@@ -267,6 +267,143 @@ describe("matchResource", () => {
   });
 });
 
+describe("matchResource — embedding path", () => {
+  // Canonical 4-dim vectors so cosine similarity is easy to reason about.
+  // r_isolation gets a vector aligned with [0,0,0,1] (axis "isolation");
+  // r_decision aligns with [1,0,0,0]; r_decision_alt aligns with [0.9, 0.4, 0, 0]
+  // (close to r_decision but distinct).
+  const EMBED_CATALOG: CatalogResource[] = CATALOG.map((r, i) => {
+    const vectors: number[][] = [
+      [1, 0, 0, 0],         // r_decision
+      [0, 0, 0, 1],         // r_isolation
+      [0.9, 0.4, 0, 0],     // r_decision_alt — close to r_decision
+    ];
+    return { ...r, embedding: vectors[i] };
+  });
+
+  function stubEmbedFetch(vector: number[]) {
+    return vi.fn(async () =>
+      new Response(JSON.stringify({ data: [{ embedding: vector }] }), {
+        status: 200,
+      })
+    );
+  }
+
+  beforeEach(() => {
+    process.env.OPENAI_API_KEY = "sk-test";
+  });
+  afterEach(() => {
+    delete process.env.OPENAI_API_KEY;
+  });
+
+  it("uses cosine retrieval + LLM rerank when embeddings are present", async () => {
+    // User vector aligned with r_decision (axis 0). LLM rerank picks
+    // r_decision from the top candidates.
+    const embedFetch = stubEmbedFetch([1, 0, 0, 0]);
+    const rerankFetch = stubFetchOnce(
+      JSON.stringify({
+        resourceId: "r_decision",
+        reason: "the decision tension surfaced clearly here.",
+      })
+    );
+    const result = await matchResource(
+      {
+        ...baseInput,
+        catalog: EMBED_CATALOG,
+        profileSummary:
+          "decision paralysis around a job change, going back and forth",
+      },
+      {
+        embedFetch: embedFetch as unknown as typeof fetch,
+        fetchImpl: rerankFetch as unknown as typeof fetch,
+      }
+    );
+    expect(result?.resourceId).toBe("r_decision");
+  });
+
+  it("falls back to top-cosine when the LLM rerank returns null", async () => {
+    const embedFetch = stubEmbedFetch([0, 0, 0, 1]); // aligned with r_isolation
+    const rerankFetch = stubFetchOnce("null");
+    const result = await matchResource(
+      {
+        ...baseInput,
+        catalog: EMBED_CATALOG,
+        profileSummary: "feels alone in seeing what others can't",
+      },
+      {
+        embedFetch: embedFetch as unknown as typeof fetch,
+        fetchImpl: rerankFetch as unknown as typeof fetch,
+      }
+    );
+    expect(result?.resourceId).toBe("r_isolation");
+  });
+
+  it("excludes already-recommended ids from the candidate set", async () => {
+    const embedFetch = stubEmbedFetch([1, 0, 0, 0]); // aligned with r_decision
+    const rerankFetch = stubFetchOnce("null");
+    const result = await matchResource(
+      {
+        ...baseInput,
+        catalog: EMBED_CATALOG,
+        profileSummary: "decision paralysis",
+        alreadyRecommendedResourceIds: ["r_decision"],
+      },
+      {
+        embedFetch: embedFetch as unknown as typeof fetch,
+        fetchImpl: rerankFetch as unknown as typeof fetch,
+      }
+    );
+    // Top-cosine after excluding r_decision is r_decision_alt.
+    expect(result?.resourceId).toBe("r_decision_alt");
+  });
+
+  it("falls through to the legacy path when no catalog rows have embeddings", async () => {
+    // No embedding on catalog → embedAndRank returns "use-legacy" → legacy
+    // LLM-over-full-catalog runs (with the catalog as-is).
+    const rerankFetch = stubFetchOnce(
+      JSON.stringify({
+        resourceId: "r_decision",
+        reason: "fits.",
+      })
+    );
+    const result = await matchResource(
+      {
+        ...baseInput,
+        catalog: CATALOG, // no embeddings
+        profileSummary: "decision paralysis",
+      },
+      { fetchImpl: rerankFetch as unknown as typeof fetch }
+    );
+    expect(result?.resourceId).toBe("r_decision");
+  });
+
+  it("falls through to legacy when OPENAI_API_KEY is missing", async () => {
+    delete process.env.OPENAI_API_KEY;
+    // catalog has embeddings but we can't embed the user signal → legacy
+    const rerankFetch = stubFetchOnce(
+      JSON.stringify({
+        resourceId: "r_decision",
+        reason: "fits.",
+      })
+    );
+    const embedFetch = vi.fn();
+    const result = await matchResource(
+      {
+        ...baseInput,
+        catalog: EMBED_CATALOG,
+        profileSummary: "decision paralysis",
+      },
+      {
+        embedFetch: embedFetch as unknown as typeof fetch,
+        fetchImpl: rerankFetch as unknown as typeof fetch,
+      }
+    );
+    expect(result?.resourceId).toBe("r_decision");
+    // Embedding endpoint never called because there's no OPENAI key.
+    expect(embedFetch).not.toHaveBeenCalled();
+  });
+});
+
 describe("themeOverlapFallback", () => {
   it("returns null when there's no haystack signal", () => {
     const result = themeOverlapFallback({

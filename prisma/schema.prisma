@@ -235,6 +235,12 @@ model Resource {
   bodyKind    String?
   // Citation, e.g. "Plato, Republic VII, trans. Jowett, 1871 (public domain)".
   bodySource  String?
+  // Semantic vector for the resource (computed from title + author + blurb +
+  // themes + why + bodyText preamble). Stored as JSON since the catalog is
+  // small enough for in-memory cosine similarity; we'll move to pgvector
+  // when scale demands it. Null until populated by scripts/embed-resources.
+  embedding       Json?
+  embeddingModel  String?  // e.g. "openai/text-embedding-3-small"
   isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

@@ -117,6 +117,7 @@ export async function POST(req: Request) {
                 bodyText: true,
                 bodyKind: true,
                 bodySource: true,
+                embedding: true,
               },
             }),
           ]);

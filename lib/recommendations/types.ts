@@ -19,6 +19,10 @@ export interface CatalogResource {
   blurb: string;
   themes: string[];
   why: string;
+  /** Pre-computed embedding from scripts/embed-resources. When present on
+   *  every catalog row, the matcher uses cosine-sim candidate retrieval +
+   *  LLM rerank instead of LLM-over-full-catalog. */
+  embedding?: number[] | null;
 }
 
 /** Inputs the matcher reads on every call. The caller assembles them. */
