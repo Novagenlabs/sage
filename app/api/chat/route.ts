@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { buildSystemPrompt, type DialoguePhase, type ConversationContext } from "@/lib/prompts";
 import { calculateCreditsUsed, deductCredits, hasEnoughCredits } from "@/lib/credits";
 import { inngest } from "@/lib/inngest/client";
+import { isMockMode, mockChatResponse } from "@/lib/load-test-mock";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -63,6 +64,13 @@ export async function POST(request: Request) {
   }
 
   const userId = session.user.id;
+
+  // Load-test escape hatch. When LOAD_TEST_MOCK=1 (non-prod only) we skip
+  // the OpenRouter call entirely and stream a canned reply, so k6 can hit
+  // this endpoint at scale without paying for real LLM tokens.
+  if (isMockMode()) {
+    return mockChatResponse();
+  }
 
   const minCreditsRequired = 5;
   const hasCredits = await hasEnoughCredits(userId, minCreditsRequired);

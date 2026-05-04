@@ -15,7 +15,10 @@
     "narrate:resources": "tsx scripts/generate-resource-audio.ts",
     "embed:resources": "tsx scripts/embed-resources.ts",
     "covers:resources": "tsx scripts/scrape-resource-covers.ts",
-    "covers:webp": "tsx scripts/convert-resource-covers-to-webp.ts"
+    "covers:webp": "tsx scripts/convert-resource-covers-to-webp.ts",
+    "load:baseline": "k6 run load-test/baseline.js",
+    "load:chat": "k6 run load-test/chat-stream.js",
+    "dev:mock": "LOAD_TEST_MOCK=1 next dev -p 3100"
   },
   "dependencies": {
     "@anam-ai/js-sdk": "^4.12.0",

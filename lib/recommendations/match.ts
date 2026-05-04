@@ -19,6 +19,7 @@
 
 import type { CatalogResource, MatchInput, MatchResult } from "./types";
 import { cosineSimilarity, embedText } from "./embed-vector";
+import { isMockMode, mockMatchResult } from "@/lib/load-test-mock";
 
 const MATCH_SYSTEM_PROMPT = `You are Sage, a Socratic AI mentor. You've just finished a conversation with this user. Your job: from the catalog below, pick the ONE resource most likely to be useful given the pattern you noticed in their session.
 
@@ -445,6 +446,11 @@ export async function matchResource(
   }
 ): Promise<MatchResult | null> {
   if (input.catalog.length === 0) return null;
+
+  // Load-test escape hatch — skip embeddings + LLM rerank entirely.
+  if (isMockMode()) {
+    return mockMatchResult(input.catalog.map((c) => c.id));
+  }
 
   // Try the embedding path first. Only falls through to the legacy path
   // when no catalog rows have embeddings, the user has no signal, or the
