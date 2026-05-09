@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { X, ArrowUp, AudioLines, Loader2, RotateCcw, Check } from "lucide-react";
+import { X, ArrowUp, Loader2, RotateCcw, Check } from "lucide-react";
 import { useSocraticChat } from "@/lib/use-chat";
 import { useRecommendationStream } from "@/lib/use-recommendation-stream";
 import { RecommendationCard } from "@/components/v2/recommendation-card";
@@ -463,25 +463,13 @@ function Inner() {
             className="flex-1 bg-transparent text-sm text-chamber-100 placeholder:text-chamber-500 focus:outline-none py-2"
             style={{ fontSize: 16 }}
           />
-          {/* Removed: a decorative mic button used to live here. It implied
-              voice-note input that didn't exist. We'll add it back when the
-              record-then-transcribe feature ships. */}
-          {draft.trim() ? (
-            <button
-              onClick={send}
-              disabled={isLoading}
-              className="h-8 w-8 rounded-full bg-ember-500 text-white flex items-center justify-center disabled:opacity-50"
-            >
-              <ArrowUp className="h-4 w-4" />
-            </button>
-          ) : (
-            <Link
-              href="/chat/voice"
-              className="h-8 w-8 rounded-full bg-chamber-50 text-chamber-900 flex items-center justify-center"
-            >
-              <AudioLines className="h-4 w-4" strokeWidth={2.2} />
-            </Link>
-          )}
+          <button
+            onClick={send}
+            disabled={isLoading || !draft.trim()}
+            className="h-8 w-8 rounded-full bg-ember-500 text-white flex items-center justify-center disabled:opacity-50"
+          >
+            <ArrowUp className="h-4 w-4" />
+          </button>
         </div>
       </div>
     </div>
