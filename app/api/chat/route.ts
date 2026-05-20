@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { withAuth } from "@/lib/with-auth";
 import { buildSystemPrompt, type DialoguePhase, type ConversationContext } from "@/lib/prompts";
 import { calculateCreditsUsed, deductCredits, hasEnoughCredits } from "@/lib/credits";
 import { inngest } from "@/lib/inngest/client";
@@ -53,17 +53,8 @@ async function fetchWithRetry(
   throw lastError;
 }
 
-export async function POST(request: Request) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return new Response(
-      JSON.stringify({ error: "Authentication required" }),
-      { status: 401, headers: { "Content-Type": "application/json" } }
-    );
-  }
-
-  const userId = session.user.id;
+export const POST = withAuth(async (request, authUser) => {
+  const userId = authUser.id;
 
   // Load-test escape hatch. When LOAD_TEST_MOCK=1 (non-prod only) we skip
   // the OpenRouter call entirely and stream a canned reply, so k6 can hit
@@ -246,4 +237,4 @@ export async function POST(request: Request) {
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
-}
+});

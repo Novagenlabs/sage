@@ -1,17 +1,12 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { getPackageById, initializeTransaction } from "@/lib/paystack";
+import { withAuth } from "@/lib/with-auth";
 import crypto from "crypto";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const POST = withAuth(async (req, authUser) => {
   const { packageId } = await req.json();
   const pkg = getPackageById(packageId);
   if (!pkg) {
@@ -23,7 +18,7 @@ export async function POST(req: Request) {
 
   await prisma.payment.create({
     data: {
-      userId: session.user.id,
+      userId: authUser.id,
       reference,
       amount: pkg.priceInKobo,
       credits: pkg.credits,
@@ -33,12 +28,12 @@ export async function POST(req: Request) {
 
   try {
     const result = await initializeTransaction({
-      email: session.user.email!,
+      email: authUser.email,
       amount: pkg.priceInKobo,
       reference,
       callback_url: `${siteUrl}/credits?reference=${reference}`,
       metadata: {
-        userId: session.user.id,
+        userId: authUser.id,
         packageId: pkg.id,
         credits: pkg.credits,
       },
@@ -56,4 +51,4 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
-}
+});

@@ -1,6 +1,6 @@
-import { auth } from "@/auth";
 import { calculateCreditsUsed, deductCredits, hasEnoughCredits } from "@/lib/credits";
 import { prisma } from "@/lib/prisma";
+import { withAuth } from "@/lib/with-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -8,15 +8,10 @@ export const dynamic = "force-dynamic";
 // GET /api/insights — return the user's accumulated UserInsight rows.
 // Used by /patterns to render themes/patterns/preferences/behaviours
 // that Sage has noticed across sessions.
-export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return Response.json({ error: "Authentication required" }, { status: 401 });
-  }
-
+export const GET = withAuth(async (_request, authUser) => {
   const insights = await prisma.userInsight.findMany({
     where: {
-      userId: session.user.id,
+      userId: authUser.id,
       confidence: { gte: 0.3 },
     },
     orderBy: [{ confidence: "desc" }, { updatedAt: "desc" }],
@@ -32,7 +27,7 @@ export async function GET() {
   });
 
   return Response.json(insights);
-}
+});
 
 interface TranscriptMessage {
   role: "user" | "assistant";
@@ -62,17 +57,8 @@ Rules:
 - Reflections should be specific follow-up questions, not generic prompts like "What does this mean to you?"
 - JSON only, no wrapper text`;
 
-export async function POST(request: Request) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return new Response(
-      JSON.stringify({ error: "Authentication required" }),
-      { status: 401, headers: { "Content-Type": "application/json" } }
-    );
-  }
-
-  const userId = session.user.id;
+export const POST = withAuth(async (request, authUser) => {
+  const userId = authUser.id;
 
   const minCreditsRequired = 3;
   const hasCredits = await hasEnoughCredits(userId, minCreditsRequired);
@@ -188,4 +174,4 @@ export async function POST(request: Request) {
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
-}
+});

@@ -1,5 +1,5 @@
-import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { withAuth } from "@/lib/with-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -9,16 +9,8 @@ interface RouteParams {
 }
 
 // POST /api/conversations/[id]/messages - Add message to conversation
-export async function POST(request: Request, { params }: RouteParams) {
-  const session = await auth();
+export const POST = withAuth(async (request, authUser, { params }: RouteParams) => {
   const { id } = await params;
-
-  if (!session?.user?.id) {
-    return new Response(
-      JSON.stringify({ error: "Authentication required" }),
-      { status: 401, headers: { "Content-Type": "application/json" } }
-    );
-  }
 
   try {
     const body = await request.json();
@@ -26,7 +18,7 @@ export async function POST(request: Request, { params }: RouteParams) {
 
     // Verify ownership
     const conversation = await prisma.conversation.findFirst({
-      where: { id, userId: session.user.id },
+      where: { id, userId: authUser.id },
     });
 
     if (!conversation) {
@@ -83,24 +75,16 @@ export async function POST(request: Request, { params }: RouteParams) {
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
-}
+});
 
 // GET /api/conversations/[id]/messages - Get all messages for conversation
-export async function GET(request: Request, { params }: RouteParams) {
-  const session = await auth();
+export const GET = withAuth(async (request, authUser, { params }: RouteParams) => {
   const { id } = await params;
-
-  if (!session?.user?.id) {
-    return new Response(
-      JSON.stringify({ error: "Authentication required" }),
-      { status: 401, headers: { "Content-Type": "application/json" } }
-    );
-  }
 
   try {
     // Verify ownership
     const conversation = await prisma.conversation.findFirst({
-      where: { id, userId: session.user.id },
+      where: { id, userId: authUser.id },
     });
 
     if (!conversation) {
@@ -125,4 +109,4 @@ export async function GET(request: Request, { params }: RouteParams) {
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
-}
+});

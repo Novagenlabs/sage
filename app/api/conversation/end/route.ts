@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { withAuth } from "@/lib/with-auth";
 import { inngest } from "@/lib/inngest/client";
 import { prisma } from "@/lib/prisma";
 
@@ -12,13 +12,7 @@ const MAX_TURNS = 500;
  * Forwards the in-memory transcript to Inngest, which produces a
  * pattern-only summary. The transcript itself is never persisted.
  */
-export async function POST(req: Request) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return Response.json({ error: "Authentication required" }, { status: 401 });
-  }
-
+export const POST = withAuth(async (req, authUser) => {
   try {
     const body = await req.json();
     const { conversationId, type, transcript } = body as {
@@ -39,7 +33,7 @@ export async function POST(req: Request) {
 
     // Verify ownership before processing
     const owned = await prisma.conversation.findFirst({
-      where: { id: conversationId, userId: session.user.id },
+      where: { id: conversationId, userId: authUser.id },
       select: { id: true },
     });
     if (!owned) {
@@ -63,7 +57,7 @@ export async function POST(req: Request) {
       name: "conversation/ended",
       data: {
         conversationId,
-        userId: session.user.id,
+        userId: authUser.id,
         type,
         transcript: cleanTranscript,
       },
@@ -86,4 +80,4 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
-}
+});
