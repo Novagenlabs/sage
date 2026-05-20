@@ -1,24 +1,15 @@
-import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { withAuth } from "@/lib/with-auth";
 import bcrypt from "bcryptjs";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // GET /api/user/profile - Get current user's profile
-export async function GET() {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return new Response(
-      JSON.stringify({ error: "Authentication required" }),
-      { status: 401, headers: { "Content-Type": "application/json" } }
-    );
-  }
-
+export const GET = withAuth(async (_request, authUser) => {
   try {
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: authUser.id },
       select: {
         id: true,
         email: true,
@@ -51,19 +42,10 @@ export async function GET() {
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
-}
+});
 
 // PUT /api/user/profile - Update current user's profile
-export async function PUT(request: Request) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return new Response(
-      JSON.stringify({ error: "Authentication required" }),
-      { status: 401, headers: { "Content-Type": "application/json" } }
-    );
-  }
-
+export const PUT = withAuth(async (request, authUser) => {
   try {
     const body = await request.json();
     const { name, birthday, preferredTopics, passcode } = body as {
@@ -133,7 +115,7 @@ export async function PUT(request: Request) {
     }
 
     const updatedUser = await prisma.user.update({
-      where: { id: session.user.id },
+      where: { id: authUser.id },
       data,
       select: {
         id: true,
@@ -155,4 +137,4 @@ export async function PUT(request: Request) {
       { status: 500 }
     );
   }
-}
+});
