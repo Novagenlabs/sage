@@ -1,5 +1,5 @@
-import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { withAuth } from "@/lib/with-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -9,22 +9,14 @@ interface RouteParams {
 }
 
 // GET /api/conversations/[id] - Get conversation with messages
-export async function GET(request: Request, { params }: RouteParams) {
-  const session = await auth();
+export const GET = withAuth(async (request, authUser, { params }: RouteParams) => {
   const { id } = await params;
-
-  if (!session?.user?.id) {
-    return new Response(
-      JSON.stringify({ error: "Authentication required" }),
-      { status: 401, headers: { "Content-Type": "application/json" } }
-    );
-  }
 
   try {
     const conversation = await prisma.conversation.findFirst({
       where: {
         id,
-        userId: session.user.id,
+        userId: authUser.id,
       },
       include: {
         messages: {
@@ -53,19 +45,11 @@ export async function GET(request: Request, { params }: RouteParams) {
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
-}
+});
 
 // PUT /api/conversations/[id] - Update conversation
-export async function PUT(request: Request, { params }: RouteParams) {
-  const session = await auth();
+export const PUT = withAuth(async (request, authUser, { params }: RouteParams) => {
   const { id } = await params;
-
-  if (!session?.user?.id) {
-    return new Response(
-      JSON.stringify({ error: "Authentication required" }),
-      { status: 401, headers: { "Content-Type": "application/json" } }
-    );
-  }
 
   try {
     const body = await request.json();
@@ -73,7 +57,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
 
     // Verify ownership
     const existing = await prisma.conversation.findFirst({
-      where: { id, userId: session.user.id },
+      where: { id, userId: authUser.id },
     });
 
     if (!existing) {
@@ -86,7 +70,7 @@ export async function PUT(request: Request, { params }: RouteParams) {
     // If setting this conversation as active, deactivate others
     if (isActive) {
       await prisma.conversation.updateMany({
-        where: { userId: session.user.id, isActive: true, id: { not: id } },
+        where: { userId: authUser.id, isActive: true, id: { not: id } },
         data: { isActive: false },
       });
     }
@@ -111,24 +95,16 @@ export async function PUT(request: Request, { params }: RouteParams) {
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
-}
+});
 
 // DELETE /api/conversations/[id] - Delete conversation
-export async function DELETE(request: Request, { params }: RouteParams) {
-  const session = await auth();
+export const DELETE = withAuth(async (request, authUser, { params }: RouteParams) => {
   const { id } = await params;
-
-  if (!session?.user?.id) {
-    return new Response(
-      JSON.stringify({ error: "Authentication required" }),
-      { status: 401, headers: { "Content-Type": "application/json" } }
-    );
-  }
 
   try {
     // Verify ownership
     const existing = await prisma.conversation.findFirst({
-      where: { id, userId: session.user.id },
+      where: { id, userId: authUser.id },
     });
 
     if (!existing) {
@@ -152,4 +128,4 @@ export async function DELETE(request: Request, { params }: RouteParams) {
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
-}
+});
