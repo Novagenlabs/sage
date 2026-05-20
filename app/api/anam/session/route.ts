@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { withAuth } from "@/lib/with-auth";
 import { prisma } from "@/lib/prisma";
 import { hasEnoughCredits } from "@/lib/credits";
 import { buildSystemPrompt, type ConversationContext } from "@/lib/prompts";
@@ -14,13 +14,8 @@ const DEFAULT_AVATAR_ID = "edf6fdcb-acab-44b8-b974-ded72665ee26";
 const DEFAULT_VOICE_ID = "de23e340-1416-4dd8-977d-065a7ca11697";
 const MIN_CREDITS = 5; // floor to start a session at all
 
-export async function POST(request: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return Response.json({ error: "Please sign in to start a video session." }, { status: 401 });
-  }
-
-  const userId = session.user.id;
+export const POST = withAuth(async (request, authUser) => {
+  const userId = authUser.id;
   // Body is optional — older clients sent no body at all. Treat parse
   // failures as "no flags."
   const body = (await request.json().catch(() => ({}))) as { ghost?: boolean };
@@ -140,4 +135,4 @@ export async function POST(request: Request) {
     sessionToken: data.sessionToken,
     conversationId,
   });
-}
+});
