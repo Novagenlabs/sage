@@ -1,18 +1,13 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { addCredits } from "@/lib/credits";
 import { verifyTransaction } from "@/lib/paystack";
+import { withAuth } from "@/lib/with-auth";
 import type { Prisma } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(req: Request) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+export const GET = withAuth(async (req, authUser) => {
   const { searchParams } = new URL(req.url);
   const reference = searchParams.get("reference");
   if (!reference) {
@@ -24,14 +19,14 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Payment not found" }, { status: 404 });
   }
 
-  if (payment.userId !== session.user.id) {
+  if (payment.userId !== authUser.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
   }
 
   // Idempotent: already processed
   if (payment.status === "success") {
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: authUser.id },
       select: { credits: true },
     });
     return NextResponse.json({
@@ -49,7 +44,7 @@ export async function GET(req: Request) {
         where: { reference },
         data: { status: "success", metadata: txn as unknown as Prisma.InputJsonValue },
       });
-      const newBalance = await addCredits(session.user.id, payment.credits);
+      const newBalance = await addCredits(authUser.id, payment.credits);
       return NextResponse.json({
         status: "success",
         credits: newBalance,
@@ -69,4 +64,4 @@ export async function GET(req: Request) {
       { status: 500 }
     );
   }
-}
+});

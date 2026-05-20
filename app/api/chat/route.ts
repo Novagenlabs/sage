@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { withAuth } from "@/lib/with-auth";
 import { buildSystemPrompt, type DialoguePhase, type ConversationContext } from "@/lib/prompts";
 import { calculateCreditsUsed, deductCredits, hasEnoughCredits } from "@/lib/credits";
 
@@ -50,17 +50,8 @@ async function fetchWithRetry(
   throw lastError;
 }
 
-export async function POST(request: Request) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return new Response(
-      JSON.stringify({ error: "Authentication required" }),
-      { status: 401, headers: { "Content-Type": "application/json" } }
-    );
-  }
-
-  const userId = session.user.id;
+export const POST = withAuth(async (request, authUser) => {
+  const userId = authUser.id;
 
   const minCreditsRequired = 5;
   const hasCredits = await hasEnoughCredits(userId, minCreditsRequired);
@@ -197,4 +188,4 @@ export async function POST(request: Request) {
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
-}
+});

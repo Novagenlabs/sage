@@ -1,4 +1,4 @@
-import { auth } from "@/auth";
+import { withAuth } from "@/lib/with-auth";
 import { inngest } from "@/lib/inngest/client";
 import { calculateCreditsUsed, deductCredits } from "@/lib/credits";
 
@@ -9,16 +9,7 @@ export const dynamic = "force-dynamic";
  * Unified endpoint to end a conversation (voice or text)
  * Triggers durable background processing via Inngest
  */
-export async function POST(req: Request) {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return Response.json(
-      { error: "Authentication required" },
-      { status: 401 }
-    );
-  }
-
+export const POST = withAuth(async (req, authUser) => {
   try {
     const body = await req.json();
     const { conversationId, type, transcript } = body;
@@ -45,7 +36,7 @@ export async function POST(req: Request) {
       );
       const estimatedTokens = Math.ceil(totalChars / 4);
       const creditsUsed = Math.max(5, calculateCreditsUsed(estimatedTokens, 0));
-      await deductCredits(session.user.id, creditsUsed, estimatedTokens, "voice");
+      await deductCredits(authUser.id, creditsUsed, estimatedTokens, "voice");
       console.log(`[ConversationEnd] Deducted ${creditsUsed} credits for voice call (${estimatedTokens} est. tokens)`);
     }
 
@@ -54,7 +45,7 @@ export async function POST(req: Request) {
       name: "conversation/ended",
       data: {
         conversationId,
-        userId: session.user.id,
+        userId: authUser.id,
         type,
         transcript, // Only provided for voice sessions
       },
@@ -75,4 +66,4 @@ export async function POST(req: Request) {
       { status: 500 }
     );
   }
-}
+});

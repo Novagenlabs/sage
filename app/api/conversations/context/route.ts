@@ -1,25 +1,16 @@
-import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { withAuth } from "@/lib/with-auth";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 // GET /api/conversations/context - Get context for new conversation (past summaries + user insights)
-export async function GET() {
-  const session = await auth();
-
-  if (!session?.user?.id) {
-    return new Response(
-      JSON.stringify({ error: "Authentication required" }),
-      { status: 401, headers: { "Content-Type": "application/json" } }
-    );
-  }
-
+export const GET = withAuth(async (_request, authUser) => {
   try {
     // Get recent conversations (last 5 for AI context - not displayed to users)
     const recentConversations = await prisma.conversation.findMany({
       where: {
-        userId: session.user.id,
+        userId: authUser.id,
         summary: { not: null }, // Only include summarized conversations
       },
       orderBy: { updatedAt: "desc" },
@@ -34,14 +25,14 @@ export async function GET() {
 
     // Get user's consolidated profile summary and name
     const user = await prisma.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: authUser.id },
       select: { profileSummary: true, name: true },
     });
 
     // Get active conversation if any
     const activeConversation = await prisma.conversation.findFirst({
       where: {
-        userId: session.user.id,
+        userId: authUser.id,
         isActive: true,
       },
       include: {
@@ -68,4 +59,4 @@ export async function GET() {
       { status: 500, headers: { "Content-Type": "application/json" } }
     );
   }
-}
+});

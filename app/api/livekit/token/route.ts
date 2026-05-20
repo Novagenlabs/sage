@@ -1,21 +1,11 @@
 import { AccessToken } from "livekit-server-sdk";
-import { NextRequest } from "next/server";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { hasEnoughCredits } from "@/lib/credits";
+import { withAuth } from "@/lib/with-auth";
 
-export async function POST(request: NextRequest) {
-  // Require authentication for voice mode
-  const session = await auth();
-  if (!session?.user?.id) {
-    return new Response(
-      JSON.stringify({ error: "Please sign in to use voice mode." }),
-      { status: 401, headers: { "Content-Type": "application/json" } }
-    );
-  }
-
+export const POST = withAuth(async (request, authUser) => {
   // Check credits before issuing token
-  const hasCredits = await hasEnoughCredits(session.user.id, 5);
+  const hasCredits = await hasEnoughCredits(authUser.id, 5);
   if (!hasCredits) {
     return new Response(
       JSON.stringify({ error: "Insufficient credits. Please purchase more credits to use voice mode." }),
@@ -51,7 +41,7 @@ export async function POST(request: NextRequest) {
         const contextParts: string[] = [];
 
         const user = await prisma.user.findUnique({
-          where: { id: session.user.id },
+          where: { id: authUser.id },
           select: { name: true, profileSummary: true },
         });
 
@@ -67,7 +57,7 @@ export async function POST(request: NextRequest) {
 
         const recentConversations = await prisma.conversation.findMany({
           where: {
-            userId: session.user.id,
+            userId: authUser.id,
             summary: { not: null },
           },
           orderBy: { updatedAt: "desc" },
@@ -138,4 +128,4 @@ export async function POST(request: NextRequest) {
     }),
     { status: 200, headers: { "Content-Type": "application/json" } }
   );
-}
+});
