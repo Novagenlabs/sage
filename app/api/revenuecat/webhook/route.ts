@@ -20,13 +20,22 @@ import { addCredits } from "@/lib/credits";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Map each CONSUMABLE credit-pack product id → credits granted.
-// IMPORTANT: these product ids must match the consumables you create in
-// App Store Connect + RevenueCat. Update the amounts to your real packs.
+// Map each CONSUMABLE credit-pack product id → credits granted (one-time,
+// permanent). These ids must match the consumables created in App Store
+// Connect + RevenueCat.
 const CREDIT_PRODUCTS: Record<string, number> = {
-  credits_500: 500,
-  credits_1500: 1500,
-  credits_5000: 5000,
+  credits_starter: 200,
+  credits_plus: 1000,
+  credits_pro: 3000,
+};
+
+// Map each SUBSCRIPTION product id → credits granted per billing period.
+// Granted on INITIAL_PURCHASE and each RENEWAL. The "Sage Pro" entitlement
+// (video access etc.) is gated client-side; this is the per-period credit
+// allowance that comes with the subscription.
+const SUBSCRIPTION_PRODUCTS: Record<string, number> = {
+  sage_pro_monthly: 1000,
+  sage_pro_yearly: 12000,
 };
 
 function safeEqual(a: string, b: string) {
@@ -65,16 +74,23 @@ export async function POST(req: Request) {
 
     console.log(`[RC-WEBHOOK] type=${event.type} product=${event.product_id} user=${event.app_user_id}`);
 
-    // Only consumable credit packs grant credits here. Subscription/lifetime
-    // "Sage Pro" access is gated by the entitlement on the client, not credits.
-    // RevenueCat sends NON_RENEWING_PURCHASE for consumables.
-    if (event.type !== "NON_RENEWING_PURCHASE") {
+    // Two paths grant credits:
+    //  - NON_RENEWING_PURCHASE: a one-time consumable credit pack.
+    //  - INITIAL_PURCHASE / RENEWAL: a subscription's per-period credit
+    //    allowance (the "Sage Pro" entitlement itself is gated client-side).
+    // RevenueCat sends a fresh transaction_id per renewal, so the idempotency
+    // key below records each period's grant distinctly.
+    const userId = event.app_user_id;
+    const productId = event.product_id ?? "";
+    let grant: number | undefined;
+    if (event.type === "NON_RENEWING_PURCHASE") {
+      grant = CREDIT_PRODUCTS[productId];
+    } else if (event.type === "INITIAL_PURCHASE" || event.type === "RENEWAL") {
+      grant = SUBSCRIPTION_PRODUCTS[productId];
+    } else {
       return NextResponse.json({ message: "ignored event type" });
     }
 
-    const userId = event.app_user_id;
-    const productId = event.product_id ?? "";
-    const grant = CREDIT_PRODUCTS[productId];
     const txnId = event.transaction_id || event.id || "";
 
     if (!userId || !grant || !txnId) {
