@@ -34,8 +34,12 @@ const CREDIT_PRODUCTS: Record<string, number> = {
 // (video access etc.) is gated client-side; this is the per-period credit
 // allowance that comes with the subscription.
 const SUBSCRIPTION_PRODUCTS: Record<string, number> = {
-  sage_pro_monthly: 1000,
-  sage_pro_yearly: 12000,
+  // NOTE: the original sage_pro_monthly / sage_pro_yearly IDs were created in
+  // App Store Connect as the WRONG type (non-consumable) and a version was
+  // submitted, which permanently burns those IDs (Apple never frees a used
+  // product id). The real auto-renewable subs use the _v2 ids below.
+  sage_pro_monthly_v2: 1000,
+  sage_pro_yearly_v2: 12000,
 };
 
 function safeEqual(a: string, b: string) {

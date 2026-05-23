@@ -65,8 +65,8 @@ describe("POST /api/revenuecat/webhook", () => {
   it("grants the per-period allowance on subscription INITIAL_PURCHASE and RENEWAL", async () => {
     for (const type of ["INITIAL_PURCHASE", "RENEWAL"]) {
       for (const [productId, credits] of [
-        ["sage_pro_monthly", 1000],
-        ["sage_pro_yearly", 12000],
+        ["sage_pro_monthly_v2", 1000],
+        ["sage_pro_yearly_v2", 12000],
       ] as Array<[string, number]>) {
         resetMocks();
         process.env.REVENUECAT_WEBHOOK_SECRET = SECRET;
@@ -107,7 +107,7 @@ describe("POST /api/revenuecat/webhook", () => {
       rcReq({
         type: "CANCELLATION",
         app_user_id: "u1",
-        product_id: "sage_pro_monthly",
+        product_id: "sage_pro_monthly_v2",
         transaction_id: "txn_cancel",
       })
     );
@@ -147,7 +147,7 @@ describe("POST /api/revenuecat/webhook", () => {
       rcReq({
         type: "RENEWAL",
         app_user_id: "u1",
-        product_id: "sage_pro_yearly",
+        product_id: "sage_pro_yearly_v2",
         transaction_id: "txn_renew_1",
       })
     );
