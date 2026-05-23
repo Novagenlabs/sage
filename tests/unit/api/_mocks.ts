@@ -62,6 +62,7 @@ export const mockPrisma = {
   payment: {
     findUnique: vi.fn(),
     update: vi.fn(),
+    create: vi.fn(),
   },
   referral: {
     count: vi.fn(),
