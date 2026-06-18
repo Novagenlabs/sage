@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { clsx } from "clsx";
 import { Lightbulb, RotateCcw, Info, X, FileText, Sparkles, LogOut, User, Coins, Brain, Settings, Ghost, Loader2 } from "lucide-react";
 import { signOut } from "next-auth/react";
@@ -29,6 +30,13 @@ interface SidebarProps {
 }
 
 export function Sidebar({ insights, problemStatement, onReset, isOpen, onClose, voiceSummary, voiceReflections, user, profileSummary, ghostMode, onToggleGhostMode, isResetting }: SidebarProps) {
+  const [isSigningOut, setIsSigningOut] = useState(false);
+
+  const handleSignOut = async () => {
+    setIsSigningOut(true);
+    await signOut({ callbackUrl: "/" });
+  };
+
   return (
     <>
       {/* Mobile overlay */}
@@ -88,35 +96,42 @@ export function Sidebar({ insights, problemStatement, onReset, isOpen, onClose, 
                   </div>
                 </div>
 
-                {/* Credits and actions row */}
-                <div className="flex items-center gap-2">
-                  {typeof user.credits === "number" && (
-                    <Link
-                      href="/credits"
-                      onClick={onClose}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-ember-500/10 border border-ember-500/20 rounded-lg hover:bg-ember-500/20 transition-colors"
-                    >
-                      <Coins className="w-3.5 h-3.5 text-ember-400" />
-                      <span className="text-xs font-medium text-ember-400">
-                        {user.credits.toLocaleString()} credits
-                      </span>
-                    </Link>
-                  )}
-                  <div className="flex items-center gap-1 ml-auto">
-                    <Link
-                      href="/profile"
-                      onClick={onClose}
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-chamber-400 hover:text-chamber-200 hover:bg-chamber-800/50 rounded-lg transition-colors"
-                    >
-                      <Settings className="w-3.5 h-3.5" />
-                    </Link>
-                    <button
-                      onClick={() => signOut()}
-                      className="flex items-center gap-1.5 px-2.5 py-1.5 text-chamber-400 hover:text-chamber-200 hover:bg-chamber-800/50 rounded-lg transition-colors"
-                    >
-                      <LogOut className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
+                {/* Credits */}
+                {typeof user.credits === "number" && (
+                  <Link
+                    href="/credits"
+                    onClick={onClose}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-ember-500/10 border border-ember-500/20 rounded-lg hover:bg-ember-500/20 transition-colors w-fit"
+                  >
+                    <Coins className="w-3.5 h-3.5 text-ember-400" />
+                    <span className="text-xs font-medium text-ember-400">
+                      {user.credits.toLocaleString()} credits
+                    </span>
+                  </Link>
+                )}
+
+                {/* Actions */}
+                <div className="flex flex-col gap-1">
+                  <Link
+                    href="/profile"
+                    onClick={onClose}
+                    className="flex items-center gap-2 px-3 py-2 text-chamber-400 hover:text-chamber-200 hover:bg-chamber-800/50 rounded-lg transition-colors"
+                  >
+                    <Settings className="w-4 h-4" />
+                    <span className="text-sm">Settings</span>
+                  </Link>
+                  <button
+                    onClick={handleSignOut}
+                    disabled={isSigningOut}
+                    className="flex items-center gap-2 px-3 py-2 text-red-400/70 hover:text-red-300 hover:bg-red-500/10 disabled:opacity-50 rounded-lg transition-colors"
+                  >
+                    {isSigningOut ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <LogOut className="w-4 h-4" />
+                    )}
+                    <span className="text-sm">{isSigningOut ? "Signing out..." : "Sign out"}</span>
+                  </button>
                 </div>
               </div>
             ) : (

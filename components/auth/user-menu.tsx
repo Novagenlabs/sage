@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { LogOut, Coins, User, Settings } from "lucide-react";
+import { LogOut, Coins, User, Settings, Loader2 } from "lucide-react";
 import type { Session } from "next-auth";
 
 interface UserMenuProps {
@@ -12,8 +12,14 @@ interface UserMenuProps {
 
 export function UserMenu({ session }: UserMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
+
+  const handleSignOut = async () => {
+    setIsSigningOut(true);
+    await signOut({ callbackUrl: "/" });
+  };
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -94,11 +100,16 @@ export function UserMenu({ session }: UserMenuProps) {
           </button>
 
           <button
-            onClick={() => signOut()}
-            className="w-full px-4 py-3 flex items-center gap-2 text-sm text-white/60 hover:text-white/90 hover:bg-white/5 transition-colors"
+            onClick={handleSignOut}
+            disabled={isSigningOut}
+            className="w-full px-4 py-3 flex items-center gap-2 text-sm text-white/60 hover:text-white/90 hover:bg-white/5 disabled:opacity-50 transition-colors"
           >
-            <LogOut className="w-4 h-4" />
-            <span>Sign out</span>
+            {isSigningOut ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <LogOut className="w-4 h-4" />
+            )}
+            <span>{isSigningOut ? "Signing out..." : "Sign out"}</span>
           </button>
         </div>
       )}

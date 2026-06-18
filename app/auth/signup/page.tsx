@@ -44,7 +44,7 @@ export default function SignUpPage() {
       if (result?.error) {
         setError("Account created but failed to sign in. Please try signing in manually.");
       } else {
-        router.push("/");
+        router.push("/chat");
         router.refresh();
       }
     } catch {
